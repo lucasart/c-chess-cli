@@ -1,0 +1,25 @@
+/*
+ * c-chess-cli, a command line interface for UCI chess engines. Copyright 2020 lucasart.
+ *
+ * c-chess-cli is free software: you can redistribute it and/or modify it under the terms of the GNU
+ * General Public License as published by the Free Software Foundation, either version 3 of the
+ * License, or (at your option) any later version.
+ *
+ * c-chess-cli is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without
+ * even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along with this program. If
+ * not, see <http://www.gnu.org/licenses/>.
+*/
+#include "position.h"
+#include "gen.h"
+
+int main(int argc, char **argv)
+{
+    Position pos;
+    pos_set(&pos, "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+    pos_print(&pos);
+
+    uint64_t n = gen_perft(&pos, 2, 0, false);
+}
