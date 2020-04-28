@@ -12,14 +12,39 @@
  * You should have received a copy of the GNU General Public License along with this program. If
  * not, see <http://www.gnu.org/licenses/>.
 */
-#include "position.h"
-#include "gen.h"
+#include "os.h"
+#include <string.h>
 
 int main(int argc, char **argv)
 {
-    Position pos;
-    pos_set(&pos, "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
-    pos_print(&pos);
+    if (argc > 1) {
+        Process p;
+        process_create(&p, argv[1]);
 
-    uint64_t n = gen_perft(&pos, 2, 0, false);
+        char buf[0x100];
+        process_writeln(&p, "uci\n");
+
+        while (true) {
+            process_readln(&p, buf, sizeof(buf));
+            printf("%s", buf);
+
+            if (!strcmp(buf, "uciok\n"))
+                break;
+        }
+
+        process_writeln(&p, "position startpos\n");
+        process_writeln(&p, "ucinewgame\n");
+        process_writeln(&p, "go depth 5\n");
+
+        while (true) {
+            process_readln(&p, buf, sizeof(buf));
+            printf("%s", buf);
+
+            if (strstr(buf, "bestmove"))
+                break;
+        }
+
+        process_writeln(&p, "quit\n");
+        process_terminate(&p);
+    }
 }
