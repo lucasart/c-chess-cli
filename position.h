@@ -45,7 +45,6 @@ int pos_piece_on(const Position *pos, int square);
 bitboard_t pos_attackers_to(const Position *pos, int square, bitboard_t occ);
 bitboard_t calc_pins(const Position *pos);
 
-bool pos_move_is_capture(const Position *pos, move_t m);
 bool pos_move_is_castling(const Position *pos, move_t m);
 void pos_move_to_string(const Position *pos, move_t m, char *str, bool chess960);
 move_t pos_string_to_move(const Position *pos, const char *str, bool chess960);

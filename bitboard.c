@@ -14,7 +14,6 @@
 */
 #include <stdio.h>
 #include "bitboard.h"
-#include "util.h"
 
 bitboard_t Rank[NB_RANK], File[NB_FILE];
 bitboard_t PawnAttacks[NB_COLOR][NB_SQUARE], KnightAttacks[NB_SQUARE], KingAttacks[NB_SQUARE];
@@ -194,6 +193,34 @@ static __attribute__((constructor)) void bb_init()
     assert(hash(RookShift, sizeof RookShift, 0) == 0xadceb33df45fc2cb);
     assert(hash(BishopDB, sizeof BishopDB, 0) == 0x3ef1f0d07c261d52);
     assert(hash(RookDB, sizeof RookDB, 0) == 0xf3fa2f3754f1c608);
+}
+
+// SplitMix64 PRNG, based on http://xoroshiro.di.unimi.it/splitmix64.c
+uint64_t prng(uint64_t *state)
+{
+    uint64_t rnd = (*state += 0x9E3779B97F4A7C15);
+    rnd = (rnd ^ (rnd >> 30)) * 0xBF58476D1CE4E5B9;
+    rnd = (rnd ^ (rnd >> 27)) * 0x94D049BB133111EB;
+    rnd ^= rnd >> 31;
+    return rnd;
+}
+
+// Simple hash function I derived from SplitMix64. Known limitations:
+// - alignment: 'buffer' must be 8-byte aligned.
+// - length: must be a multiple of 8 bytes.
+// - endianness: don't care (assume little-endian).
+uint64_t hash(const void *buffer, size_t length, uint64_t seed)
+{
+    assert((uintptr_t)buffer % 8 == 0 && length % 8 == 0);
+    const uint64_t *blocks = (const uint64_t *)buffer;
+    uint64_t result = 0;
+
+    for (size_t i = 0; i < length / 8; i++) {
+        seed ^= blocks[i];
+        result ^= prng(&seed);
+    }
+
+    return result;
 }
 
 int opposite(int color)

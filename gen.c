@@ -13,9 +13,7 @@
  * not, see <http://www.gnu.org/licenses/>.
 */
 #include <stdio.h>
-#include "bitboard.h"
 #include "gen.h"
-#include "position.h"
 
 static move_t *serialize_moves(int from, bitboard_t targets, move_t *mList)
 {

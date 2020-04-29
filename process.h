@@ -4,8 +4,8 @@
 #include <unistd.h>
 
 typedef struct {
-	pid_t pid;
-	FILE *in, *out;
+    pid_t pid;
+    FILE *in, *out;
 } Process;
 
 bool process_create(Process *p, const char *cmd);

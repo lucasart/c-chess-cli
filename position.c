@@ -16,9 +16,38 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "bitboard.h"
 #include "position.h"
-#include "zobrist.h"
+
+static uint64_t ZobristKey[NB_COLOR][NB_PIECE][NB_SQUARE];
+static uint64_t ZobristCastling[NB_SQUARE], ZobristEnPassant[NB_SQUARE + 1], ZobristTurn;
+
+static __attribute__((constructor)) void zobrist_init()
+{
+    uint64_t state = 0;
+
+    for (int color = WHITE; color <= BLACK; color++)
+        for (int piece = KNIGHT; piece < NB_PIECE; piece++)
+            for (int square = A1; square <= H8; square++)
+                ZobristKey[color][piece][square] = prng(&state);
+
+    for (int square = A1; square <= H8; square++) {
+        ZobristCastling[square] = prng(&state);
+        ZobristEnPassant[square] = prng(&state);
+    }
+
+    ZobristEnPassant[NB_SQUARE] = prng(&state);
+    ZobristTurn = prng(&state);
+}
+
+static uint64_t zobrist_castling(bitboard_t castleRooks)
+{
+    bitboard_t k = 0;
+
+    while (castleRooks)
+        k ^= ZobristCastling[bb_pop_lsb(&castleRooks)];
+
+    return k;
+}
 
 // Sets the position in its empty state (no pieces, white to play, rule50=0, etc.)
 static void clear(Position *pos)
@@ -504,13 +533,6 @@ bitboard_t calc_pins(const Position *pos)
     }
 
     return result;
-}
-
-bool pos_move_is_capture(const Position *pos, move_t m)
-{
-    const int from = move_from(m), to = move_to(m);
-    return bb_test(pos->byColor[opposite(pos->turn)], to)
-        || (pos_piece_on(pos, from) == PAWN && (to == pos->epSquare || move_prom(m) < NB_PIECE));
 }
 
 bool pos_move_is_castling(const Position *pos, move_t m)

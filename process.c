@@ -1,7 +1,8 @@
-#include "os.h"
 #include <signal.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <unistd.h>
+#include "process.h"
 
 bool process_create(Process *p, const char *cmd)
 {
