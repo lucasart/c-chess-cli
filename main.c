@@ -13,6 +13,7 @@
  * not, see <http://www.gnu.org/licenses/>.
 */
 #include "process.h"
+#include "gen.h"
 #include <string.h>
 
 int main(int argc, char **argv)
@@ -46,5 +47,6 @@ int main(int argc, char **argv)
 
         process_writeln(&p, "quit\n");
         process_terminate(&p);
-    }
+    } else
+        gen_run_test();
 }
