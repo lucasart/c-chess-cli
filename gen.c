@@ -15,19 +15,27 @@
 #include <stdio.h>
 #include "gen.h"
 
-static move_t *serialize_moves(int from, bitboard_t targets, move_t *mList)
+static move_t *serialize_piece_moves(int from, bitboard_t pins, int king, bitboard_t targets,
+    move_t *mList)
 {
+
+    if (bb_test(pins, from))
+        targets &= Ray[king][from];
+
     while (targets)
         *mList++ = move_build(from, bb_pop_lsb(&targets), NB_PIECE);
 
     return mList;
 }
 
-static move_t *serialize_pawn_moves(bitboard_t pawns, int shift, move_t *mList)
+static move_t *serialize_pawn_moves(bitboard_t pawns, bitboard_t pins, int king, int shift,
+    move_t *mList)
 {
     while (pawns) {
         const int from = bb_pop_lsb(&pawns);
-        *mList++ = move_build(from, from + shift, NB_PIECE);
+
+        if (!bb_test(pins, from) || bb_test(Ray[king][from], from + shift))
+            *mList++ = move_build(from, from + shift, NB_PIECE);
     }
 
     return mList;
@@ -36,29 +44,48 @@ static move_t *serialize_pawn_moves(bitboard_t pawns, int shift, move_t *mList)
 static move_t *gen_pawn_moves(const Position *pos, move_t *mList, bitboard_t filter)
 {
     const int us = pos->turn, them = opposite(us);
+    const int king = pos_king_square(pos, us);
     const int push = push_inc(us);
-    const bitboard_t capturable = (pos->byColor[them] | pos_ep_square_bb(pos)) & filter;
+    const bitboard_t capturable = pos->byColor[them] & filter;
 
-    // ** Non promotions **
+    // ** Normal moves **
     const bitboard_t nonPromotingPawns = pos_pieces_cp(pos, us, PAWN)
         & ~Rank[relative_rank(us, RANK_7)];
 
     // Left captures
     bitboard_t b = nonPromotingPawns & ~File[FILE_A] & bb_shift(capturable, -(push + LEFT));
-    mList = serialize_pawn_moves(b, push + LEFT, mList);
+    mList = serialize_pawn_moves(b, pos->pins, king, push + LEFT, mList);
 
     // Right captures
     b = nonPromotingPawns & ~File[FILE_H] & bb_shift(capturable, -(push + RIGHT));
-    mList = serialize_pawn_moves(b, push + RIGHT, mList);
+    mList = serialize_pawn_moves(b, pos->pins, king, push + RIGHT, mList);
 
     // Single pushes
     b = nonPromotingPawns & bb_shift(~pos_pieces(pos) & filter, -push);
-    mList = serialize_pawn_moves(b, push, mList);
+    mList = serialize_pawn_moves(b, pos->pins, king, push, mList);
 
     // Double pushes
     b = nonPromotingPawns & Rank[relative_rank(us, RANK_2)] & bb_shift(~pos_pieces(pos), -push)
         & bb_shift(~pos_pieces(pos) & filter, -2 * push);
-    mList = serialize_pawn_moves(b, 2 * push, mList);
+    mList = serialize_pawn_moves(b, pos->pins, king, 2 * push, mList);
+
+    // ** En passant **
+    if (pos->epSquare != NB_SQUARE) {
+        bitboard_t epCapturingPawns = PawnAttacks[them][pos->epSquare] & nonPromotingPawns;
+
+        while (epCapturingPawns) {
+            const int from = bb_pop_lsb(&epCapturingPawns);
+
+            bitboard_t occ = pos_pieces(pos);
+            bb_clear(&occ, from);
+            bb_set(&occ, pos->epSquare);
+            bb_clear(&occ, pos->epSquare + push_inc(them));
+
+            if (!(bb_rook_attacks(king, occ) & pos_pieces_cpp(pos, them, ROOK, QUEEN))
+                    && !(bb_bishop_attacks(king, occ) & pos_pieces_cpp(pos, them, BISHOP, QUEEN)))
+                *mList++ = move_build(from, pos->epSquare, NB_PIECE);
+        }
+    }
 
     // ** Promotions **
     bitboard_t promotingPawns = pos_pieces_cp(pos, us, PAWN) & Rank[relative_rank(us, RANK_7)];
@@ -76,47 +103,52 @@ static move_t *gen_pawn_moves(const Position *pos, move_t *mList, bitboard_t fil
         while (targets) {
             const int to = bb_pop_lsb(&targets);
 
-            for (int prom = QUEEN; prom >= KNIGHT; --prom)
-                *mList++ = move_build(from, to, prom);
+            if (!bb_test(pos->pins, from) || bb_test(Ray[king][from], to))
+                for (int prom = QUEEN; prom >= KNIGHT; --prom)
+                    *mList++ = move_build(from, to, prom);
         }
     }
 
     return mList;
 }
 
-static move_t *gen_piece_moves(const Position *pos, move_t *mList, bitboard_t filter, bool kingMoves)
+static move_t *gen_piece_moves(const Position *pos, move_t *mList, bitboard_t filter,
+    bool kingMoves)
 {
     const int us = pos->turn;
-    int from;
+    const int king = pos_king_square(pos, us);
 
     // King moves
     if (kingMoves) {
-        from = pos_king_square(pos, us);
-        mList = serialize_moves(from, KingAttacks[from] & filter & ~pos->attacked, mList);
+        const int from = pos_king_square(pos, us);
+        mList = serialize_piece_moves(from, pos->pins, king, KingAttacks[from] & filter
+            & ~pos->attacked, mList);
     }
 
     // Knight moves
     bitboard_t knights = pos_pieces_cp(pos, us, KNIGHT);
 
     while (knights) {
-        from = bb_pop_lsb(&knights);
-        mList = serialize_moves(from, KnightAttacks[from] & filter, mList);
+        const int from = bb_pop_lsb(&knights);
+        mList = serialize_piece_moves(from, pos->pins, king, KnightAttacks[from] & filter, mList);
     }
 
     // Rook moves
     bitboard_t rookMovers = pos_pieces_cpp(pos, us, ROOK, QUEEN);
 
     while (rookMovers) {
-        from = bb_pop_lsb(&rookMovers);
-        mList = serialize_moves(from, bb_rook_attacks(from, pos_pieces(pos)) & filter, mList);
+        const int from = bb_pop_lsb(&rookMovers);
+        mList = serialize_piece_moves(from, pos->pins, king,
+            bb_rook_attacks(from, pos_pieces(pos)) & filter, mList);
     }
 
     // Bishop moves
     bitboard_t bishopMovers = pos_pieces_cpp(pos, us, BISHOP, QUEEN);
 
     while (bishopMovers) {
-        from = bb_pop_lsb(&bishopMovers);
-        mList = serialize_moves(from, bb_bishop_attacks(from, pos_pieces(pos)) & filter, mList);
+        const int from = bb_pop_lsb(&bishopMovers);
+        mList = serialize_piece_moves(from, pos->pins, king,
+            bb_bishop_attacks(from, pos_pieces(pos)) & filter, mList);
     }
 
     return mList;
@@ -135,7 +167,7 @@ static move_t *gen_castling_moves(const Position *pos, move_t *mList)
         const int rto = square_from(rank_of(rook), rook > king ? FILE_F : FILE_D);
 
         if (bb_count((Segment[king][kto] | Segment[rook][rto]) & pos_pieces(pos)) == 2
-                && !(pos->attacked & Segment[king][kto]))
+                && !(pos->attacked & Segment[king][kto]) && !bb_test(pos->pins, rook))
             *mList++ = move_build(king, rook, NB_PIECE);
     }
 
@@ -149,7 +181,8 @@ static move_t *gen_check_escapes(const Position *pos, move_t *mList)
     const int king = pos_king_square(pos, pos->turn);
 
     // King moves
-    mList = serialize_moves(king, KingAttacks[king] & ~ours & ~pos->attacked, mList);
+    mList = serialize_piece_moves(king, pos->pins, king, KingAttacks[king] & ~ours & ~pos->attacked,
+        mList);
 
     if (!bb_several(pos->checkers)) {
         // Blocking moves (single checker)
@@ -176,17 +209,19 @@ static move_t *gen_check_escapes(const Position *pos, move_t *mList)
 
 static uint64_t gen_leaves(const Position *pos, int depth, int ply, bool chess960)
 {
-    if (depth <= 0)
+    if (depth <= 0) {
+        assert(depth == 0);
         return 1;
+    }
 
-    const bitboard_t pins = calc_pins(pos);
     uint64_t result = 0;
     move_t mList[MAX_MOVES], *end = gen_all_moves(pos, mList);
 
-    for (move_t *m = mList; m != end; m++) {
-        if (!gen_is_legal(pos, pins, *m))
-            continue;
+    // Bulk counting
+    if (depth == 1 && ply > 0)
+        return end - mList;
 
+    for (move_t *m = mList; m != end; m++) {
         Position after;
         pos_move(&after, pos, *m);
         const uint64_t subTree = gen_leaves(&after, depth - 1, ply + 1, chess960);
@@ -212,39 +247,6 @@ move_t *gen_all_moves(const Position *pos, move_t *mList)
         m = gen_piece_moves(pos, m, ~pos->byColor[pos->turn], true);
         m = gen_castling_moves(pos, m);
         return m;
-    }
-}
-
-bool gen_is_legal(const Position *pos, bitboard_t pins, move_t m)
-{
-    const int from = move_from(m), to = move_to(m);
-    const int piece = pos_piece_on(pos, from);
-    const int king = pos_king_square(pos, pos->turn);
-
-    if (piece == KING) {
-        if (bb_test(pos->byColor[pos->turn], to)) {
-            // Castling: king can't move through attacked square, and rook can't be pinned
-            assert(pos_piece_on(pos, to) == ROOK);
-            return !bb_test(pins, to);
-        } else
-            // Normal king move: do not land on an attacked square (already filtered at generation)
-            return true;
-    } else {
-        // Normal case: illegal if pinned, and moves out of pin-ray
-        if (bb_test(pins, from) && !bb_test(Ray[king][from], to))
-            return false;
-
-        // En-passant special case: also illegal if self-check through the en-passant captured pawn
-        if (to == pos->epSquare && piece == PAWN) {
-            const int us = pos->turn, them = opposite(us);
-            bitboard_t occ = pos_pieces(pos);
-            bb_clear(&occ, from);
-            bb_set(&occ, to);
-            bb_clear(&occ, to + push_inc(them));
-            return !(bb_rook_attacks(king, occ) & pos_pieces_cpp(pos, them, ROOK, QUEEN))
-                && !(bb_bishop_attacks(king, occ) & pos_pieces_cpp(pos, them, BISHOP, QUEEN));
-        } else
-            return true;
     }
 }
 
@@ -275,9 +277,7 @@ void gen_run_test()
     Position pos;
 
     for (size_t i = 0; i < sizeof(tests) / sizeof(Test); i++) {
-
         pos_set(&pos, tests[i].fen);
-
         pos_print(&pos);
         printf("depth %d:\n", tests[i].depth);
 

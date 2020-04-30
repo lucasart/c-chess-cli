@@ -58,7 +58,6 @@ static uint64_t zobrist_castling(bitboard_t castleRooks)
 static void clear(Position *pos)
 {
     memset(pos, 0, sizeof *pos);
-    memset(pos->pieceOn, NB_PIECE, sizeof pos->pieceOn);
 }
 
 // Remove 'piece' of 'color' on 'square'. Such a piece must be there first.
@@ -70,7 +69,6 @@ static void clear_square(Position *pos, int color, int piece, int square)
 
     bb_clear(&pos->byColor[color], square);
     bb_clear(&pos->byPiece[piece], square);
-    pos->pieceOn[square] = NB_PIECE;
     pos->key ^= ZobristKey[color][piece][square];
 }
 
@@ -83,11 +81,10 @@ static void set_square(Position *pos, int color, int piece, int square)
 
     bb_set(&pos->byColor[color], square);
     bb_set(&pos->byPiece[piece], square);
-    pos->pieceOn[square] = piece;
     pos->key ^= ZobristKey[color][piece][square];
 }
 
-// Squares attacked by pieces of 'color'
+// Squares attacked by pieces of 'color'. Note that attacks through a checked king are generated.
 static bitboard_t attacked_by(const Position *pos, int color)
 {
     BOUNDS(color, NB_COLOR);
@@ -104,7 +101,7 @@ static bitboard_t attacked_by(const Position *pos, int color)
     result |= bb_shift(pawns & ~File[FILE_A], push_inc(color) + LEFT);
     result |= bb_shift(pawns & ~File[FILE_H], push_inc(color) + RIGHT);
 
-    // Sliders
+    // Sliders (using modified occupancy to see through an eventual checked king)
     bitboard_t _occ = pos_pieces(pos) ^ pos_pieces_cp(pos, opposite(color), KING);
     bitboard_t rookMovers = pos_pieces_cpp(pos, color, ROOK, QUEEN);
 
@@ -128,6 +125,21 @@ static void finish(Position *pos)
     pos->attacked = attacked_by(pos, them);
     pos->checkers = bb_test(pos->attacked, king)
         ? pos_attackers_to(pos, king, pos_pieces(pos)) & pos->byColor[them] : 0;
+
+    // Calculate pins
+    pos->pins = 0;
+    bitboard_t candidates = (pos_pieces_cpp(pos, them, ROOK, QUEEN) & bb_rook_attacks(king, 0))
+        | (pos_pieces_cpp(pos, them, BISHOP, QUEEN) & bb_bishop_attacks(king, 0));
+
+    while (candidates) {
+        const int square = bb_pop_lsb(&candidates);
+        bitboard_t skewered = Segment[king][square] & pos_pieces(pos);
+        bb_clear(&skewered, king);
+        bb_clear(&skewered, square);
+
+        if (!bb_several(skewered) && (skewered & pos->byColor[us]))
+            pos->pins |= skewered;
+    }
 
 #ifndef NDEBUG
     // Verify that byColor[] and byPiece[] do not collide, and are consistent
@@ -184,19 +196,15 @@ static void finish(Position *pos)
         assert(!bb_test(pos_pieces(pos), pos->epSquare - push_inc(color)));
     }
 
-    // Verify key, pieceOn[]
+    // Verify key
     bitboard_t key = 0;
 
     for (int color = WHITE; color <= BLACK; color++)
         for (int piece = KNIGHT; piece <= PAWN; piece++) {
             bitboard_t b = pos_pieces_cp(pos, color, piece);
 
-            while (b) {
-                const int square = bb_pop_lsb(&b);
-                assert(pos->pieceOn[square] == piece);
-
-                key ^= ZobristKey[color][piece][square];
-            }
+            while (b)
+                key ^= ZobristKey[color][piece][bb_pop_lsb(&b)];
         }
 
     key ^= ZobristEnPassant[pos->epSquare] ^ (pos->turn == BLACK ? ZobristTurn : 0)
@@ -503,7 +511,14 @@ int pos_color_on(const Position *pos, int square)
 int pos_piece_on(const Position *pos, int square)
 {
     BOUNDS(square, NB_SQUARE);
-    return pos->pieceOn[square];
+
+    int piece;
+
+    for (piece = KNIGHT; piece <= PAWN; piece++)
+        if (bb_test(pos->byPiece[piece], square))
+            break;
+
+    return piece;
 }
 
 // Attackers (or any color) to square 'square', using occupancy 'occ' for rook/bishop attacks
@@ -516,28 +531,6 @@ bitboard_t pos_attackers_to(const Position *pos, int square, bitboard_t occ)
         | (KingAttacks[square] & pos->byPiece[KING])
         | (bb_rook_attacks(square, occ) & (pos->byPiece[ROOK] | pos->byPiece[QUEEN]))
         | (bb_bishop_attacks(square, occ) & (pos->byPiece[BISHOP] | pos->byPiece[QUEEN]));
-}
-
-// Pinned pieces for the side to move
-bitboard_t calc_pins(const Position *pos)
-{
-    const int us = pos->turn, them = opposite(us);
-    const int king = pos_king_square(pos, us);
-    bitboard_t pinners = (pos_pieces_cpp(pos, them, ROOK, QUEEN) & bb_rook_attacks(king, 0))
-        | (pos_pieces_cpp(pos, them, BISHOP, QUEEN) & bb_bishop_attacks(king, 0));
-    bitboard_t result = 0;
-
-    while (pinners) {
-        const int square = bb_pop_lsb(&pinners);
-        bitboard_t skewered = Segment[king][square] & pos_pieces(pos);
-        bb_clear(&skewered, king);
-        bb_clear(&skewered, square);
-
-        if (!bb_several(skewered) && (skewered & pos->byColor[us]))
-            result |= skewered;
-    }
-
-    return result;
 }
 
 bool pos_move_is_castling(const Position *pos, move_t m)
