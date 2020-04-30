@@ -15,8 +15,9 @@
 #include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 #include "position.h"
+
+static const char *PieceLabel[NB_COLOR] = {"NBRQKP.", "nbrqkp."};
 
 static uint64_t ZobristKey[NB_COLOR][NB_PIECE][NB_SQUARE];
 static uint64_t ZobristCastling[NB_SQUARE], ZobristEnPassant[NB_SQUARE + 1], ZobristTurn;
@@ -52,6 +53,27 @@ static uint64_t zobrist_castling(bitboard_t castleRooks)
         k ^= ZobristCastling[bb_pop_lsb(&castleRooks)];
 
     return k;
+}
+
+static void square_to_string(int square, char *str)
+{
+    BOUNDS(square, NB_SQUARE + 1);
+
+    if (square == NB_SQUARE)
+        *str++ = '-';
+    else {
+        *str++ = file_of(square) + 'a';
+        *str++ = rank_of(square) + '1';
+    }
+
+    *str = '\0';
+}
+
+static int string_to_square(const char *str)
+{
+    return *str != '-'
+        ? square_from(str[1] - '1', str[0] - 'a')
+        : NB_SQUARE;
 }
 
 // Sets the position in its empty state (no pieces, white to play, rule50=0, etc.)
@@ -114,6 +136,18 @@ static bitboard_t attacked_by(const Position *pos, int color)
         result |= bb_bishop_attacks(bb_pop_lsb(&bishopMovers), _occ);
 
     return result;
+}
+
+// Attackers (or any color) to square 'square', using occupancy 'occ' for rook/bishop attacks
+static bitboard_t pos_attackers_to(const Position *pos, int square, bitboard_t occ)
+{
+    BOUNDS(square, NB_SQUARE);
+    return (pos_pieces_cp(pos, WHITE, PAWN) & PawnAttacks[BLACK][square])
+        | (pos_pieces_cp(pos, BLACK, PAWN) & PawnAttacks[WHITE][square])
+        | (KnightAttacks[square] & pos->byPiece[KNIGHT])
+        | (KingAttacks[square] & pos->byPiece[KING])
+        | (bb_rook_attacks(square, occ) & (pos->byPiece[ROOK] | pos->byPiece[QUEEN]))
+        | (bb_bishop_attacks(square, occ) & (pos->byPiece[BISHOP] | pos->byPiece[QUEEN]));
 }
 
 // Helper function used to facorize common tasks, after setting up a position
@@ -215,29 +249,6 @@ static void finish(Position *pos)
     assert(pos->turn == WHITE || pos->turn == BLACK);
     assert(pos->rule50 < 100);
 #endif
-}
-
-const char *PieceLabel[NB_COLOR] = {"NBRQKP.", "nbrqkp."};
-
-void square_to_string(int square, char *str)
-{
-    BOUNDS(square, NB_SQUARE + 1);
-
-    if (square == NB_SQUARE)
-        *str++ = '-';
-    else {
-        *str++ = file_of(square) + 'a';
-        *str++ = rank_of(square) + '1';
-    }
-
-    *str = '\0';
-}
-
-int string_to_square(const char *str)
-{
-    return *str != '-'
-        ? square_from(str[1] - '1', str[0] - 'a')
-        : NB_SQUARE;
 }
 
 // Set position from FEN string
@@ -359,7 +370,7 @@ void pos_get(const Position *pos, char *fen)
     }
 
     // En passant and 50 move
-    char str[3];
+    char str[MAX_SQUARE_CHAR];
     square_to_string(pos->epSquare, str);
     sprintf(fen, " %s %d", str, pos->rule50);
 }
@@ -439,19 +450,7 @@ void pos_move(Position *pos, const Position *before, move_t m)
     pos->key ^= ZobristTurn;
     pos->key ^= ZobristEnPassant[before->epSquare] ^ ZobristEnPassant[pos->epSquare];
     pos->key ^= zobrist_castling(before->castleRooks ^ pos->castleRooks);
-
-    finish(pos);
-}
-
-// Play a null move (ie. switch sides): pos = before + play(null)
-void pos_switch(Position *pos, const Position *before)
-{
-    *pos = *before;
-    pos->epSquare = NB_SQUARE;
-
-    pos->turn = opposite(pos->turn);
-    pos->key ^= ZobristTurn;
-    pos->key ^= ZobristEnPassant[before->epSquare] ^ ZobristEnPassant[pos->epSquare];
+    pos->lastMove = m;
 
     finish(pos);
 }
@@ -478,12 +477,6 @@ bitboard_t pos_pieces_cpp(const Position *pos, int color, int p1, int p2)
     BOUNDS(p1, NB_PIECE);
     BOUNDS(p2, NB_PIECE);
     return pos->byColor[color] & (pos->byPiece[p1] | pos->byPiece[p2]);
-}
-
-// En passant square, in bitboard format
-bitboard_t pos_ep_square_bb(const Position *pos)
-{
-    return pos->epSquare < NB_SQUARE ? 1ULL << pos->epSquare : 0;
 }
 
 // Detect insufficient material configuration (draw by chess rules only)
@@ -519,18 +512,6 @@ int pos_piece_on(const Position *pos, int square)
             break;
 
     return piece;
-}
-
-// Attackers (or any color) to square 'square', using occupancy 'occ' for rook/bishop attacks
-bitboard_t pos_attackers_to(const Position *pos, int square, bitboard_t occ)
-{
-    BOUNDS(square, NB_SQUARE);
-    return (pos_pieces_cp(pos, WHITE, PAWN) & PawnAttacks[BLACK][square])
-        | (pos_pieces_cp(pos, BLACK, PAWN) & PawnAttacks[WHITE][square])
-        | (KnightAttacks[square] & pos->byPiece[KNIGHT])
-        | (KingAttacks[square] & pos->byPiece[KING])
-        | (bb_rook_attacks(square, occ) & (pos->byPiece[ROOK] | pos->byPiece[QUEEN]))
-        | (bb_bishop_attacks(square, occ) & (pos->byPiece[BISHOP] | pos->byPiece[QUEEN]));
 }
 
 bool pos_move_is_castling(const Position *pos, move_t m)
@@ -592,18 +573,22 @@ void pos_print(const Position *pos)
         puts(line);
     }
 
-    char fen[MAX_FEN];
+    char fen[MAX_FEN_CHAR];
     pos_get(pos, fen);
     puts(fen);
 
-    bitboard_t b = pos->checkers;
+    char moveStr[MAX_MOVE_CHAR];
+    pos_move_to_string(pos, pos->lastMove, moveStr, true);
+    printf("Last move: %s\n", moveStr);
 
-    if (b) {
+    bitboard_t checkers = pos->checkers;
+
+    if (checkers) {
         puts("checkers:");
-        char str[3];
+        char str[MAX_SQUARE_CHAR];
 
-        while (b) {
-            square_to_string(bb_pop_lsb(&b), str);
+        while (checkers) {
+            square_to_string(bb_pop_lsb(&checkers), str);
             printf(" %s", str);
         }
 

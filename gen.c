@@ -253,7 +253,7 @@ move_t *gen_all_moves(const Position *pos, move_t *mList)
 void gen_run_test()
 {
     typedef struct {
-        char fen[MAX_FEN];
+        char fen[MAX_FEN_CHAR];
         int depth, leaves;
     } Test;
 

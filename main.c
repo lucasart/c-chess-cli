@@ -12,41 +12,37 @@
  * You should have received a copy of the GNU General Public License along with this program. If
  * not, see <http://www.gnu.org/licenses/>.
 */
-#include "process.h"
+#include "game.h"
 #include "gen.h"
 #include <string.h>
 
 int main(int argc, char **argv)
 {
-    if (argc > 1) {
-        Process p;
-        process_create(&p, argv[1]);
+    if (argc == 3) {
+        Game game;
+        game.chess960 = false;
+        pos_set(&game.pos[0], "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0");
 
-        char buf[0x100];
-        process_writeln(&p, "uci\n");
+        // Prepare engines
+        for (int i = 0; i < 2; i++) {
+            strcpy(game.e[i].name, argv[i + 1]);
+            engine_start(&game.e[i], argv[i + 1]);
 
-        while (true) {
-            process_readln(&p, buf, sizeof(buf));
-            printf("%s", buf);
+            char line[1024];
+            engine_writeln(&game.e[i], "uci\n");
 
-            if (!strcmp(buf, "uciok\n"))
-                break;
+            while (engine_readln(&game.e[i], line, sizeof line)
+                && strcmp(line, "uciok\n"));
         }
 
-        process_writeln(&p, "position startpos\n");
-        process_writeln(&p, "ucinewgame\n");
-        process_writeln(&p, "go depth 5\n");
+        // Play a game
+        play_game(&game);
 
-        while (true) {
-            process_readln(&p, buf, sizeof(buf));
-            printf("%s", buf);
-
-            if (strstr(buf, "bestmove"))
-                break;
+        // Close engines
+        for (int i = 0; i < 2; i++) {
+            engine_writeln(&game.e[i], "quit\n");
+            engine_stop(&game.e[i]);
         }
-
-        process_writeln(&p, "quit\n");
-        process_terminate(&p);
     } else
         gen_run_test();
 }
