@@ -21,17 +21,18 @@ int main(int argc, char **argv)
     if (argc == 3) {
         Game game;
         game.chess960 = false;
+        game.result = 0;
         pos_set(&game.pos[0], "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0");
 
         // Prepare engines
         for (int i = 0; i < 2; i++) {
-            strcpy(game.e[i].name, argv[i + 1]);
-            engine_start(&game.e[i], argv[i + 1]);
+            strcpy(game.engines[i].name, argv[i + 1]);
+            engine_start(&game.engines[i], argv[i + 1]);
 
             char line[1024];
-            engine_writeln(&game.e[i], "uci\n");
+            engine_writeln(&game.engines[i], "uci\n");
 
-            while (engine_readln(&game.e[i], line, sizeof line)
+            while (engine_readln(&game.engines[i], line, sizeof line)
                 && strcmp(line, "uciok\n"));
         }
 
@@ -40,9 +41,11 @@ int main(int argc, char **argv)
 
         // Close engines
         for (int i = 0; i < 2; i++) {
-            engine_writeln(&game.e[i], "quit\n");
-            engine_stop(&game.e[i]);
+            engine_writeln(&game.engines[i], "quit\n");
+            engine_stop(&game.engines[i]);
         }
+
+        game_print(&game, stdout);
     } else
         gen_run_test();
 }

@@ -81,7 +81,7 @@ bool engine_stop(Engine *e)
 
 bool engine_readln(const Engine *e, char *buf, size_t n)
 {
-    if (fgets(buf, n, e->in) >= 0) {
+    if (fgets(buf, n, e->in)) {
         printf("%s -> %s", e->name, buf);
         return true;
     }

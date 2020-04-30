@@ -7,11 +7,23 @@ enum {
     MAX_POSITION_CHAR = 9 + MAX_FEN_CHAR + 7 + 100 * MAX_MOVE_CHAR + 1
 };
 
+enum {
+    RESULT_NONE,
+    RESULT_MATE,  // checkmated
+    RESULT_STALEMATE,  // stalemate
+    RESULT_THREEFOLD,  // draw by 3 position repetition
+    RESULT_FIFTY_MOVES,  // draw by 50 moves rule
+    RESULT_INSUFFICIENT_MATERIAL,  // draw due to insufficient material to deliver checkmate
+    RESULT_MAX_PLY  // special draw "rule" (not supposed to happen)
+};
+
 typedef struct {
-    Engine e[2];
+    Engine engines[2];
     Position pos[MAX_GAME_PLY];  // list of positions since game start
     int ply;
     bool chess960;
+    int result;
 } Game;
 
 void play_game(Game *g);
+void game_print(const Game *game, FILE *out);

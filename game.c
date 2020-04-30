@@ -27,16 +27,7 @@ void build_position_command(const Game *game, char *str)
     strcat(str, "\n");
 }
 
-enum {
-    RESULT_NONE,
-    RESULT_MATE,
-    RESULT_STALEMATE,
-    RESULT_THREEFOLD,
-    RESULT_FIFTY_MOVES,
-    RESULT_INSUFFICIENT_MATERIAL
-};
-
-int game_over(const Game *game, move_t moves[MAX_MOVES], move_t **end)
+int game_result(const Game *game, move_t moves[MAX_MOVES], move_t **end)
 {
     const Position *pos = &game->pos[game->ply];
 
@@ -50,7 +41,7 @@ int game_over(const Game *game, move_t moves[MAX_MOVES], move_t **end)
     } else if (pos_insufficient_material(pos))
         return RESULT_INSUFFICIENT_MATERIAL;
 
-    // TODO: RESULT_THREEFOLD
+    // TODO: 3 move repetition
 
     return RESULT_NONE;
 }
@@ -58,35 +49,57 @@ int game_over(const Game *game, move_t moves[MAX_MOVES], move_t **end)
 void play_game(Game *game)
 {
     for (int i = 0; i < 2; i++) {
-        engine_writeln(&game->e[i], "ucinewgame\n");
-        engine_sync(&game->e[i]);
+        engine_writeln(&game->engines[i], "ucinewgame\n");
+        engine_sync(&game->engines[i]);
     }
 
+    move_t move = 0;
+
     for (game->ply = 0; game->ply < MAX_GAME_PLY; game->ply++) {
-        const Engine *eng = &game->e[game->ply % 2];  // engine whose turn it is
-        const Position *before = &game->pos[game->ply];  // before playing the move
-        Position *after = &game->pos[game->ply + 1];  // after playing the move
+        if (game->ply > 0)
+            pos_move(&game->pos[game->ply], &game->pos[game->ply - 1], move);
 
         move_t moves[MAX_MOVES], *end;
-        const int over = game_over(game, moves, &end);
-
-        if (over) {
-            printf("game_over = %d\n", over);
+        if ((game->result = game_result(game, moves, &end)))
             break;
-        }
 
-        char str[MAX_POSITION_CHAR];
-        build_position_command(game, str);
+        const Engine *engine = &game->engines[game->ply % 2];  // engine whose turn it is to play
 
-        engine_writeln(eng, str);
-        engine_sync(eng);
+        char posCmd[MAX_POSITION_CHAR];
+        build_position_command(game, posCmd);
+
+        engine_writeln(engine, posCmd);
+        engine_sync(engine);
 
         char moveStr[MAX_MOVE_CHAR];
-        engine_writeln(eng, "go depth 4\n");
-        engine_bestmove(eng, moveStr);
+        engine_writeln(engine, "go depth 4\n");
+        engine_bestmove(engine, moveStr);
 
-        const move_t move = pos_string_to_move(before, moveStr, game->chess960);
-        pos_move(after, before, move);
-        pos_print(after);
+        move = pos_string_to_move(&game->pos[game->ply], moveStr, game->chess960);
+        // TODO: check if the move is legal
+    }
+
+    if (!game->result) {
+        assert(game->ply == MAX_GAME_PLY - 1);
+        game->result = RESULT_MAX_PLY;
+    }
+}
+
+void game_print(const Game *game, FILE *out)
+// FIXME: Eventually we want PGN format
+{
+    char fen[MAX_FEN_CHAR];
+    pos_get(&game->pos[0], fen);
+
+    fprintf(out, "Start FEN: %s\n", fen);
+    fprintf(out, "Chess960: %d\n", game->chess960);
+    fprintf(out, "First player: %s\n", game->engines[0].name);
+    fprintf(out, "Second player: %s\n", game->engines[1].name);
+    fprintf(out, "Result: %d\n", game->result);
+
+    for (int ply = 1; ply <= game->ply; ply++) {
+        char moveStr[MAX_MOVE_CHAR];
+        pos_move_to_string(&game->pos[ply - 1], game->pos[ply].lastMove, moveStr, game->chess960);
+        fprintf(out, ply % 20 == 0 || ply == game->ply ? "%s\n" : "%s ", moveStr);
     }
 }

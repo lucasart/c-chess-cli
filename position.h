@@ -21,10 +21,10 @@ typedef struct {
     bitboard_t checkers;  // if in check, enemy piece(s) giving check(s), otherwise empty
     bitboard_t pins;  // pinned pieces for the side to move
     uint64_t key;  // hash key encoding all information of the position (except rule50)
-    int turn;  // turn of play (WHITE or BLACK)
-    int epSquare;  // en-passant square (NB_SQUARE if none)
-    int rule50;  // ply counter for 50-move rule, ranging from 0 to 100 = draw (unless mated)
     move_t lastMove;  // last move played
+    uint8_t turn;  // turn of play (WHITE or BLACK)
+    uint8_t epSquare;  // en-passant square (NB_SQUARE if none)
+    uint8_t rule50;  // ply counter for 50-move rule, ranging from 0 to 100 = draw (unless mated)
 } Position;
 
 void pos_set(Position *pos, const char *fen);
