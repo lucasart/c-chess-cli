@@ -1,4 +1,5 @@
 #include "game.h"
+#include "gen.h"
 
 void build_position_command(const Game *game, char *str)
 // Builds a string of the form position fen ... [moves ...]. Implements rule50 pruning, which means
@@ -26,6 +27,34 @@ void build_position_command(const Game *game, char *str)
     strcat(str, "\n");
 }
 
+enum {
+    RESULT_NONE,
+    RESULT_MATE,
+    RESULT_STALEMATE,
+    RESULT_THREEFOLD,
+    RESULT_FIFTY_MOVES,
+    RESULT_INSUFFICIENT_MATERIAL
+};
+
+int game_over(const Game *game, move_t moves[MAX_MOVES], move_t **end)
+{
+    const Position *pos = &game->pos[game->ply];
+
+    *end = gen_all_moves(pos, moves);
+
+    if (*end == moves)
+        return pos->checkers ? RESULT_MATE : RESULT_STALEMATE;
+    else if (pos->rule50 >= 100) {
+        assert(pos->rule50 == 100);
+        return RESULT_FIFTY_MOVES;
+    } else if (pos_insufficient_material(pos))
+        return RESULT_INSUFFICIENT_MATERIAL;
+
+    // TODO: RESULT_THREEFOLD
+
+    return RESULT_NONE;
+}
+
 void play_game(Game *game)
 {
     for (int i = 0; i < 2; i++) {
@@ -37,6 +66,14 @@ void play_game(Game *game)
         const Engine *eng = &game->e[game->ply % 2];  // engine whose turn it is
         const Position *before = &game->pos[game->ply];  // before playing the move
         Position *after = &game->pos[game->ply + 1];  // after playing the move
+
+        move_t moves[MAX_MOVES], *end;
+        const int over = game_over(game, moves, &end);
+
+        if (over) {
+            printf("game_over = %d\n", over);
+            break;
+        }
 
         char str[MAX_POSITION_CHAR];
         build_position_command(game, str);

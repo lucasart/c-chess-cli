@@ -247,7 +247,7 @@ static void finish(Position *pos)
 
     // Verify turn and rule50
     assert(pos->turn == WHITE || pos->turn == BLACK);
-    assert(pos->rule50 < 100);
+    assert(pos->rule50 <= 100);
 #endif
 }
 
@@ -372,7 +372,7 @@ void pos_get(const Position *pos, char *fen)
     // En passant and 50 move
     char str[MAX_SQUARE_CHAR];
     square_to_string(pos->epSquare, str);
-    sprintf(fen, " %s %d", str, pos->rule50);
+    sprintf(fen, " %s %d %d", str, pos->rule50, 1);
 }
 
 // Play a move on a position copy (original 'before' is untouched): pos = before + play(m)
