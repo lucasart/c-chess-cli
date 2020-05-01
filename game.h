@@ -9,12 +9,13 @@ enum {
 
 enum {
     RESULT_NONE,
-    RESULT_MATE,  // checkmated
-    RESULT_STALEMATE,  // stalemate
+    RESULT_MATE,  // lost by being checkmated
+    RESULT_STALEMATE,  // draw by stalemate
     RESULT_THREEFOLD,  // draw by 3 position repetition
     RESULT_FIFTY_MOVES,  // draw by 50 moves rule
     RESULT_INSUFFICIENT_MATERIAL,  // draw due to insufficient material to deliver checkmate
-    RESULT_MAX_PLY  // special draw "rule" (not supposed to happen)
+    RESULT_ILLEGAL_MOVE,  // lost by playing an illegal move
+    RESULT_MAX_PLY  // not supposed to happen (count as draw but notify user)
 };
 
 typedef struct {

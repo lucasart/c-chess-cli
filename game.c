@@ -27,14 +27,14 @@ void build_position_command(const Game *game, char *str)
     strcat(str, "\n");
 }
 
-int game_result(const Game *game, move_t moves[MAX_MOVES], move_t **end)
+int game_result(const Game *game, move_t *begin, move_t **end)
 {
     GenInfo gi;
     const Position *pos = &game->pos[game->ply];
 
-    *end = gen_all_moves(pos, &gi, moves);
+    *end = gen_all_moves(pos, &gi, begin);
 
-    if (*end == moves)
+    if (*end == begin)
         return gi.checkers ? RESULT_MATE : RESULT_STALEMATE;
     else if (pos->rule50 >= 100) {
         assert(pos->rule50 == 100);
@@ -45,6 +45,15 @@ int game_result(const Game *game, move_t moves[MAX_MOVES], move_t **end)
     // TODO: 3 move repetition
 
     return RESULT_NONE;
+}
+
+bool illegal_move(move_t move, const move_t *begin, const move_t *end)
+{
+    for (const move_t *m = begin; m != end; m++)
+        if (*m == move)
+            return false;
+
+    return true;
 }
 
 void play_game(Game *game)
@@ -78,7 +87,11 @@ void play_game(Game *game)
         engine_bestmove(engine, moveStr);
 
         move = pos_string_to_move(&game->pos[game->ply], moveStr, game->chess960);
-        // TODO: check if the move is legal
+
+        if (illegal_move(move, moves, end)) {
+            game->result = RESULT_ILLEGAL_MOVE;
+            break;
+        }
     }
 
     if (!game->result) {
