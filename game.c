@@ -29,12 +29,13 @@ void build_position_command(const Game *game, char *str)
 
 int game_result(const Game *game, move_t moves[MAX_MOVES], move_t **end)
 {
+    GenInfo gi;
     const Position *pos = &game->pos[game->ply];
 
-    *end = gen_all_moves(pos, moves);
+    *end = gen_all_moves(pos, &gi, moves);
 
     if (*end == moves)
-        return pos->checkers ? RESULT_MATE : RESULT_STALEMATE;
+        return gi.checkers ? RESULT_MATE : RESULT_STALEMATE;
     else if (pos->rule50 >= 100) {
         assert(pos->rule50 == 100);
         return RESULT_FIFTY_MOVES;
@@ -60,6 +61,7 @@ void play_game(Game *game)
             pos_move(&game->pos[game->ply], &game->pos[game->ply - 1], move);
 
         move_t moves[MAX_MOVES], *end;
+
         if ((game->result = game_result(game, moves, &end)))
             break;
 

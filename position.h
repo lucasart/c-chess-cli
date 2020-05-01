@@ -17,9 +17,6 @@ typedef struct {
     bitboard_t byColor[NB_COLOR];  // eg. byColor[WHITE] = squares occupied by white's army
     bitboard_t byPiece[NB_PIECE];  // eg. byPiece[KNIGHT] = squares occupied by knights (any color)
     bitboard_t castleRooks;  // rooks with castling rights (eg. A1, A8, H1, H8 in start pos)
-    bitboard_t attacked;  // squares attacked by enemy
-    bitboard_t checkers;  // if in check, enemy piece(s) giving check(s), otherwise empty
-    bitboard_t pins;  // pinned pieces for the side to move
     uint64_t key;  // hash key encoding all information of the position (except rule50)
     move_t lastMove;  // last move played
     uint8_t turn;  // turn of play (WHITE or BLACK)
