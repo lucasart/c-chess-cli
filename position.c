@@ -243,10 +243,17 @@ void pos_set(Position *pos, const char *fen)
 
     pos->key ^= zobrist_castling(pos->castleRooks);
 
-    // en-passant, 50 move
+    // en-passant
     pos->epSquare = string_to_square(strtok_r(NULL, " ", &strPos));
     pos->key ^= ZobristEnPassant[pos->epSquare];
-    pos->rule50 = atoi(strtok_r(NULL, " ", &strPos));
+
+    // optional, default=0: 50 move counter (in plies, starts at 0)
+    token = strtok_r(NULL, " ", &strPos);
+    pos->rule50 = token ? atoi(token) : 0;
+
+    // optional, default=1: full move counter (in moves, starts at 1)
+    token = strtok_r(NULL, " ", &strPos);
+    pos->fullMove = token ? atoi(token) : 1;
 
     free(str);
     verify(pos);
@@ -306,7 +313,7 @@ void pos_get(const Position *pos, char *fen)
     // En passant and 50 move
     char str[MAX_SQUARE_CHAR];
     square_to_string(pos->epSquare, str);
-    sprintf(fen, " %s %d %d", str, pos->rule50, 1);
+    sprintf(fen, " %s %d %d", str, pos->rule50, pos->fullMove);
 }
 
 // Play a move on a position copy (original 'before' is untouched): pos = before + play(m)
@@ -384,6 +391,7 @@ void pos_move(Position *pos, const Position *before, move_t m)
     pos->key ^= ZobristTurn;
     pos->key ^= ZobristEnPassant[before->epSquare] ^ ZobristEnPassant[pos->epSquare];
     pos->key ^= zobrist_castling(before->castleRooks ^ pos->castleRooks);
+    pos->fullMove += pos->turn == WHITE;
     pos->lastMove = m;
 
     verify(pos);

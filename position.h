@@ -19,6 +19,7 @@ typedef struct {
     bitboard_t castleRooks;  // rooks with castling rights (eg. A1, A8, H1, H8 in start pos)
     uint64_t key;  // hash key encoding all information of the position (except rule50)
     move_t lastMove;  // last move played
+    uint16_t fullMove;  // full move number, starts at 1
     uint8_t turn;  // turn of play (WHITE or BLACK)
     uint8_t epSquare;  // en-passant square (NB_SQUARE if none)
     uint8_t rule50;  // ply counter for 50-move rule, ranging from 0 to 100 = draw (unless mated)
