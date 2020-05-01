@@ -18,15 +18,11 @@
 #include <unistd.h>
 #include "engine.h"
 
-bool engine_start(Engine *e, const char *cmd)
+bool engine_start(Engine *e, const char *cmd, FILE *log)
 {
-    // Diagram: Parent -> into -> Child -> outof -> Parent
-    // Each pipe have 2 ends: read end is 0, write end is 1
+    // Pipe diagram: Parent -> [1]into[0] -> Child -> [1]outof[0] -> Parent
+    // 'into' and 'outof' are pipes, each with 2 ends: read=0, write=1
     int outof[2], into[2];
-    #define PARENT_READ  outof[0]
-    #define CHILD_WRITE  outof[1]
-    #define CHILD_READ   into[0]
-    #define PARENT_WRITE into[1]
 
     if (pipe(outof) < 0 || pipe(into) < 0)
         return false;
@@ -35,28 +31,28 @@ bool engine_start(Engine *e, const char *cmd)
 
     if (e->pid == 0) {
         // in the child process
-        close(PARENT_WRITE);
-        close(PARENT_READ);
+        close(into[1]);
+        close(outof[0]);
 
-        if (dup2(CHILD_READ, STDIN_FILENO) == -1)
+        if (dup2(into[0], STDIN_FILENO) == -1)
             return false;
-        close(CHILD_READ);
+        close(into[0]);
 
-        if (dup2(CHILD_WRITE, STDOUT_FILENO) == -1)
+        if (dup2(outof[1], STDOUT_FILENO) == -1)
             return false;
-        close(CHILD_WRITE);
+        close(outof[1]);
 
         if (execlp(cmd, cmd, NULL) == -1)
             return false;
     } else if (e->pid > 0) {
         // in the parent process
-        close(CHILD_READ);
-        close(CHILD_WRITE);
+        close(into[0]);
+        close(outof[1]);
 
-        if (!(e->in = fdopen(PARENT_READ, "r")))
+        if (!(e->in = fdopen(outof[0], "r")))
             return false;
 
-        if (!(e->out = fdopen(PARENT_WRITE, "w")))
+        if (!(e->out = fdopen(into[1], "w")))
             return false;
 
         // FIXME: doesn't work on Windows
@@ -66,6 +62,7 @@ bool engine_start(Engine *e, const char *cmd)
         // fork failed
         return false;
 
+    e->log = log;
     return true;
 }
 
@@ -82,7 +79,9 @@ bool engine_stop(Engine *e)
 bool engine_readln(const Engine *e, char *buf, size_t n)
 {
     if (fgets(buf, n, e->in)) {
-        printf("%s -> %s", e->name, buf);
+        if (e->log)
+            fprintf(e->log, "%s -> %s", e->name, buf);
+
         return true;
     }
 
@@ -92,7 +91,9 @@ bool engine_readln(const Engine *e, char *buf, size_t n)
 bool engine_writeln(const Engine *e, char *buf)
 {
     if (fputs(buf, e->out) >= 0) {
-        printf("%s <- %s", e->name, buf);
+        if (e->log)
+            fprintf(e->log, "%s <- %s", e->name, buf);
+
         return true;
     }
 
@@ -109,16 +110,19 @@ void engine_sync(const Engine *e)
 }
 
 void engine_bestmove(const Engine *e, char *str)
-// Parse UCI output until bestmove is found and return it
-// TODO: parse info lines and return the last score (for adjudication)
 {
+    strcpy(str, "0000");  // default value
     char line[MAX_LINE_CHAR];
 
     while (engine_readln(e, line, sizeof line)) {
         char *linePos = NULL, *token = strtok_r(line, " \n", &linePos);
 
         if (token && !strcmp(token, "bestmove")) {
-            strcpy(str, strtok_r(NULL, " \n", &linePos));
+            token = strtok_r(NULL, " \n", &linePos);
+
+            if (token)
+                strcpy(str, token);
+
             break;
         }
     }

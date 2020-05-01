@@ -27,7 +27,7 @@ int main(int argc, char **argv)
         // Prepare engines
         for (int i = 0; i < 2; i++) {
             strcpy(game.engines[i].name, argv[i + 1]);
-            engine_start(&game.engines[i], argv[i + 1]);
+            engine_start(&game.engines[i], argv[i + 1], stderr);
 
             char line[1024];
             engine_writeln(&game.engines[i], "uci\n");

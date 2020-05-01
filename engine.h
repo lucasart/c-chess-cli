@@ -8,11 +8,11 @@ enum {MAX_LINE_CHAR = 1024};
 // Engine process
 typedef struct {
     pid_t pid;
-    FILE *in, *out;
+    FILE *in, *out, *log;
     char name[64];
 } Engine;
 
-bool engine_start(Engine *e, const char *cmd);
+bool engine_start(Engine *e, const char *cmd, FILE *log);
 bool engine_stop(Engine *e);
 
 bool engine_readln(const Engine *e, char *buf, size_t n);
