@@ -518,6 +518,7 @@ int pos_piece_on(const Position *pos, int square)
 }
 
 bool pos_move_is_capture(const Position *pos, move_t m)
+// Detect normal captures only (not en passant)
 {
     return bb_test(pos->byColor[opposite(pos->turn)], move_to(m));
 }
@@ -587,7 +588,7 @@ void pos_move_to_san(const Position *pos, move_t m, char *str)
     } else if (piece == PAWN) {
         *str++ = file_of(from) + 'a';
 
-        if (pos_move_is_capture(pos, m)) {
+        if (pos_move_is_capture(pos, m) || to == pos->epSquare) {
             *str++ = 'x';
             *str++ = file_of(to) + 'a';
         }
