@@ -499,6 +499,124 @@ move_t pos_string_to_move(const Position *pos, const char *str, bool chess960)
     return move_build(from, to, prom);
 }
 
+bitboard_t pos_calc_pins(const Position *pos)
+{
+    const int us = pos->turn, them = opposite(us);
+    const int king = pos_king_square(pos, us);
+
+    bitboard_t pins = 0;
+    bitboard_t pinners = (pos_pieces_cpp(pos, them, ROOK, QUEEN) & bb_rook_attacks(king, 0))
+        | (pos_pieces_cpp(pos, them, BISHOP, QUEEN) & bb_bishop_attacks(king, 0));
+
+    while (pinners) {
+        const int pinner = bb_pop_lsb(&pinners);
+        bitboard_t skewered = Segment[king][pinner] & pos_pieces(pos);
+        bb_clear(&skewered, king);
+        bb_clear(&skewered, pinner);
+
+        if (!bb_several(skewered) && (skewered & pos->byColor[us]))
+            pins |= skewered;
+    }
+
+    return pins;
+}
+
+void pos_move_to_san(const Position *pos, move_t m, char *str)
+// Converts a move to Standard Algebraic Notation. Note that the '+' (check) or '#' (checkmate)
+// suffixes are not generated here.
+{
+    const int us = pos->turn, them = opposite(us);
+    const int from = move_from(m), to = move_to(m), prom = move_prom(m);
+    const int piece = pos_piece_on(pos, from);
+
+    if (piece == KING) {
+        if (bb_test(pos->byColor[us], to))
+            strcpy(str, to > from ? "O-O" : "O-O-O");
+        else {
+            *str++ = 'K';
+
+            if (bb_test(pos->byColor[them], to))
+                *str++ = 'x';
+
+            square_to_string(to, str);
+        }
+    } else if (piece == PAWN) {
+        *str++ = file_of(from) + 'a';
+
+        if (bb_test(pos->byColor[them], to)) {
+            *str++ = 'x';
+            *str++ = file_of(to) + 'a';
+        }
+
+        *str++ = rank_of(to) + '1';
+
+        if (prom < NB_PIECE) {
+            *str++ = '=';
+            *str++ = PieceLabel[WHITE][prom];
+        }
+
+        *str = '\0';
+    } else {
+        *str++ = PieceLabel[WHITE][piece];
+
+        // ** SAN disambiguation **
+
+        // 1. Build a list of 'contesters', which are all our pieces of the same type that can also
+        // reach the 'to' square.
+        const bitboard_t pins = pos_calc_pins(pos);
+        bitboard_t contesters = pos_pieces_cp(pos, us, piece);
+        bb_clear(&contesters, from);
+
+        if (piece == KNIGHT)
+            // 1.1. Knights. Eestrict to those within a knight jump of of 'to' that are not pinned.
+            contesters &= KnightAttacks[to] & ~pins;
+        else {
+            // 1.2. Sliders
+
+            // 1.2.1. Restrict to those that can pseudo-legally reach the 'to' square.
+            bitboard_t occ = pos_pieces(pos);
+
+            if (piece == BISHOP)
+                contesters &= bb_bishop_attacks(to, occ);
+            else if (piece == ROOK)
+                contesters &= bb_rook_attacks(to, occ);
+            else if (piece == QUEEN)
+                contesters &= bb_bishop_attacks(to, occ) | bb_rook_attacks(to, occ);
+
+            // 1.2.2. Remove pinned sliders, which, by sliding to the 'to' square, would escape
+            // their pin-ray.
+            bitboard_t pinnedContesters = contesters & pins;
+
+            while (pinnedContesters) {
+                const int pinnedContester = bb_pop_lsb(&pinnedContesters);
+
+                if (!bb_test(Ray[pos_king_square(pos, us)][pinnedContester], to))
+                    bb_clear(&contesters, pinnedContester);
+            }
+        }
+
+        // 2. Use the contesters to disambiguate
+        if (contesters) {
+            // 2.1. Contested rank. Use file to disambiguate
+            if (Rank[rank_of(from)] & contesters)
+                *str++ = file_of(from) + 'a';
+
+            // 2.2. Contested file. Use rank to disambiguate
+            if (File[file_of(from)] & contesters)
+                *str++ = rank_of(from) + '1';
+
+            // Note that 2.1 and 2.2 are not mutually exclusive
+        }
+
+        // ** SAN disambiguation done **
+
+        if (bb_test(pos->byColor[them], to))
+            *str++ = 'x';
+
+        square_to_string(to, str);
+    }
+}
+
 // Prints the position in ASCII 'art' (for debugging)
 void pos_print(const Position *pos)
 {

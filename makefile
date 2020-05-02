@@ -1,11 +1,11 @@
-CC = musl-clang  # choices: gcc, clang, musl-gcc, musl-clang
-OUT = c-chess-cli  # output file
+CC = musl-clang
+OUT = c-chess-cli
 debug = no
 static = no
 
 # Compilation flags
 CF = -std=gnu99 -mpopcnt -O3 -flto -Wfatal-errors -Wall -Wextra -Wshadow
-LF = 
+LF =
 
 ifeq ($(debug),no)
 	CF += -DNDEBUG

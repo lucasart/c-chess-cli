@@ -240,25 +240,12 @@ static uint64_t gen_leaves(const Position *pos, int depth, int ply, bool chess96
     return result;
 }
 
-void gen_prepare(GenInfo *gi, const Position *pos)
+static void gen_prepare(GenInfo *gi, const Position *pos)
 {
     const int us = pos->turn, them = opposite(us);
     const int king = pos_king_square(pos, us);
 
-    // Calculate pins
-    gi->pins = 0;
-    bitboard_t candidates = (pos_pieces_cpp(pos, them, ROOK, QUEEN) & bb_rook_attacks(king, 0))
-        | (pos_pieces_cpp(pos, them, BISHOP, QUEEN) & bb_bishop_attacks(king, 0));
-
-    while (candidates) {
-        const int square = bb_pop_lsb(&candidates);
-        bitboard_t skewered = Segment[king][square] & pos_pieces(pos);
-        bb_clear(&skewered, king);
-        bb_clear(&skewered, square);
-
-        if (!bb_several(skewered) && (skewered & pos->byColor[us]))
-            gi->pins |= skewered;
-    }
+    gi->pins = pos_calc_pins(pos);
 
     // ** Calculate gi->attacked **
 

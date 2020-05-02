@@ -9,7 +9,7 @@ enum {MATE = 32000};
 // Max number of bytes needed to store strings
 enum {
     MAX_FEN_CHAR = 64 + 8 + 2 + 5 + 3 + 4 + 4 + 1,  // conservative upper bound
-    MAX_MOVE_CHAR = 2 + 2 + 1 + 1,  // eg. "e7e8q"
+    MAX_MOVE_CHAR = 8,  // enough for SAN and LAN (longest "exf8=Q+")
     MAX_SQUARE_CHAR = 2 + 1 // eg. "e2"
 };
 
@@ -41,6 +41,8 @@ int pos_piece_on(const Position *pos, int square);
 bool pos_move_is_castling(const Position *pos, move_t m);
 void pos_move_to_string(const Position *pos, move_t m, char *str, bool chess960);
 move_t pos_string_to_move(const Position *pos, const char *str, bool chess960);
-int pos_see(const Position *pos, move_t m);
+
+bitboard_t pos_calc_pins(const Position *pos);
+void pos_move_to_san(const Position *pos, move_t m, char *str);
 
 void pos_print(const Position *pos);

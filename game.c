@@ -89,7 +89,7 @@ void play_game(Game *game)
         engine_sync(engine);
 
         char moveStr[MAX_MOVE_CHAR];
-        engine_writeln(engine, "go depth 4\n");
+        engine_writeln(engine, "go depth 6\n");
         engine_bestmove(engine, moveStr);
 
         move = pos_string_to_move(&game->pos[game->ply], moveStr, game->chess960);
@@ -155,14 +155,20 @@ void game_print(const Game *game, FILE *out)
     fprintf(out, "[Termination \"%s\"]\n\n", terminationStr);
 
     for (int ply = 1; ply <= game->ply; ply++) {
-        char moveStr[MAX_MOVE_CHAR];
-        pos_move_to_string(&game->pos[ply - 1], game->pos[ply].lastMove, moveStr, game->chess960);
+        // Prepare SAN move base
+        char san[MAX_MOVE_CHAR];
+        pos_move_to_san(&game->pos[ply - 1], game->pos[ply].lastMove, san);
+
+        // FIXME: append '+' to checks, requires pos->checkers
+
+        if (ply == game->ply && game->result == RESULT_CHECKMATE)
+            strcat(san, "#");
 
         if (game->pos[ply - 1].turn == WHITE || ply == 1)
             fprintf(out, game->pos[ply - 1].turn == WHITE ? "%d. " : "%d.. ",
                 game->pos[ply - 1].fullMove);
 
-        fprintf(out, ply % 10 == 0 ? "%s\n" : "%s ", moveStr);
+        fprintf(out, ply % 10 == 0 ? "%s\n" : "%s ", san);
     }
 
     fprintf(out, "\n%s\n\n", resultStr);
