@@ -22,7 +22,7 @@ int main(int argc, char **argv)
         Game game;
         game.chess960 = false;
         game.result = 0;
-        pos_set(&game.pos[0], "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq -");
+        pos_set(&game.pos[0], "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR b KQkq -");
 
         // Prepare engines
         for (int i = 0; i < 2; i++) {

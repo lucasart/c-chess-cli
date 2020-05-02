@@ -9,7 +9,7 @@ enum {
 
 enum {
     RESULT_NONE,
-    RESULT_MATE,  // lost by being checkmated
+    RESULT_CHECKMATE,  // lost by being checkmated
     RESULT_STALEMATE,  // draw by stalemate
     RESULT_THREEFOLD,  // draw by 3 position repetition
     RESULT_FIFTY_MOVES,  // draw by 50 moves rule

@@ -1,10 +1,10 @@
 #include "game.h"
 #include "gen.h"
 
-void build_position_command(const Game *game, char *str)
-// Builds a string of the form position fen ... [moves ...]. Implements rule50 pruning, which means
-// start from the last position that reset the rule50 counter. This produces the shortest string,
-// without any loss of information.
+static void build_position_command(const Game *game, char *str)
+// Builds a string of the form "position fen ... [moves ...]". Implements rule50 pruning: start from
+// the last position that reset the rule50 counter, to reduce the move list to the minimum, without
+// losing information.
 {
     // Index of the starting FEN, where rule50 was last reset
     const int ply0 = max(game->ply - game->pos[game->ply].rule50, 0);
@@ -35,14 +35,20 @@ int game_result(const Game *game, move_t *begin, move_t **end)
     *end = gen_all_moves(pos, &gi, begin);
 
     if (*end == begin)
-        return gi.checkers ? RESULT_MATE : RESULT_STALEMATE;
+        return gi.checkers ? RESULT_CHECKMATE : RESULT_STALEMATE;
     else if (pos->rule50 >= 100) {
         assert(pos->rule50 == 100);
         return RESULT_FIFTY_MOVES;
     } else if (pos_insufficient_material(pos))
         return RESULT_INSUFFICIENT_MATERIAL;
+    else {
+        // Scan for 3-fold repetition
+        int repetitions = 1;
 
-    // TODO: 3 move repetition
+        for (int i = 4; i <= pos->rule50 && i <= game->ply; i += 2)
+            if (game->pos[game->ply - i].key == pos->key && ++repetitions >= 3)
+                return RESULT_THREEFOLD;
+    }
 
     return RESULT_NONE;
 }
@@ -95,26 +101,69 @@ void play_game(Game *game)
     }
 
     if (!game->result) {
-        assert(game->ply == MAX_GAME_PLY - 1);
+        assert(game->ply == MAX_GAME_PLY);
         game->result = RESULT_MAX_PLY;
     }
 }
 
-void game_print(const Game *game, FILE *out)
-// FIXME: Eventually we want PGN format
+void game_result_string(int result, int lastTurn, char *resultStr, char *terminationStr)
 {
-    char fen[MAX_FEN_CHAR];
-    pos_get(&game->pos[0], fen);
+    strcpy(terminationStr, "normal");  // default: termination by chess rules
 
-    fprintf(out, "Start FEN: %s\n", fen);
-    fprintf(out, "Chess960: %d\n", game->chess960);
-    fprintf(out, "First player: %s\n", game->engines[0].name);
-    fprintf(out, "Second player: %s\n", game->engines[1].name);
-    fprintf(out, "Result: %d\n", game->result);
+    if (result == RESULT_NONE) {
+        strcpy(resultStr, "*");
+        strcpy(terminationStr, "unterminated");
+    } else if (result == RESULT_CHECKMATE)
+        strcpy(resultStr, lastTurn == WHITE ? "0-1" : "1-0");
+    else if (result == RESULT_STALEMATE)
+        strcpy(resultStr, "1/2-1/2");
+    else if (result == RESULT_THREEFOLD)
+        strcpy(resultStr, "1/2-1/2");
+    else if (result == RESULT_FIFTY_MOVES)
+        strcpy(resultStr, "1/2-1/2");
+    else if (result ==RESULT_INSUFFICIENT_MATERIAL)
+        strcpy(resultStr, "1/2-1/2");
+    else if (result == RESULT_ILLEGAL_MOVE) {
+        strcpy(resultStr, lastTurn == WHITE ? "0-1" : "1-0");
+        strcpy(terminationStr, "illegal move");
+    } else if (result == RESULT_MAX_PLY) {
+        strcpy(resultStr, "1/2-1/2");
+        strcpy(terminationStr, "max ply");
+    }
+}
+
+void game_print(const Game *game, FILE *out)
+// FIXME: Use SAN as required by PGN
+{
+    char fen[MAX_FEN_CHAR], resultStr[8], terminationStr[16];
+
+    // Scan initial position
+    pos_get(&game->pos[0], fen);
+    bool blackFirst = game->pos[0].turn;
+
+    // Decode game result into human readable information
+    game_result_string(game->result, game->pos[game->ply].turn, resultStr, terminationStr);
+
+    fprintf(out, "[White \"%s\"]\n", game->engines[blackFirst].name);
+    fprintf(out, "[Black \"%s\"]\n", game->engines[!blackFirst].name);
+    fprintf(out, "[FEN \"%s\"]\n", fen);
+
+    if (game->chess960)
+        fputs("[Variant \"Chess960\"]", out);
+
+    fprintf(out, "[Result \"%s\"]\n", resultStr);
+    fprintf(out, "[Termination \"%s\"]\n\n", terminationStr);
 
     for (int ply = 1; ply <= game->ply; ply++) {
         char moveStr[MAX_MOVE_CHAR];
         pos_move_to_string(&game->pos[ply - 1], game->pos[ply].lastMove, moveStr, game->chess960);
-        fprintf(out, ply % 20 == 0 || ply == game->ply ? "%s\n" : "%s ", moveStr);
+
+        if (game->pos[ply - 1].turn == WHITE || ply == 1)
+            fprintf(out, game->pos[ply - 1].turn == WHITE ? "%d. " : "%d.. ",
+                game->pos[ply - 1].fullMove);
+
+        fprintf(out, ply % 10 == 0 ? "%s\n" : "%s ", moveStr);
     }
+
+    fprintf(out, "\n%s\n\n", resultStr);
 }
