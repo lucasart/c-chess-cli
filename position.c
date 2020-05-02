@@ -106,9 +106,70 @@ static void set_square(Position *pos, int color, int piece, int square)
     pos->key ^= ZobristKey[color][piece][square];
 }
 
-static void verify(Position *pos)
+static void finish(Position *pos)
 {
-    (void)pos;  // Silence compiler warning (unused variable)
+    const int us = pos->turn, them = opposite(us);
+    const int king = pos_king_square(pos, us);
+
+    // ** Calculate pos->pins **
+
+    pos->pins = 0;
+    bitboard_t pinners = (pos_pieces_cpp(pos, them, ROOK, QUEEN) & bb_rook_attacks(king, 0))
+        | (pos_pieces_cpp(pos, them, BISHOP, QUEEN) & bb_bishop_attacks(king, 0));
+
+    while (pinners) {
+        const int pinner = bb_pop_lsb(&pinners);
+        bitboard_t skewered = Segment[king][pinner] & pos_pieces(pos);
+        bb_clear(&skewered, king);
+        bb_clear(&skewered, pinner);
+
+        if (!bb_several(skewered) && (skewered & pos->byColor[us]))
+            pos->pins |= skewered;
+    }
+
+    // ** Calculate pos->attacked **
+
+    // King and Knight attacks
+    pos->attacked = KingAttacks[pos_king_square(pos, them)];
+    bitboard_t knights = pos_pieces_cp(pos, them, KNIGHT);
+
+    while (knights)
+        pos->attacked |= KnightAttacks[bb_pop_lsb(&knights)];
+
+    // Pawn captures
+    bitboard_t pawns = pos_pieces_cp(pos, them, PAWN);
+    pos->attacked |= bb_shift(pawns & ~File[FILE_A], push_inc(them) + LEFT);
+    pos->attacked |= bb_shift(pawns & ~File[FILE_H], push_inc(them) + RIGHT);
+
+    // Sliders (using modified occupancy to see through a checked king)
+    bitboard_t occ = pos_pieces(pos) ^ pos_pieces_cp(pos, opposite(them), KING);
+    bitboard_t rookMovers = pos_pieces_cpp(pos, them, ROOK, QUEEN);
+
+    while (rookMovers)
+        pos->attacked |= bb_rook_attacks(bb_pop_lsb(&rookMovers), occ);
+
+    bitboard_t bishopMovers = pos_pieces_cpp(pos, them, BISHOP, QUEEN);
+
+    while (bishopMovers)
+        pos->attacked |= bb_bishop_attacks(bb_pop_lsb(&bishopMovers), occ);
+
+    // ** Calculate pos->checkers **
+
+    if (bb_test(pos->attacked, king)) {
+        pos->checkers = (pos_pieces_cp(pos, them, PAWN) & PawnAttacks[us][king])
+            | (pos_pieces_cp(pos, them, KNIGHT) & KnightAttacks[king])
+            | (pos_pieces_cpp(pos, them, ROOK, QUEEN) & bb_rook_attacks(king, pos_pieces(pos)))
+            | (pos_pieces_cpp(pos, them, BISHOP, QUEEN) & bb_bishop_attacks(king, pos_pieces(pos)));
+
+        // We can't be checked by the opponent king
+        assert(!(pos_pieces_cp(pos, them, KING) & KingAttacks[king]));
+
+        // Since our king is attacked, we must have at least one checker. Also more than 2 checkers
+        // is impossible (even in Chess960).
+        assert(pos->checkers && bb_count(pos->checkers) <= 2);
+    } else
+        pos->checkers = 0;
+
 #ifndef NDEBUG
     // Verify that byColor[] and byPiece[] do not collide, and are consistent
     bitboard_t all = 0;
@@ -256,7 +317,7 @@ void pos_set(Position *pos, const char *fen)
     pos->fullMove = token ? atoi(token) : 1;
 
     free(str);
-    verify(pos);
+    finish(pos);
 }
 
 // Get FEN string of position
@@ -394,7 +455,7 @@ void pos_move(Position *pos, const Position *before, move_t m)
     pos->fullMove += pos->turn == WHITE;
     pos->lastMove = m;
 
-    verify(pos);
+    finish(pos);
 }
 
 // All pieces
@@ -456,6 +517,11 @@ int pos_piece_on(const Position *pos, int square)
     return piece;
 }
 
+bool pos_move_is_capture(const Position *pos, move_t m)
+{
+    return bb_test(pos->byColor[opposite(pos->turn)], move_to(m));
+}
+
 bool pos_move_is_castling(const Position *pos, move_t m)
 {
     return bb_test(pos->byColor[pos->turn], move_to(m));
@@ -499,43 +565,21 @@ move_t pos_string_to_move(const Position *pos, const char *str, bool chess960)
     return move_build(from, to, prom);
 }
 
-bitboard_t pos_calc_pins(const Position *pos)
-{
-    const int us = pos->turn, them = opposite(us);
-    const int king = pos_king_square(pos, us);
-
-    bitboard_t pins = 0;
-    bitboard_t pinners = (pos_pieces_cpp(pos, them, ROOK, QUEEN) & bb_rook_attacks(king, 0))
-        | (pos_pieces_cpp(pos, them, BISHOP, QUEEN) & bb_bishop_attacks(king, 0));
-
-    while (pinners) {
-        const int pinner = bb_pop_lsb(&pinners);
-        bitboard_t skewered = Segment[king][pinner] & pos_pieces(pos);
-        bb_clear(&skewered, king);
-        bb_clear(&skewered, pinner);
-
-        if (!bb_several(skewered) && (skewered & pos->byColor[us]))
-            pins |= skewered;
-    }
-
-    return pins;
-}
-
 void pos_move_to_san(const Position *pos, move_t m, char *str)
 // Converts a move to Standard Algebraic Notation. Note that the '+' (check) or '#' (checkmate)
 // suffixes are not generated here.
 {
-    const int us = pos->turn, them = opposite(us);
+    const int us = pos->turn;
     const int from = move_from(m), to = move_to(m), prom = move_prom(m);
     const int piece = pos_piece_on(pos, from);
 
     if (piece == KING) {
-        if (bb_test(pos->byColor[us], to))
+        if (pos_move_is_castling(pos, m))
             strcpy(str, to > from ? "O-O" : "O-O-O");
         else {
             *str++ = 'K';
 
-            if (bb_test(pos->byColor[them], to))
+            if (pos_move_is_capture(pos, m))
                 *str++ = 'x';
 
             square_to_string(to, str);
@@ -543,7 +587,7 @@ void pos_move_to_san(const Position *pos, move_t m, char *str)
     } else if (piece == PAWN) {
         *str++ = file_of(from) + 'a';
 
-        if (bb_test(pos->byColor[them], to)) {
+        if (pos_move_is_capture(pos, m)) {
             *str++ = 'x';
             *str++ = file_of(to) + 'a';
         }
@@ -563,7 +607,7 @@ void pos_move_to_san(const Position *pos, move_t m, char *str)
 
         // 1. Build a list of 'contesters', which are all our pieces of the same type that can also
         // reach the 'to' square.
-        const bitboard_t pins = pos_calc_pins(pos);
+        const bitboard_t pins = pos->pins;
         bitboard_t contesters = pos_pieces_cp(pos, us, piece);
         bb_clear(&contesters, from);
 
@@ -610,7 +654,7 @@ void pos_move_to_san(const Position *pos, move_t m, char *str)
 
         // ** SAN disambiguation done **
 
-        if (bb_test(pos->byColor[them], to))
+        if (pos_move_is_capture(pos, m))
             *str++ = 'x';
 
         square_to_string(to, str);

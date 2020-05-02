@@ -29,13 +29,12 @@ static void build_position_command(const Game *game, char *str)
 
 int game_result(const Game *game, move_t *begin, move_t **end)
 {
-    GenInfo gi;
     const Position *pos = &game->pos[game->ply];
 
-    *end = gen_all_moves(pos, &gi, begin);
+    *end = gen_all_moves(pos, begin);
 
     if (*end == begin)
-        return gi.checkers ? RESULT_CHECKMATE : RESULT_STALEMATE;
+        return pos->checkers ? RESULT_CHECKMATE : RESULT_STALEMATE;
     else if (pos->rule50 >= 100) {
         assert(pos->rule50 == 100);
         return RESULT_FIFTY_MOVES;
@@ -155,14 +154,17 @@ void game_print(const Game *game, FILE *out)
     fprintf(out, "[Termination \"%s\"]\n\n", terminationStr);
 
     for (int ply = 1; ply <= game->ply; ply++) {
-        // Prepare SAN move base
+        // Prepare SAN base
         char san[MAX_MOVE_CHAR];
         pos_move_to_san(&game->pos[ply - 1], game->pos[ply].lastMove, san);
 
-        // FIXME: append '+' to checks, requires pos->checkers
-
-        if (ply == game->ply && game->result == RESULT_CHECKMATE)
-            strcat(san, "#");
+        // Append check markers to SAN
+        if (game->pos[ply].checkers) {
+            if (ply == game->ply && game->result == RESULT_CHECKMATE)
+                strcat(san, "#");  // checkmate
+            else
+                strcat(san, "+");  // normal check
+        }
 
         if (game->pos[ply - 1].turn == WHITE || ply == 1)
             fprintf(out, game->pos[ply - 1].turn == WHITE ? "%d. " : "%d.. ",
@@ -171,5 +173,5 @@ void game_print(const Game *game, FILE *out)
         fprintf(out, ply % 10 == 0 ? "%s\n" : "%s ", san);
     }
 
-    fprintf(out, "\n%s\n\n", resultStr);
+    fprintf(out, "%s\n\n", resultStr);
 }

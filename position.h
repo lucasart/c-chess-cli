@@ -18,6 +18,9 @@ typedef struct {
     bitboard_t byPiece[NB_PIECE];  // eg. byPiece[KNIGHT] = squares occupied by knights (any color)
     bitboard_t castleRooks;  // rooks with castling rights (eg. A1, A8, H1, H8 in start pos)
     uint64_t key;  // hash key encoding all information of the position (except rule50)
+    uint64_t attacked;  // squares attacked by enemy
+    uint64_t checkers;  // if in check, enemy piece(s) giving check(s), otherwise empty
+    uint64_t pins;  // pinned pieces for the side to move
     move_t lastMove;  // last move played
     uint16_t fullMove;  // full move number, starts at 1
     uint8_t turn;  // turn of play (WHITE or BLACK)
@@ -40,9 +43,7 @@ int pos_piece_on(const Position *pos, int square);
 
 bool pos_move_is_castling(const Position *pos, move_t m);
 void pos_move_to_string(const Position *pos, move_t m, char *str, bool chess960);
-move_t pos_string_to_move(const Position *pos, const char *str, bool chess960);
-
-bitboard_t pos_calc_pins(const Position *pos);
 void pos_move_to_san(const Position *pos, move_t m, char *str);
+move_t pos_string_to_move(const Position *pos, const char *str, bool chess960);
 
 void pos_print(const Position *pos);
