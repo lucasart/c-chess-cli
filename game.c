@@ -1,7 +1,8 @@
 #include "game.h"
 #include "gen.h"
+#include "str.h"
 
-static void build_position_command(const Game *game, char *str)
+static void build_position_command(const Game *game, str_t *str)
 // Builds a string of the form "position fen ... [moves ...]". Implements rule50 pruning: start from
 // the last position that reset the rule50 counter, to reduce the move list to the minimum, without
 // losing information.
@@ -11,20 +12,20 @@ static void build_position_command(const Game *game, char *str)
 
     char fen[MAX_FEN_CHAR];
     pos_get(&game->pos[ply0], fen);
-    strcat(strcpy(str, "position fen "), fen);
+    str_cat(str_cpy(str, "position fen "), fen);
 
     if (ply0 < game->ply) {
-        strcat(str, " moves");
+        str_cat(str, " moves");
 
         for (int ply = ply0 + 1; ply <= game->ply; ply++) {
             char token[MAX_MOVE_CHAR + 1] = " ";
             pos_move_to_string(&game->pos[ply - 1], game->pos[ply].lastMove, token + 1,
                 game->chess960);
-            strcat(str, token);
+            str_cat(str, token);
         }
     }
 
-    strcat(str, "\n");
+    str_cat(str, "\n");
 }
 
 int game_result(const Game *game, move_t *begin, move_t **end)
@@ -81,11 +82,13 @@ void play_game(Game *game)
 
         const Engine *engine = &game->engines[game->ply % 2];  // engine whose turn it is to play
 
-        char posCmd[MAX_POSITION_CHAR];
-        build_position_command(game, posCmd);
+        str_t posCmd;
+        str_init(&posCmd);
+        build_position_command(game, &posCmd);
 
-        engine_writeln(engine, posCmd);
+        engine_writeln(engine, posCmd.buf);
         engine_sync(engine);
+        str_free(&posCmd);
 
         char moveStr[MAX_MOVE_CHAR];
         engine_writeln(engine, "go depth 6\n");
