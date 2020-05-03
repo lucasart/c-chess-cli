@@ -7,7 +7,7 @@ typedef struct {
     size_t len;  // does not count '\0' terminator
 } str_t;
 
-str_t str_new();
+str_t str_new(const char *src);
 void str_resize(str_t *s, size_t len);
 void str_free(str_t *s);
 

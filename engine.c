@@ -13,19 +13,26 @@
  * not, see <http://www.gnu.org/licenses/>.
 */
 #include <signal.h>
+#include <stdlib.h>
 #include <string.h>
 #include <sys/wait.h>
 #include <unistd.h>
 #include "engine.h"
 
-bool engine_start(Engine *e, const char *cmd, FILE *log)
+void die(const char *msg)
+{
+    perror(msg);
+    exit(1);
+}
+
+static void engine_start(Engine *e, const char *cmd)
 {
     // Pipe diagram: Parent -> [1]into[0] -> Child -> [1]outof[0] -> Parent
     // 'into' and 'outof' are pipes, each with 2 ends: read=0, write=1
     int outof[2], into[2];
 
     if (pipe(outof) < 0 || pipe(into) < 0)
-        return false;
+        die("pipe() failed!");
 
     e->pid = fork();
 
@@ -35,78 +42,88 @@ bool engine_start(Engine *e, const char *cmd, FILE *log)
         close(outof[0]);
 
         if (dup2(into[0], STDIN_FILENO) == -1)
-            return false;
+            die("dup2 failed!");
         close(into[0]);
 
         if (dup2(outof[1], STDOUT_FILENO) == -1)
-            return false;
+            die("dup2 failed!");
         close(outof[1]);
 
         if (execlp(cmd, cmd, NULL) == -1)
-            return false;
+            die("exec failed!");
     } else if (e->pid > 0) {
         // in the parent process
         close(into[0]);
         close(outof[1]);
 
         if (!(e->in = fdopen(outof[0], "r")))
-            return false;
+            die("fdopen failed!");
 
         if (!(e->out = fdopen(into[1], "w")))
-            return false;
+            die("fdopen failed!");
 
         // FIXME: doesn't work on Windows
         setvbuf(e->in, NULL, _IONBF, 0);
         setvbuf(e->out, NULL, _IONBF, 0);
     } else
         // fork failed
-        return false;
-
-    e->log = log;
-    return true;
+        die("fork failed!");
 }
 
-bool engine_stop(Engine *e)
+void engine_load(Engine *e, const char *cmd, FILE *log)
+{
+    engine_start(e, cmd);
+    e->log = log;
+
+    engine_writeln(e, "uci\n");
+
+    str_t line = str_new("");
+
+    do {
+        engine_readln(e, &line);
+    } while (strcmp(line.buf, "uciok\n"));
+
+    str_free(&line);
+}
+
+void engine_kill(Engine *e)
 {
     // close the parent side of the pipes
     fclose(e->in);
     fclose(e->out);
 
     // terminate the child process
-    return kill(e->pid, SIGTERM) >= 0;
+    if (kill(e->pid, SIGTERM) < 0)
+        die("kill failed!");
 }
 
-bool engine_readln(const Engine *e, str_t *line)
+void engine_readln(const Engine *e, str_t *line)
 {
     if (str_getdelim(line, '\n', e->in)) {
         if (e->log)
             fprintf(e->log, "%s -> %s", e->name, line->buf);
-
-        return true;
-    }
-
-    return false;
+    } else
+        die("engine_readln() failed!");
 }
 
-bool engine_writeln(const Engine *e, char *buf)
+void engine_writeln(const Engine *e, char *buf)
 {
     if (fputs(buf, e->out) >= 0) {
         if (e->log)
             fprintf(e->log, "%s <- %s", e->name, buf);
-
-        return true;
-    }
-
-    return false;
+    } else
+        die("engine_readln() failed!");
 }
 
 void engine_sync(const Engine *e)
 {
     engine_writeln(e, "isready\n");
 
-    str_t line = str_new();
+    str_t line = str_new("");
 
-    while (engine_readln(e, &line) && strcmp(line.buf, "readyok\n"));
+    do {
+        engine_readln(e, &line);
+    } while (strcmp(line.buf, "readyok\n"));
 
     str_free(&line);
 }
@@ -114,9 +131,10 @@ void engine_sync(const Engine *e)
 void engine_bestmove(const Engine *e, char *str)
 {
     strcpy(str, "0000");  // default value
-    str_t line = str_new();
+    str_t line = str_new("");
 
-    while (engine_readln(e, &line)) {
+    while (true) {
+        engine_readln(e, &line);
         char *linePos = NULL, *token = strtok_r(line.buf, " \n", &linePos);
 
         if (token && !strcmp(token, "bestmove")) {

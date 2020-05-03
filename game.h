@@ -16,12 +16,12 @@ enum {
 };
 
 typedef struct {
-    Engine engines[2];
-    Position pos[MAX_GAME_PLY];  // list of positions since game start
+    Position pos[MAX_GAME_PLY];  // list of positions (including moves) since game start
+    char names[NB_COLOR][MAX_NAME_CHAR];  // names of white and black players
     int ply;
     bool chess960;
     int result;
 } Game;
 
-void game_run(Game *g, char *fen, bool chess960);
+void game_run(Game *g, const Engine *first, const Engine *second, bool chess960, const char *fen);
 void game_print(const Game *g, FILE *out);

@@ -20,28 +20,22 @@
 int main(int argc, char **argv)
 {
     if (argc == 3) {
-        Game game;
+        Engine engines[2];
 
         // Prepare engines
         for (int i = 0; i < 2; i++) {
-            strcpy(game.engines[i].name, argv[i + 1]);
-            engine_start(&game.engines[i], argv[i + 1], stderr);
-
-            engine_writeln(&game.engines[i], "uci\n");
-
-            str_t line = str_new();
-            while (engine_readln(&game.engines[i], &line) && strcmp(line.buf, "uciok\n"));
-            str_free(&line);
+            strcpy(engines[i].name, argv[i + 1]);
+            engine_load(&engines[i], argv[i + 1], stderr);
         }
 
         // Play a game
-        game_run(&game, "rnbqkbnr/ppp1ppp1/8/3p3p/8/2P1P3/PPQP1PPP/RNB1KBNR b KQkq - 1 3", false);
+        Game game;
+        game_run(&game, &engines[0], &engines[1], false,
+            "rnbqkbnr/ppp1ppp1/8/3p3p/8/2P1P3/PPQP1PPP/RNB1KBNR b KQkq - 1 3");
 
-        // Close engines
-        for (int i = 0; i < 2; i++) {
-            engine_writeln(&game.engines[i], "quit\n");
-            engine_stop(&game.engines[i]);
-        }
+        // Kill engines
+        for (int i = 0; i < 2; i++)
+            engine_kill(&engines[i]);
 
         game_print(&game, stdout);
     } else

@@ -36,14 +36,14 @@ static bool str_ok(const str_t *s)
         && s->buf && s->buf[s->len] == '\0';
 }
 
-str_t str_new()
+str_t str_new(const char *src)
 {
     str_t s;
 
-    s.len = 0;
-    s.alloc = str_round_up(1),
+    s.len = strlen(src);
+    s.alloc = str_round_up(s.len + 1);
     s.buf = malloc(s.alloc);
-    s.buf[0] = '\0';
+    strcpy(s.buf, src);
 
     assert(str_ok(&s));
     return s;

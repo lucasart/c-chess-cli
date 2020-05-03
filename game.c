@@ -13,8 +13,8 @@ static str_t uci_position_command(const Game *g)
     char fen[MAX_FEN_CHAR];
     pos_get(&g->pos[ply0], fen);
 
-    str_t cmd = str_new();
-    str_cat(str_cpy(&cmd, "position fen "), fen);
+    str_t cmd = str_new("position fen ");
+    str_cat(&cmd, fen);
 
     if (ply0 < g->ply) {
         str_cat(&cmd, " moves");
@@ -65,14 +65,19 @@ bool illegal_move(move_t move, const move_t *begin, const move_t *end)
     return true;
 }
 
-void game_run(Game *g, char *fen, bool chess960)
+void game_run(Game *g, const Engine *first, const Engine *second, bool chess960, const char *fen)
 {
+    const Engine *engines[2] = {first, second};  // more practical for loops
+
     g->chess960 = chess960;
     pos_set(&g->pos[0], fen);
 
+    for (int color = WHITE; color <= BLACK; color++)
+        strcpy(g->names[color], engines[color ^ g->pos[0].turn]->name);
+
     for (int i = 0; i < 2; i++) {
-        engine_writeln(&g->engines[i], "ucinewgame\n");
-        engine_sync(&g->engines[i]);
+        engine_writeln(engines[i], "ucinewgame\n");
+        engine_sync(engines[i]);
     }
 
     move_t move = 0;
@@ -86,7 +91,7 @@ void game_run(Game *g, char *fen, bool chess960)
         if ((g->result = game_result(g, moves, &end)))
             break;
 
-        const Engine *engine = &g->engines[g->ply % 2];  // engine whose turn it is to play
+        const Engine *engine = engines[g->ply % 2];  // engine whose turn it is to play
 
         str_t posCmd = uci_position_command(g);
         engine_writeln(engine, posCmd.buf);
@@ -112,53 +117,55 @@ void game_run(Game *g, char *fen, bool chess960)
     }
 }
 
-void game_result_string(int result, int lastTurn, char *resultStr, char *terminationStr)
+str_t game_pgn_result(int result, int lastTurn, str_t *pgnTermination)
 {
-    strcpy(terminationStr, "normal");  // default: termination by chess rules
+    str_t pgnResult = str_new("");
+    str_cpy(pgnTermination, "normal");  // default: termination by chess rules
 
     if (result == RESULT_NONE) {
-        strcpy(resultStr, "*");
-        strcpy(terminationStr, "unterminated");
+        str_cpy(&pgnResult, "*");
+        str_cpy(pgnTermination, "unterminated");
     } else if (result == RESULT_CHECKMATE)
-        strcpy(resultStr, lastTurn == WHITE ? "0-1" : "1-0");
+        str_cpy(&pgnResult, lastTurn == WHITE ? "0-1" : "1-0");
     else if (result == RESULT_STALEMATE)
-        strcpy(resultStr, "1/2-1/2");
+        str_cpy(&pgnResult, "1/2-1/2");
     else if (result == RESULT_THREEFOLD)
-        strcpy(resultStr, "1/2-1/2");
+        str_cpy(&pgnResult, "1/2-1/2");
     else if (result == RESULT_FIFTY_MOVES)
-        strcpy(resultStr, "1/2-1/2");
+        str_cpy(&pgnResult, "1/2-1/2");
     else if (result ==RESULT_INSUFFICIENT_MATERIAL)
-        strcpy(resultStr, "1/2-1/2");
+        str_cpy(&pgnResult, "1/2-1/2");
     else if (result == RESULT_ILLEGAL_MOVE) {
-        strcpy(resultStr, lastTurn == WHITE ? "0-1" : "1-0");
-        strcpy(terminationStr, "illegal move");
+        str_cpy(&pgnResult, lastTurn == WHITE ? "0-1" : "1-0");
+        str_cpy(pgnTermination, "illegal move");
     } else if (result == RESULT_MAX_PLY) {
-        strcpy(resultStr, "1/2-1/2");
-        strcpy(terminationStr, "max ply");
+        str_cpy(&pgnResult, "1/2-1/2");
+        str_cpy(pgnTermination, "max ply");
     }
+
+    return pgnResult;
 }
 
 void game_print(const Game *g, FILE *out)
 // FIXME: Use SAN as required by PGN
 {
-    char fen[MAX_FEN_CHAR], resultStr[8], terminationStr[16];
-
     // Scan initial position
+    char fen[MAX_FEN_CHAR];
     pos_get(&g->pos[0], fen);
-    bool blackFirst = g->pos[0].turn;
 
-    // Decode game result into human readable information
-    game_result_string(g->result, g->pos[g->ply].turn, resultStr, terminationStr);
+    // Result in PGN format "1-0", "0-1", "1/2-1/2" (from white pov)
+    str_t pgnTermination = str_new("");
+    str_t pgnResult = game_pgn_result(g->result, g->pos[g->ply].turn, &pgnTermination);
 
-    fprintf(out, "[White \"%s\"]\n", g->engines[blackFirst].name);
-    fprintf(out, "[Black \"%s\"]\n", g->engines[!blackFirst].name);
+    fprintf(out, "[White \"%s\"]\n", g->names[WHITE]);
+    fprintf(out, "[Black \"%s\"]\n", g->names[BLACK]);
     fprintf(out, "[FEN \"%s\"]\n", fen);
 
     if (g->chess960)
         fputs("[Variant \"Chess960\"]", out);
 
-    fprintf(out, "[Result \"%s\"]\n", resultStr);
-    fprintf(out, "[Termination \"%s\"]\n\n", terminationStr);
+    fprintf(out, "[Result \"%s\"]\n", pgnResult.buf);
+    fprintf(out, "[Termination \"%s\"]\n\n", pgnTermination.buf);
 
     for (int ply = 1; ply <= g->ply; ply++) {
         // Prepare SAN base
@@ -180,5 +187,7 @@ void game_print(const Game *g, FILE *out)
         fprintf(out, ply % 10 == 0 ? "%s\n" : "%s ", san);
     }
 
-    fprintf(out, "%s\n\n", resultStr);
+    fprintf(out, "%s\n\n", pgnResult.buf);
+    str_free(&pgnResult);
+    str_free(&pgnTermination);
 }
