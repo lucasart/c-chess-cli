@@ -15,29 +15,27 @@
 #include "game.h"
 #include "gen.h"
 #include <string.h>
+#include "str.h"
 
 int main(int argc, char **argv)
 {
     if (argc == 3) {
         Game game;
-        game.chess960 = false;
-        game.result = 0;
-        pos_set(&game.pos[0], "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR b KQkq -");
 
         // Prepare engines
         for (int i = 0; i < 2; i++) {
             strcpy(game.engines[i].name, argv[i + 1]);
             engine_start(&game.engines[i], argv[i + 1], stderr);
 
-            char line[1024];
             engine_writeln(&game.engines[i], "uci\n");
 
-            while (engine_readln(&game.engines[i], line, sizeof line)
-                && strcmp(line, "uciok\n"));
+            str_t line = str_new();
+            while (engine_readln(&game.engines[i], &line) && strcmp(line.buf, "uciok\n"));
+            str_free(&line);
         }
 
         // Play a game
-        play_game(&game);
+        game_run(&game, "rnbqkbnr/ppp1ppp1/8/3p3p/8/2P1P3/PPQP1PPP/RNB1KBNR b KQkq - 1 3", false);
 
         // Close engines
         for (int i = 0; i < 2; i++) {

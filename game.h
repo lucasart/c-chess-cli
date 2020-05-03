@@ -23,5 +23,5 @@ typedef struct {
     int result;
 } Game;
 
-void play_game(Game *g);
-void game_print(const Game *game, FILE *out);
+void game_run(Game *g, char *fen, bool chess960);
+void game_print(const Game *g, FILE *out);

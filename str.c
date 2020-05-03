@@ -14,6 +14,7 @@
 */
 #include <assert.h>
 #include <stdbool.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include "str.h"
@@ -35,13 +36,17 @@ static bool str_ok(const str_t *s)
         && s->buf && s->buf[s->len] == '\0';
 }
 
-void str_init(str_t *s)
+str_t str_new()
 {
-    s->len = 0;
-    s->alloc = str_round_up(1);
-    s->buf = malloc(s->alloc);
-    s->buf[0] = '\0';
-    assert(str_ok(s));
+    str_t s;
+
+    s.len = 0;
+    s.alloc = str_round_up(1),
+    s.buf = malloc(s.alloc);
+    s.buf[0] = '\0';
+
+    assert(str_ok(&s));
+    return s;
 }
 
 void str_free(str_t *s)
@@ -64,7 +69,7 @@ void str_resize(str_t *s, size_t len)
     s->buf[len] = '\0';
 }
 
-str_t *str_cpy(str_t *dest, const char *restrict src)
+str_t *str_cpy(str_t *dest, const char *src)
 {
     assert(str_ok(dest) && src);
 
@@ -73,7 +78,7 @@ str_t *str_cpy(str_t *dest, const char *restrict src)
     return dest;
 }
 
-str_t *str_cat(str_t *dest, const char *restrict src)
+str_t *str_cat(str_t *dest, const char *src)
 {
     assert(str_ok(dest) && src);
     const size_t initial = dest->len, additional = strlen(src);
@@ -81,4 +86,33 @@ str_t *str_cat(str_t *dest, const char *restrict src)
     str_resize(dest, initial + additional);
     memcpy(&dest->buf[initial], src, additional + 1);
     return dest;
+}
+
+str_t *str_putc(str_t *dest, char c)
+{
+    assert(str_ok(dest));
+
+    str_resize(dest, dest->len + 1);
+    dest->buf[dest->len - 1] = c;
+    return dest;
+}
+
+size_t str_getdelim(str_t *str, int delim, FILE *f)
+{
+    str_cpy(str, "");
+
+    flockfile(f);
+
+    int c;
+
+    do {
+        c = getc_unlocked(f);
+
+        if (c != EOF)
+            str_putc(str, c);
+    } while (c != delim && c != EOF);
+
+    funlockfile(f);
+
+    return str->len;
 }

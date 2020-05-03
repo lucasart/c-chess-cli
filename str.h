@@ -7,9 +7,12 @@ typedef struct {
     size_t len;  // does not count '\0' terminator
 } str_t;
 
-void str_init(str_t *s);
+str_t str_new();
 void str_resize(str_t *s, size_t len);
 void str_free(str_t *s);
 
-str_t *str_cpy(str_t *dest, const char * src);
-str_t *str_cat(str_t *dest, const char * src);
+str_t *str_cpy(str_t *dest, const char *src);
+str_t *str_cat(str_t *dest, const char *src);
+str_t *str_putc(str_t *dest, char c);
+
+size_t str_getdelim(str_t *str, int delim, FILE *f);

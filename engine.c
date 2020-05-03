@@ -76,11 +76,11 @@ bool engine_stop(Engine *e)
     return kill(e->pid, SIGTERM) >= 0;
 }
 
-bool engine_readln(const Engine *e, char *buf, size_t n)
+bool engine_readln(const Engine *e, str_t *line)
 {
-    if (fgets(buf, n, e->in)) {
+    if (str_getdelim(line, '\n', e->in)) {
         if (e->log)
-            fprintf(e->log, "%s -> %s", e->name, buf);
+            fprintf(e->log, "%s -> %s", e->name, line->buf);
 
         return true;
     }
@@ -104,18 +104,20 @@ void engine_sync(const Engine *e)
 {
     engine_writeln(e, "isready\n");
 
-    char line[MAX_LINE_CHAR];
+    str_t line = str_new();
 
-    while (engine_readln(e, line, sizeof line) && strcmp(line, "readyok\n"));
+    while (engine_readln(e, &line) && strcmp(line.buf, "readyok\n"));
+
+    str_free(&line);
 }
 
 void engine_bestmove(const Engine *e, char *str)
 {
     strcpy(str, "0000");  // default value
-    char line[MAX_LINE_CHAR];
+    str_t line = str_new();
 
-    while (engine_readln(e, line, sizeof line)) {
-        char *linePos = NULL, *token = strtok_r(line, " \n", &linePos);
+    while (engine_readln(e, &line)) {
+        char *linePos = NULL, *token = strtok_r(line.buf, " \n", &linePos);
 
         if (token && !strcmp(token, "bestmove")) {
             token = strtok_r(NULL, " \n", &linePos);
@@ -126,4 +128,6 @@ void engine_bestmove(const Engine *e, char *str)
             break;
         }
     }
+
+    str_free(&line);
 }

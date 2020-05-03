@@ -2,35 +2,38 @@
 #include "gen.h"
 #include "str.h"
 
-static void build_position_command(const Game *game, str_t *str)
+static str_t uci_position_command(const Game *g)
 // Builds a string of the form "position fen ... [moves ...]". Implements rule50 pruning: start from
 // the last position that reset the rule50 counter, to reduce the move list to the minimum, without
 // losing information.
 {
     // Index of the starting FEN, where rule50 was last reset
-    const int ply0 = max(game->ply - game->pos[game->ply].rule50, 0);
+    const int ply0 = max(g->ply - g->pos[g->ply].rule50, 0);
 
     char fen[MAX_FEN_CHAR];
-    pos_get(&game->pos[ply0], fen);
-    str_cat(str_cpy(str, "position fen "), fen);
+    pos_get(&g->pos[ply0], fen);
 
-    if (ply0 < game->ply) {
-        str_cat(str, " moves");
+    str_t cmd = str_new();
+    str_cat(str_cpy(&cmd, "position fen "), fen);
 
-        for (int ply = ply0 + 1; ply <= game->ply; ply++) {
+    if (ply0 < g->ply) {
+        str_cat(&cmd, " moves");
+
+        for (int ply = ply0 + 1; ply <= g->ply; ply++) {
             char token[MAX_MOVE_CHAR + 1] = " ";
-            pos_move_to_string(&game->pos[ply - 1], game->pos[ply].lastMove, token + 1,
-                game->chess960);
-            str_cat(str, token);
+            pos_move_to_string(&g->pos[ply - 1], g->pos[ply].lastMove, token + 1,
+                g->chess960);
+            str_cat(&cmd, token);
         }
     }
 
-    str_cat(str, "\n");
+    str_cat(&cmd, "\n");
+    return cmd;
 }
 
-int game_result(const Game *game, move_t *begin, move_t **end)
+int game_result(const Game *g, move_t *begin, move_t **end)
 {
-    const Position *pos = &game->pos[game->ply];
+    const Position *pos = &g->pos[g->ply];
 
     *end = gen_all_moves(pos, begin);
 
@@ -45,8 +48,8 @@ int game_result(const Game *game, move_t *begin, move_t **end)
         // Scan for 3-fold repetition
         int repetitions = 1;
 
-        for (int i = 4; i <= pos->rule50 && i <= game->ply; i += 2)
-            if (game->pos[game->ply - i].key == pos->key && ++repetitions >= 3)
+        for (int i = 4; i <= pos->rule50 && i <= g->ply; i += 2)
+            if (g->pos[g->ply - i].key == pos->key && ++repetitions >= 3)
                 return RESULT_THREEFOLD;
     }
 
@@ -62,49 +65,50 @@ bool illegal_move(move_t move, const move_t *begin, const move_t *end)
     return true;
 }
 
-void play_game(Game *game)
+void game_run(Game *g, char *fen, bool chess960)
 {
+    g->chess960 = chess960;
+    pos_set(&g->pos[0], fen);
+
     for (int i = 0; i < 2; i++) {
-        engine_writeln(&game->engines[i], "ucinewgame\n");
-        engine_sync(&game->engines[i]);
+        engine_writeln(&g->engines[i], "ucinewgame\n");
+        engine_sync(&g->engines[i]);
     }
 
     move_t move = 0;
 
-    for (game->ply = 0; game->ply < MAX_GAME_PLY; game->ply++) {
-        if (game->ply > 0)
-            pos_move(&game->pos[game->ply], &game->pos[game->ply - 1], move);
+    for (g->ply = 0; g->ply < MAX_GAME_PLY; g->ply++) {
+        if (g->ply > 0)
+            pos_move(&g->pos[g->ply], &g->pos[g->ply - 1], move);
 
         move_t moves[MAX_MOVES], *end;
 
-        if ((game->result = game_result(game, moves, &end)))
+        if ((g->result = game_result(g, moves, &end)))
             break;
 
-        const Engine *engine = &game->engines[game->ply % 2];  // engine whose turn it is to play
+        const Engine *engine = &g->engines[g->ply % 2];  // engine whose turn it is to play
 
-        str_t posCmd;
-        str_init(&posCmd);
-        build_position_command(game, &posCmd);
-
+        str_t posCmd = uci_position_command(g);
         engine_writeln(engine, posCmd.buf);
-        engine_sync(engine);
         str_free(&posCmd);
+
+        engine_sync(engine);
 
         char moveStr[MAX_MOVE_CHAR];
         engine_writeln(engine, "go depth 6\n");
         engine_bestmove(engine, moveStr);
 
-        move = pos_string_to_move(&game->pos[game->ply], moveStr, game->chess960);
+        move = pos_string_to_move(&g->pos[g->ply], moveStr, g->chess960);
 
         if (illegal_move(move, moves, end)) {
-            game->result = RESULT_ILLEGAL_MOVE;
+            g->result = RESULT_ILLEGAL_MOVE;
             break;
         }
     }
 
-    if (!game->result) {
-        assert(game->ply == MAX_GAME_PLY);
-        game->result = RESULT_MAX_PLY;
+    if (!g->result) {
+        assert(g->ply == MAX_GAME_PLY);
+        g->result = RESULT_MAX_PLY;
     }
 }
 
@@ -134,44 +138,44 @@ void game_result_string(int result, int lastTurn, char *resultStr, char *termina
     }
 }
 
-void game_print(const Game *game, FILE *out)
+void game_print(const Game *g, FILE *out)
 // FIXME: Use SAN as required by PGN
 {
     char fen[MAX_FEN_CHAR], resultStr[8], terminationStr[16];
 
     // Scan initial position
-    pos_get(&game->pos[0], fen);
-    bool blackFirst = game->pos[0].turn;
+    pos_get(&g->pos[0], fen);
+    bool blackFirst = g->pos[0].turn;
 
     // Decode game result into human readable information
-    game_result_string(game->result, game->pos[game->ply].turn, resultStr, terminationStr);
+    game_result_string(g->result, g->pos[g->ply].turn, resultStr, terminationStr);
 
-    fprintf(out, "[White \"%s\"]\n", game->engines[blackFirst].name);
-    fprintf(out, "[Black \"%s\"]\n", game->engines[!blackFirst].name);
+    fprintf(out, "[White \"%s\"]\n", g->engines[blackFirst].name);
+    fprintf(out, "[Black \"%s\"]\n", g->engines[!blackFirst].name);
     fprintf(out, "[FEN \"%s\"]\n", fen);
 
-    if (game->chess960)
+    if (g->chess960)
         fputs("[Variant \"Chess960\"]", out);
 
     fprintf(out, "[Result \"%s\"]\n", resultStr);
     fprintf(out, "[Termination \"%s\"]\n\n", terminationStr);
 
-    for (int ply = 1; ply <= game->ply; ply++) {
+    for (int ply = 1; ply <= g->ply; ply++) {
         // Prepare SAN base
         char san[MAX_MOVE_CHAR];
-        pos_move_to_san(&game->pos[ply - 1], game->pos[ply].lastMove, san);
+        pos_move_to_san(&g->pos[ply - 1], g->pos[ply].lastMove, san);
 
         // Append check markers to SAN
-        if (game->pos[ply].checkers) {
-            if (ply == game->ply && game->result == RESULT_CHECKMATE)
+        if (g->pos[ply].checkers) {
+            if (ply == g->ply && g->result == RESULT_CHECKMATE)
                 strcat(san, "#");  // checkmate
             else
                 strcat(san, "+");  // normal check
         }
 
-        if (game->pos[ply - 1].turn == WHITE || ply == 1)
-            fprintf(out, game->pos[ply - 1].turn == WHITE ? "%d. " : "%d.. ",
-                game->pos[ply - 1].fullMove);
+        if (g->pos[ply - 1].turn == WHITE || ply == 1)
+            fprintf(out, g->pos[ply - 1].turn == WHITE ? "%d. " : "%d.. ",
+                g->pos[ply - 1].fullMove);
 
         fprintf(out, ply % 10 == 0 ? "%s\n" : "%s ", san);
     }
