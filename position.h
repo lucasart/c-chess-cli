@@ -1,17 +1,11 @@
 #pragma once
 #include "bitboard.h"
+#include "str.h"
 
 enum {MATE = 32000};
 
 #define min(x, y) ((x) < (y) ? (x) : (y))
 #define max(x, y) ((x) > (y) ? (x) : (y))
-
-// Max number of bytes needed to store strings
-enum {
-    MAX_FEN_CHAR = 64 + 8 + 2 + 5 + 3 + 4 + 4 + 1,  // conservative upper bound
-    MAX_MOVE_CHAR = 8,  // enough for SAN and LAN (longest "exf8=Q+")
-    MAX_SQUARE_CHAR = 2 + 1 // eg. "e2"
-};
 
 typedef struct {
     bitboard_t byColor[NB_COLOR];  // eg. byColor[WHITE] = squares occupied by white's army
@@ -29,7 +23,7 @@ typedef struct {
 } Position;
 
 void pos_set(Position *pos, const char *fen);
-void pos_get(const Position *pos, char *fen);
+str_t pos_get(const Position *pos);
 void pos_move(Position *pos, const Position *before, move_t m);
 
 bitboard_t pos_pieces(const Position* pos);
@@ -42,8 +36,8 @@ int pos_color_on(const Position *pos, int square);
 int pos_piece_on(const Position *pos, int square);
 
 bool pos_move_is_castling(const Position *pos, move_t m);
-void pos_move_to_string(const Position *pos, move_t m, char *str, bool chess960);
-void pos_move_to_san(const Position *pos, move_t m, char *str);
+str_t pos_move_to_lan(const Position *pos, move_t m, bool chess960);
+str_t pos_move_to_san(const Position *pos, move_t m);
 move_t pos_string_to_move(const Position *pos, const char *str, bool chess960);
 
 void pos_print(const Position *pos);

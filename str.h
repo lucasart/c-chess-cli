@@ -1,5 +1,16 @@
+/* Dynamic strings.
+
+Quick tutorial:
+    str_t s1 = str_new();  // s1 = ""
+    str_t s2 = str_dup("world");  // s2 = "world"
+    str_cpy(&s1, "hello");  // s1 = "hello"
+    str_cat(&s1, " ", s2.buf);  // s1 += " " + s2 (appends any n >= 1 strings to s1)
+    str_putc(&s1, '!');  // s1 += '!'
+    puts(s1.buf);  // displays "hello world!"
+    free(&s1, &s2);  // frees both strings (any n >= 1 arguments)
+*/
 #pragma once
-#include <stddef.h>
+#include <stdio.h>
 
 typedef struct {
     char *buf;  // always '\0' terminated
@@ -7,12 +18,19 @@ typedef struct {
     size_t len;  // does not count '\0' terminator
 } str_t;
 
-str_t str_new(const char *src);
+str_t str_new();
+str_t str_dup(const char *src);
 void str_resize(str_t *s, size_t len);
-void str_free(str_t *s);
 
-str_t *str_cpy(str_t *dest, const char *src);
-str_t *str_cat(str_t *dest, const char *src);
-str_t *str_putc(str_t *dest, char c);
+void str_cpy(str_t *dest, const char *src);
+#define str_putc(...) str_putc_aux(__VA_ARGS__, NULL)
+#define str_cat(...) str_cat_aux(__VA_ARGS__, NULL)
+#define str_free(...) str_free_aux(__VA_ARGS__, NULL)
 
-size_t str_getdelim(str_t *str, int delim, FILE *f);
+const char *str_tok(const char *s, str_t *token, const char *delim);
+size_t str_getdelim(str_t *out, int delim, FILE *in);
+
+// Don't use the _aux() functions directly, use the variadic macros instead
+void str_putc_aux(str_t *dest, int c1, ...);
+void str_cat_aux(str_t *dest, const char *s1, ...);
+void str_free_aux(str_t *s1, ...);

@@ -229,9 +229,9 @@ static uint64_t gen_leaves(const Position *pos, int depth, int ply, bool chess96
         result += subTree;
 
         if (!ply) {
-            char str[6];
-            pos_move_to_string(pos, *m, str, chess960);
-            printf("%s\t%" PRIu64 "\n", str, subTree);
+            str_t lan = pos_move_to_lan(pos, *m, chess960);
+            printf("%s\t%" PRIu64 "\n", lan.buf, subTree);
+            str_free(&lan);
         }
     }
 
@@ -254,7 +254,7 @@ move_t *gen_all_moves(const Position *pos, move_t *mList)
 void gen_run_test()
 {
     typedef struct {
-        char fen[MAX_FEN_CHAR];
+        char fen[128];
         int depth, leaves;
     } Test;
 

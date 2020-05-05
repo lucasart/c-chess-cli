@@ -23,21 +23,19 @@ int main(int argc, char **argv)
         Engine engines[2];
 
         // Prepare engines
-        for (int i = 0; i < 2; i++) {
-            strcpy(engines[i].name, argv[i + 1]);
-            engine_load(&engines[i], argv[i + 1], stderr);
-        }
+        for (int i = 0; i < 2; i++)
+            engine_create(&engines[i], argv[i + 1], stderr);
 
-        // Play a game
+        // Play and print a game
         Game game;
-        game_run(&game, &engines[0], &engines[1], false,
-            "rnbqkbnr/ppp1ppp1/8/3p3p/8/2P1P3/PPQP1PPP/RNB1KBNR b KQkq - 1 3");
+        game_create(&game, false, "rnbqkbnr/ppp1ppp1/8/3p3p/8/2P1P3/PPQP1PPP/RNB1KBNR b KQkq - 1 3");
+        game_play(&game, &engines[0], &engines[1]);
+        game_print(&game, stdout);
+        game_destroy(&game);
 
         // Kill engines
         for (int i = 0; i < 2; i++)
-            engine_kill(&engines[i]);
-
-        game_print(&game, stdout);
+            engine_destroy(&engines[i]);
     } else
         gen_run_test();
 }

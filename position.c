@@ -17,6 +17,8 @@
 #include <stdlib.h>
 #include "position.h"
 
+enum {MAX_SQUARE_CHAR = 3};
+
 static const char *PieceLabel[NB_COLOR] = {"NBRQKP.", "nbrqkp."};
 
 static uint64_t ZobristKey[NB_COLOR][NB_PIECE][NB_SQUARE];
@@ -250,79 +252,84 @@ static void finish(Position *pos)
 void pos_set(Position *pos, const char *fen)
 {
     clear(pos);
-    char *str = strdup(fen), *strPos = NULL;
-    char *token = strtok_r(str, " ", &strPos);
+    str_t token = str_new();
 
     // Piece placement
-    char ch;
+    fen = str_tok(fen, &token, " ");
+    assert(token.len >= 10);
     int file = FILE_A, rank = RANK_8;
 
-    while ((ch = *token++)) {
-        if ('1' <= ch && ch <= '8') {
-            file += ch -'0';
+    for (const char *c = token.buf; *c; c++) {
+        if ('1' <= *c && *c <= '8') {
+            file += *c -'0';
             assert(file <= NB_FILE);
-        } else if (ch == '/') {
+        } else if (*c == '/') {
             rank--;
             file = FILE_A;
         } else {
-            assert(strchr("nbrqkpNBRQKP", ch));
-            const bool color = islower(ch);
-            set_square(pos, color, strchr(PieceLabel[color], ch) - PieceLabel[color],
+            assert(strchr("nbrqkpNBRQKP", *c));
+            const bool color = islower(*c);
+            set_square(pos, color, strchr(PieceLabel[color], *c) - PieceLabel[color],
                 square_from(rank, file++));
         }
     }
 
     // Turn of play
-    token = strtok_r(NULL, " ", &strPos);
-    assert(strlen(token) == 1);
+    fen = str_tok(fen, &token, " ");
+    assert(token.len == 1);
 
-    if (token[0] == 'w')
+    if (token.buf[0] == 'w')
         pos->turn = WHITE;
     else {
-        assert(token[0] == 'b');
+        assert(token.buf[0] == 'b');
         pos->turn = BLACK;
         pos->key ^= ZobristTurn;
     }
 
-    // Castling rights
-    token = strtok_r(NULL, " ", &strPos);
-    assert(strlen(token) <= 4);
+    // Castling rights: optional, default '-'
+    if ((fen = str_tok(fen, &token, " "))) {
+        assert(token.len <= 4);
 
-    while ((ch = *token++)) {
-        rank = isupper(ch) ? RANK_1 : RANK_8;
-        ch = toupper(ch);
+        for (const char *c = token.buf; *c; c++) {
+            rank = isupper(*c) ? RANK_1 : RANK_8;
+            char C = toupper(*c);
 
-        if (ch == 'K')
-            bb_set(&pos->castleRooks, bb_msb(Rank[rank] & pos->byPiece[ROOK]));
-        else if (ch == 'Q')
-            bb_set(&pos->castleRooks, bb_lsb(Rank[rank] & pos->byPiece[ROOK]));
-        else if ('A' <= ch && ch <= 'H')
-            bb_set(&pos->castleRooks, square_from(rank, ch - 'A'));
-        else
-            assert(ch == '-' && !pos->castleRooks && *token == '\0');
+            if (C == 'K')
+                bb_set(&pos->castleRooks, bb_msb(Rank[rank] & pos->byPiece[ROOK]));
+            else if (C == 'Q')
+                bb_set(&pos->castleRooks, bb_lsb(Rank[rank] & pos->byPiece[ROOK]));
+            else if ('A' <= C && C <= 'H')
+                bb_set(&pos->castleRooks, square_from(rank, C - 'A'));
+            else
+                assert(C == '-' && !pos->castleRooks && c[1] == '\0');
+        }
     }
 
     pos->key ^= zobrist_castling(pos->castleRooks);
 
-    // en-passant
-    pos->epSquare = string_to_square(strtok_r(NULL, " ", &strPos));
+    // En passant square: optional, default '-'
+    if (!(fen = str_tok(fen, &token, " ")))
+        str_cpy(&token, "-");
+
+    assert(token.len <= 2);
+    pos->epSquare = string_to_square(token.buf);
     pos->key ^= ZobristEnPassant[pos->epSquare];
 
-    // optional, default=0: 50 move counter (in plies, starts at 0)
-    token = strtok_r(NULL, " ", &strPos);
-    pos->rule50 = token ? atoi(token) : 0;
+    // 50 move counter (in plies, starts at 0): optional, default 0
+    pos->rule50 = (fen = str_tok(fen, &token, " ")) ? atoi(token.buf) : 0;
 
-    // optional, default=1: full move counter (in moves, starts at 1)
-    token = strtok_r(NULL, " ", &strPos);
-    pos->fullMove = token ? atoi(token) : 1;
+    // Full move counter (in moves, starts at 1): optional, default 1
+    pos->fullMove = str_tok(fen, &token, " ") ? atoi(token.buf) : 1;
 
-    free(str);
+    str_free(&token);
     finish(pos);
 }
 
 // Get FEN string of position
-void pos_get(const Position *pos, char *fen)
+str_t pos_get(const Position *pos)
 {
+    str_t fen = str_new();
+
     // Piece placement
     for (int rank = RANK_8; rank >= RANK_1; rank--) {
         int cnt = 0;
@@ -332,27 +339,26 @@ void pos_get(const Position *pos, char *fen)
 
             if (bb_test(pos_pieces(pos), square)) {
                 if (cnt)
-                    *fen++ = cnt + '0';
+                    str_putc(&fen, cnt + '0');
 
-                *fen++ = PieceLabel[pos_color_on(pos, square)][pos_piece_on(pos, square)];
+                str_putc(&fen, PieceLabel[pos_color_on(pos, square)][pos_piece_on(pos, square)]);
                 cnt = 0;
             } else
                 cnt++;
         }
 
         if (cnt)
-            *fen++ = cnt + '0';
+            str_putc(&fen, cnt + '0');
 
-        *fen++ = rank == RANK_1 ? ' ' : '/';
+        str_putc(&fen, rank == RANK_1 ? ' ' : '/');
     }
 
     // Turn of play
-    *fen++ = pos->turn == WHITE ? 'w' : 'b';
-    *fen++ = ' ';
+    str_cat(&fen, pos->turn == WHITE ? "w " : "b ");
 
     // Castling rights
     if (!pos->castleRooks)
-        *fen++ = '-';
+        str_putc(&fen, '-');
     else {
         for (int color = WHITE; color <= BLACK; color++) {
             const bitboard_t b = pos->castleRooks & pos->byColor[color];
@@ -362,19 +368,22 @@ void pos_get(const Position *pos, char *fen)
 
                 // Right side castling
                 if (b & Ray[king][king + RIGHT])
-                    *fen++ = PieceLabel[color][KING];
+                    str_putc(&fen, PieceLabel[color][KING]);
 
                 // Left side castling
                 if (b & Ray[king][king + LEFT])
-                    *fen++ = PieceLabel[color][QUEEN];
+                    str_putc(&fen, PieceLabel[color][QUEEN]);
             }
         }
     }
 
     // En passant and 50 move
-    char str[MAX_SQUARE_CHAR];
+    char str[MAX_SQUARE_CHAR], tail[16];
     square_to_string(pos->epSquare, str);
-    sprintf(fen, " %s %d %d", str, pos->rule50, pos->fullMove);
+    sprintf(tail, " %s %d %d", str, pos->rule50, pos->fullMove);
+    str_cat(&fen, tail);
+
+    return fen;
 }
 
 // Play a move on a position copy (original 'before' is untouched): pos = before + play(m)
@@ -528,26 +537,29 @@ bool pos_move_is_castling(const Position *pos, move_t m)
     return bb_test(pos->byColor[pos->turn], move_to(m));
 }
 
-void pos_move_to_string(const Position *pos, move_t m, char *str, bool chess960)
+str_t pos_move_to_lan(const Position *pos, move_t m, bool chess960)
 {
+    str_t lan = str_new();
     const int from = move_from(m), to = move_to(m), prom = move_prom(m);
 
     if (!(from | to | prom)) {
-        strcpy(str, "0000");
-        return;
+        str_cpy(&lan, "0000");
+        return lan;
     }
 
     const int _to = !chess960 && pos_move_is_castling(pos, m)
         ? (to > from ? from + 2 : from - 2)  // e1h1 -> e1g1, e1a1 -> e1c1
         : to;
 
-    square_to_string(from, str);
-    square_to_string(_to, str + 2);
+    char fromStr[MAX_SQUARE_CHAR], toStr[MAX_SQUARE_CHAR];
+    square_to_string(from, fromStr);
+    square_to_string(_to, toStr);
+    str_cat(&lan, fromStr, toStr);
 
-    if (prom < NB_PIECE) {
-        str[4] = PieceLabel[BLACK][prom];
-        str[5] = '\0';
-    }
+    if (prom < NB_PIECE)
+        str_putc(&lan, PieceLabel[BLACK][prom]);
+
+    return lan;
 }
 
 move_t pos_string_to_move(const Position *pos, const char *str, bool chess960)
@@ -566,43 +578,31 @@ move_t pos_string_to_move(const Position *pos, const char *str, bool chess960)
     return move_build(from, to, prom);
 }
 
-void pos_move_to_san(const Position *pos, move_t m, char *str)
+str_t pos_move_to_san(const Position *pos, move_t m)
 // Converts a move to Standard Algebraic Notation. Note that the '+' (check) or '#' (checkmate)
 // suffixes are not generated here.
 {
+    str_t san = str_new();
+
     const int us = pos->turn;
     const int from = move_from(m), to = move_to(m), prom = move_prom(m);
     const int piece = pos_piece_on(pos, from);
 
-    if (piece == KING) {
-        if (pos_move_is_castling(pos, m))
-            strcpy(str, to > from ? "O-O" : "O-O-O");
-        else {
-            *str++ = 'K';
+    if (piece == PAWN) {
+        str_putc(&san, file_of(from) + 'a');
 
-            if (pos_move_is_capture(pos, m))
-                *str++ = 'x';
+        if (pos_move_is_capture(pos, m) || to == pos->epSquare)
+            str_putc(&san, 'x', file_of(to) + 'a');
 
-            square_to_string(to, str);
-        }
-    } else if (piece == PAWN) {
-        *str++ = file_of(from) + 'a';
+        str_putc(&san, rank_of(to) + '1');
 
-        if (pos_move_is_capture(pos, m) || to == pos->epSquare) {
-            *str++ = 'x';
-            *str++ = file_of(to) + 'a';
-        }
-
-        *str++ = rank_of(to) + '1';
-
-        if (prom < NB_PIECE) {
-            *str++ = '=';
-            *str++ = PieceLabel[WHITE][prom];
-        }
-
-        *str = '\0';
+        if (prom < NB_PIECE)
+            str_putc(&san, '=', PieceLabel[WHITE][prom]);
     } else {
-        *str++ = PieceLabel[WHITE][piece];
+        str_putc(&san, PieceLabel[WHITE][piece]);
+
+        if (piece == KING)
+            goto disambiguation_done;
 
         // ** SAN disambiguation **
 
@@ -613,7 +613,7 @@ void pos_move_to_san(const Position *pos, move_t m, char *str)
         bb_clear(&contesters, from);
 
         if (piece == KNIGHT)
-            // 1.1. Knights. Eestrict to those within a knight jump of of 'to' that are not pinned.
+            // 1.1. Knights. Restrict to those within a knight jump of of 'to' that are not pinned.
             contesters &= KnightAttacks[to] & ~pins;
         else {
             // 1.2. Sliders
@@ -644,22 +644,26 @@ void pos_move_to_san(const Position *pos, move_t m, char *str)
         if (contesters) {
             // 2.1. Contested rank. Use file to disambiguate
             if (Rank[rank_of(from)] & contesters)
-                *str++ = file_of(from) + 'a';
+                str_putc(&san, file_of(from) + 'a');
 
             // 2.2. Contested file. Use rank to disambiguate
             if (File[file_of(from)] & contesters)
-                *str++ = rank_of(from) + '1';
+                str_putc(&san, rank_of(from) + '1');
 
             // Note that 2.1 and 2.2 are not mutually exclusive
         }
 
-        // ** SAN disambiguation done **
+        disambiguation_done:
 
         if (pos_move_is_capture(pos, m))
-            *str++ = 'x';
+            str_putc(&san, 'x');
 
-        square_to_string(to, str);
+        char toStr[MAX_SQUARE_CHAR];
+        square_to_string(to, toStr);
+        str_cat(&san, toStr);
     }
+
+    return san;
 }
 
 // Prints the position in ASCII 'art' (for debugging)
@@ -678,11 +682,11 @@ void pos_print(const Position *pos)
         puts(line);
     }
 
-    char fen[MAX_FEN_CHAR];
-    pos_get(pos, fen);
-    puts(fen);
+    str_t fen = pos_get(pos);
+    puts(fen.buf);
+    str_free(&fen);
 
-    char moveStr[MAX_MOVE_CHAR];
-    pos_move_to_string(pos, pos->lastMove, moveStr, true);
-    printf("Last move: %s\n", moveStr);
+    str_t lan = pos_move_to_lan(pos, pos->lastMove, true);
+    printf("Last move: %s\n", lan.buf);
+    str_free(&lan);
 }

@@ -25,14 +25,14 @@ void die(const char *msg)
     exit(1);
 }
 
-static void engine_start(Engine *e, const char *cmd)
+static void engine_spawn(Engine *e, const char *cmd)
 {
     // Pipe diagram: Parent -> [1]into[0] -> Child -> [1]outof[0] -> Parent
     // 'into' and 'outof' are pipes, each with 2 ends: read=0, write=1
     int outof[2], into[2];
 
     if (pipe(outof) < 0 || pipe(into) < 0)
-        die("pipe() failed!");
+        die("pipe failed!");
 
     e->pid = fork();
 
@@ -70,14 +70,16 @@ static void engine_start(Engine *e, const char *cmd)
         die("fork failed!");
 }
 
-void engine_load(Engine *e, const char *cmd, FILE *log)
+void engine_create(Engine *e, const char *cmd, FILE *log)
 {
-    engine_start(e, cmd);
+    engine_spawn(e, cmd);  // spawn child process and plug communication pipes
     e->log = log;
+
+    e->name = str_dup(cmd); // FIXME: parse from 'id name %s'
 
     engine_writeln(e, "uci\n");
 
-    str_t line = str_new("");
+    str_t line = str_new();
 
     do {
         engine_readln(e, &line);
@@ -86,13 +88,12 @@ void engine_load(Engine *e, const char *cmd, FILE *log)
     str_free(&line);
 }
 
-void engine_kill(Engine *e)
+void engine_destroy(Engine *e)
 {
-    // close the parent side of the pipes
     fclose(e->in);
     fclose(e->out);
+    str_free(&e->name);
 
-    // terminate the child process
     if (kill(e->pid, SIGTERM) < 0)
         die("kill failed!");
 }
@@ -101,7 +102,7 @@ void engine_readln(const Engine *e, str_t *line)
 {
     if (str_getdelim(line, '\n', e->in)) {
         if (e->log)
-            fprintf(e->log, "%s -> %s", e->name, line->buf);
+            fprintf(e->log, "%s -> %s", e->name.buf, line->buf);
     } else
         die("engine_readln() failed!");
 }
@@ -110,7 +111,7 @@ void engine_writeln(const Engine *e, char *buf)
 {
     if (fputs(buf, e->out) >= 0) {
         if (e->log)
-            fprintf(e->log, "%s <- %s", e->name, buf);
+            fprintf(e->log, "%s <- %s", e->name.buf, buf);
     } else
         die("engine_readln() failed!");
 }
@@ -119,7 +120,7 @@ void engine_sync(const Engine *e)
 {
     engine_writeln(e, "isready\n");
 
-    str_t line = str_new("");
+    str_t line = str_new();
 
     do {
         engine_readln(e, &line);
@@ -128,24 +129,23 @@ void engine_sync(const Engine *e)
     str_free(&line);
 }
 
-void engine_bestmove(const Engine *e, char *str)
+str_t engine_bestmove(const Engine *e)
 {
-    strcpy(str, "0000");  // default value
-    str_t line = str_new("");
+    str_t best = str_dup("0000");  // default value
+    str_t line = str_new(), token = str_new();
 
     while (true) {
         engine_readln(e, &line);
-        char *linePos = NULL, *token = strtok_r(line.buf, " \n", &linePos);
+        const char *tail = str_tok(line.buf, &token, " \n");
 
-        if (token && !strcmp(token, "bestmove")) {
-            token = strtok_r(NULL, " \n", &linePos);
-
-            if (token)
-                strcpy(str, token);
+        if (tail && !strcmp(token.buf, "bestmove")) {
+            if (str_tok(tail, &token, " \n"))
+                str_cpy(&best, token.buf);
 
             break;
         }
     }
 
-    str_free(&line);
+    str_free(&line, &token);
+    return best;
 }
