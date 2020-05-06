@@ -378,10 +378,9 @@ str_t pos_get(const Position *pos)
     }
 
     // En passant and 50 move
-    char str[MAX_SQUARE_CHAR], tail[16];
+    char str[MAX_SQUARE_CHAR];
     square_to_string(pos->epSquare, str);
-    sprintf(tail, " %s %d %d", str, pos->rule50, pos->fullMove);
-    str_cat(&fen, tail);
+    str_catf(&fen, " %s %d %d", str, pos->rule50, pos->fullMove);
 
     return fen;
 }

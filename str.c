@@ -31,13 +31,11 @@ static size_t str_round_up(size_t n)
     return p2;
 }
 
-#ifndef NDEBUG
-static bool str_ok(const str_t *s)
+bool str_ok(const str_t *s)
 {
     return s && s->alloc == str_round_up(s->len + 1)
         && s->buf && s->buf[s->len] == '\0';
 }
-#endif
 
 str_t str_new()
 {
@@ -180,6 +178,54 @@ void str_cat_aux(str_t *dest, const char *s1, ...)
     assert(str_ok(dest));
 }
 
+void str_catf(str_t *dest, const char *fmt, ...)
+{
+    assert(str_ok(dest) && fmt);
+
+    va_list args;
+    va_start(args, fmt);
+
+    size_t bytesLeft = strlen(fmt);
+
+    while (bytesLeft) {
+        const char *pct = memchr(fmt, '%', bytesLeft);
+
+        if (!pct) {
+            // no more '%', append the rest of the format string and we're done
+            str_cat(dest, fmt);
+            break;
+        }
+
+        assert(*pct == '%');
+
+        if (pct != fmt) {
+            // append the chunk of format string before '%' to dest (if any)
+            char *target = &dest->buf[dest->len];
+            size_t bytes = pct - fmt;
+            str_resize(dest, dest->len + bytes);
+            memcpy(target, fmt, bytes);
+        }
+
+        bytesLeft -= (pct + 2) - fmt;
+        fmt = pct + 2;  // move past the '%?' to prepare next loop iteration
+        assert(strlen(fmt) == bytesLeft);
+
+        if (pct[1] == 's') {
+            const char *s = va_arg(args, const char *);
+            str_cat(dest, s);
+        } else if (pct[1] == 'd') {
+            const int i = va_arg(args, int);
+            char buf[16];
+            sprintf(buf, "%d", i);  // can't overflow 16 char buffer
+            str_cat(dest, buf);
+        } else
+            assert(false);  // add your format specifier handler here
+    }
+
+    va_end(args);
+    assert(str_ok(dest));
+}
+
 void str_free_aux(str_t *s1, ...)
 {
     va_list args;
@@ -188,8 +234,8 @@ void str_free_aux(str_t *s1, ...)
 
     while (next) {
         assert(str_ok(next));
-        next->alloc = next->len = 0;
-        free(next->buf), next->buf = NULL;
+        free(next->buf);
+        *next = (str_t){0};
 
         next = va_arg(args, str_t *);
     }

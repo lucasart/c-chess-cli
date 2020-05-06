@@ -27,4 +27,4 @@ void game_create(Game *g, bool chess960, const char *fen);
 void game_destroy(Game *g);
 
 void game_play(Game *g, const Engine *first, const Engine *second);
-void game_print(const Game *g, FILE *out);
+str_t game_pgn(const Game *g);

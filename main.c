@@ -30,7 +30,9 @@ int main(int argc, char **argv)
         Game game;
         game_create(&game, false, "rnbqkbnr/ppp1ppp1/8/3p3p/8/2P1P3/PPQP1PPP/RNB1KBNR b KQkq - 1 3");
         game_play(&game, &engines[0], &engines[1]);
-        game_print(&game, stdout);
+        str_t pgn = game_pgn(&game);
+        puts(pgn.buf);
+        str_free(&pgn);
         game_destroy(&game);
 
         // Kill engines

@@ -158,30 +158,31 @@ str_t game_pgn_result(int result, int lastTurn, str_t *pgnTermination)
     return pgnResult;
 }
 
-void game_print(const Game *g, FILE *out)
+str_t game_pgn(const Game *g)
 // FIXME: Use SAN as required by PGN
 {
-    // Result in PGN format "1-0", "0-1", "1/2-1/2" (from white pov)
-    str_t pgnTermination = str_new();
-    str_t pgnResult = game_pgn_result(g->result, g->pos[g->ply].turn, &pgnTermination);
+    str_t pgn = str_new();
 
-    fprintf(out, "[White \"%s\"]\n", g->names[WHITE].buf);
-    fprintf(out, "[Black \"%s\"]\n", g->names[BLACK].buf);
+    str_cat(&pgn, "[White \"", g->names[WHITE].buf, "\"]\n");
+    str_cat(&pgn, "[Black \"", g->names[BLACK].buf, "\"]\n");
 
     str_t fen = pos_get(&g->pos[0]);
-    fprintf(out, "[FEN \"%s\"]\n", fen.buf);
+    str_cat(&pgn, "[FEN \"", fen.buf, "\"]\n");
     str_free(&fen);
 
     if (g->chess960)
-        fputs("[Variant \"Chess960\"]", out);
+        str_cat(&pgn, "[Variant \"Chess960\"]\n");
 
-    fprintf(out, "[Result \"%s\"]\n", pgnResult.buf);
-    fprintf(out, "[Termination \"%s\"]\n\n", pgnTermination.buf);
+    // Result in PGN format "1-0", "0-1", "1/2-1/2" (from white pov)
+    str_t pgnTermination = str_new();
+    str_t pgnResult = game_pgn_result(g->result, g->pos[g->ply].turn, &pgnTermination);
+    str_cat(&pgn, "[Result \"", pgnResult.buf, "\"]\n");
+    str_cat(&pgn, "[Termination \"", pgnTermination.buf, "\"]\n\n");
 
     for (int ply = 1; ply <= g->ply; ply++) {
         // Write move number
         if (g->pos[ply - 1].turn == WHITE || ply == 1)
-            fprintf(out, g->pos[ply - 1].turn == WHITE ? "%d. " : "%d.. ",
+            str_catf(&pgn, g->pos[ply - 1].turn == WHITE ? "%d. " : "%d.. ",
                 g->pos[ply - 1].fullMove);
 
         // Prepare SAN base
@@ -195,11 +196,11 @@ void game_print(const Game *g, FILE *out)
                 str_putc(&san, '+');  // normal check
         }
 
-        fprintf(out, ply % 10 == 0 ? "%s\n" : "%s ", san.buf);
+        str_cat(&pgn, san.buf, ply % 10 == 0 ? "\n" : " ");
         str_free(&san);
     }
 
-    fprintf(out, "%s\n\n", pgnResult.buf);
-    str_free(&pgnResult);
-    str_free(&pgnTermination);
+    str_cat(&pgn, pgnResult.buf, "\n\n");
+    str_free(&pgnResult, &pgnTermination);
+    return pgn;
 }
