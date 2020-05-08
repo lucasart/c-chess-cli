@@ -31,10 +31,10 @@ static size_t str_round_up(size_t n)
     return p2;
 }
 
-bool str_ok(const str_t *s)
+static bool str_ok(const str_t *s)
 {
     return s && s->alloc == str_round_up(s->len + 1)
-        && s->buf && s->buf[s->len] == '\0';
+        && s->buf && s->buf[s->len] == '\0' && !memchr(s->buf, 0, s->len);
 }
 
 str_t str_new()
@@ -76,7 +76,6 @@ void str_resize(str_t *s, size_t len)
     }
 
     s->buf[len] = '\0';
-    assert(str_ok(s));
 }
 
 void str_cpy(str_t *dest, const char *src)
@@ -86,6 +85,62 @@ void str_cpy(str_t *dest, const char *src)
     str_resize(dest, strlen(src));
     memcpy(dest->buf, src, dest->len + 1);
 
+    assert(str_ok(dest));
+}
+
+void str_ncat(str_t *dest, const char *src, size_t n)
+{
+    assert(str_ok(dest));
+
+    if (strlen(src) < n)
+        n = strlen(src);
+
+    const size_t oldLen = dest->len;
+    str_resize(dest, dest->len + n);
+    memcpy(&dest->buf[oldLen], src, n);
+
+    assert(str_ok(dest));
+}
+
+void str_catf(str_t *dest, const char *fmt, ...)
+{
+    assert(str_ok(dest) && fmt);
+
+    va_list args;
+    va_start(args, fmt);
+
+    size_t bytesLeft = strlen(fmt);
+
+    while (bytesLeft) {
+        const char *pct = memchr(fmt, '%', bytesLeft);
+
+        if (!pct) {
+            // '%' not found: append the rest of the format string and we're done
+            str_cat(dest, fmt);
+            break;
+        }
+
+        assert(pct >= fmt && *pct == '%');
+
+        if (pct > fmt)
+            // '%' found: append the chunk of format string before '%' (if any)
+            str_ncat(dest, fmt, pct - fmt);
+
+        bytesLeft -= (pct + 2) - fmt;
+        fmt = pct + 2;  // move past the '%?' to prepare next loop iteration
+        assert(strlen(fmt) == bytesLeft);
+
+        if (pct[1] == 's')
+            str_cat(dest, va_arg(args, const char *));
+        else if (pct[1] == 'd') {
+            char buf[16];
+            sprintf(buf, "%d", va_arg(args, int));
+            str_cat(dest, buf);
+        } else
+            assert(false);  // add your format specifier handler here
+    }
+
+    va_end(args);
     assert(str_ok(dest));
 }
 
@@ -119,24 +174,28 @@ const char *str_tok(const char *s, str_t *token, const char *delim)
     }
 
     // return string tail or NULL if token empty
+    assert(str_ok(token));
     return token->len ? s : NULL;
 }
 
 size_t str_getdelim(str_t *out, int delim, FILE *in)
 {
-    assert(in && delim);
+    assert(str_ok(out) && in && delim);
     str_cpy(out, "");
-    flockfile(in);
     int c;
+
+    flockfile(in);
 
     do {
         c = getc_unlocked(in);
 
-        if (c != EOF && c)
+        if (c != EOF)
             str_putc(out, c);
     } while (c != delim && c != EOF);
 
     funlockfile(in);
+
+    assert(str_ok(out));
     return out->len;
 }
 
@@ -172,54 +231,6 @@ void str_cat_aux(str_t *dest, const char *s1, ...)
         assert(str_ok(dest));
 
         next = va_arg(args, const char *);
-    }
-
-    va_end(args);
-    assert(str_ok(dest));
-}
-
-void str_catf(str_t *dest, const char *fmt, ...)
-{
-    assert(str_ok(dest) && fmt);
-
-    va_list args;
-    va_start(args, fmt);
-
-    size_t bytesLeft = strlen(fmt);
-
-    while (bytesLeft) {
-        const char *pct = memchr(fmt, '%', bytesLeft);
-
-        if (!pct) {
-            // no more '%', append the rest of the format string and we're done
-            str_cat(dest, fmt);
-            break;
-        }
-
-        assert(*pct == '%');
-
-        if (pct != fmt) {
-            // append the chunk of format string before '%' to dest (if any)
-            char *target = &dest->buf[dest->len];
-            size_t bytes = pct - fmt;
-            str_resize(dest, dest->len + bytes);
-            memcpy(target, fmt, bytes);
-        }
-
-        bytesLeft -= (pct + 2) - fmt;
-        fmt = pct + 2;  // move past the '%?' to prepare next loop iteration
-        assert(strlen(fmt) == bytesLeft);
-
-        if (pct[1] == 's') {
-            const char *s = va_arg(args, const char *);
-            str_cat(dest, s);
-        } else if (pct[1] == 'd') {
-            const int i = va_arg(args, int);
-            char buf[16];
-            sprintf(buf, "%d", i);  // can't overflow 16 char buffer
-            str_cat(dest, buf);
-        } else
-            assert(false);  // add your format specifier handler here
     }
 
     va_end(args);

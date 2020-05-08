@@ -13,17 +13,10 @@
  * not, see <http://www.gnu.org/licenses/>.
 */
 #include <signal.h>
-#include <stdlib.h>
 #include <string.h>
-#include <sys/wait.h>
 #include <unistd.h>
 #include "engine.h"
-
-void die(const char *msg)
-{
-    perror(msg);
-    exit(1);
-}
+#include "util.h"
 
 static void engine_spawn(Engine *e, const char *cmd)
 {
@@ -32,7 +25,7 @@ static void engine_spawn(Engine *e, const char *cmd)
     int outof[2], into[2];
 
     if (pipe(outof) < 0 || pipe(into) < 0)
-        die("pipe failed!");
+        die("pipe() failed in engine_spawn()");
 
     e->pid = fork();
 
@@ -42,32 +35,32 @@ static void engine_spawn(Engine *e, const char *cmd)
         close(outof[0]);
 
         if (dup2(into[0], STDIN_FILENO) == -1)
-            die("dup2 failed!");
+            die("dup2() failed in engine_spawn()");
         close(into[0]);
 
         if (dup2(outof[1], STDOUT_FILENO) == -1)
-            die("dup2 failed!");
+            die("dup2() failed in engine_spawn()");
         close(outof[1]);
 
         if (execlp(cmd, cmd, NULL) == -1)
-            die("exec failed!");
+            die("execlp() failed in engine_spawn()");
     } else if (e->pid > 0) {
         // in the parent process
         close(into[0]);
         close(outof[1]);
 
         if (!(e->in = fdopen(outof[0], "r")))
-            die("fdopen failed!");
+            die("fdopen() failed in engine_spawn()");
 
         if (!(e->out = fdopen(into[1], "w")))
-            die("fdopen failed!");
+            die("fdopen() failed in engine_spawn()");
 
         // FIXME: doesn't work on Windows
         setvbuf(e->in, NULL, _IONBF, 0);
         setvbuf(e->out, NULL, _IONBF, 0);
     } else
         // fork failed
-        die("fork failed!");
+        die("fork() failed in engine_spawn()");
 }
 
 void engine_create(Engine *e, const char *cmd, FILE *log)
@@ -95,25 +88,25 @@ void engine_destroy(Engine *e)
     str_free(&e->name);
 
     if (kill(e->pid, SIGTERM) < 0)
-        die("kill failed!");
+        die("engine_destroy() failed");
 }
 
 void engine_readln(const Engine *e, str_t *line)
 {
     if (str_getdelim(line, '\n', e->in)) {
-        if (e->log)
-            fprintf(e->log, "%s -> %s", e->name.buf, line->buf);
+        if (e->log && fprintf(e->log, "%s -> %s", e->name.buf, line->buf) <= 0)
+            die("engine_writeln() failed writing to e->log");
     } else
-        die("engine_readln() failed!");
+        die("engine_readln() failed reading from e->in");
 }
 
 void engine_writeln(const Engine *e, char *buf)
 {
     if (fputs(buf, e->out) >= 0) {
-        if (e->log)
-            fprintf(e->log, "%s <- %s", e->name.buf, buf);
+        if (e->log && fprintf(e->log, "%s <- %s", e->name.buf, buf) <= 0)
+            die("engine_writeln() failed writing to e->log");
     } else
-        die("engine_readln() failed!");
+        die("engine_writeln() failed writing to e->out");
 }
 
 void engine_sync(const Engine *e)

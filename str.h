@@ -16,15 +16,13 @@ typedef struct {
     size_t len;  // does not count '\0' terminator
 } str_t;
 
-bool str_ok(const str_t *s);
-
 str_t str_new();
 str_t str_dup(const char *src);
 void str_resize(str_t *s, size_t len);
 
 void str_cpy(str_t *dest, const char *src);
-
 #define str_putc(...) str_putc_aux(__VA_ARGS__, NULL)
+void str_ncat(str_t *dest, const char *src, size_t n);
 #define str_cat(...) str_cat_aux(__VA_ARGS__, NULL)
 void str_catf(str_t *s1, const char *fmt, ...);
 #define str_free(...) str_free_aux(__VA_ARGS__, NULL)

@@ -16,6 +16,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "position.h"
+#include "util.h"
 
 enum {MAX_SQUARE_CHAR = 3};
 
