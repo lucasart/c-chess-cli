@@ -7,7 +7,7 @@ typedef struct {
     FILE *file;
 } Openings;
 
-void openings_create(Openings *openings, const char *fileName, bool randomStart);
-void openings_destroy(Openings *openings);
+Openings openings_new(const char *fileName, bool randomStart);
+void openings_delete(Openings *openings);
 
-str_t openings_get(Openings *openings);
+str_t openings_get(Openings *openings);  // FIXME: lock this

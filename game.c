@@ -212,7 +212,7 @@ str_t game_pgn(const Game *g)
         str_delete(&san);
     }
 
-    str_cat(&pgn, pgnResult.buf, "\n\n");
+    str_cat(&pgn, pgnResult.buf, "\n");
     str_delete(&pgnResult, &pgnTermination, &fen);
     return pgn;
 }

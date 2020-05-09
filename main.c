@@ -15,10 +15,14 @@
 #include <pthread.h>
 #include <stdlib.h>
 #include "engine.h"
+#include "game.h"
+#include "openings.h"
 #include "options.h"
 
 Options options;
 EngineOptions engineOptions[2];
+Openings openings;
+
 pthread_t *threads;
 
 void *thread_start(void *arg)
@@ -34,6 +38,18 @@ void *thread_start(void *arg)
     for (int i = 0; i < 2; i++)
         engines[i] = engine_create(engineOptions[i].cmd.buf, log);
 
+    for (int i = 0; i < options.games; i++) {
+        str_t fen = openings_get(&openings);
+        Game game = game_new(options.chess960, fen.buf);
+
+        game_play(&game, &engines[0], &engines[1]);
+        str_t pgn = game_pgn(&game);
+        puts(pgn.buf);
+
+        str_delete(&pgn, &fen);
+        game_delete(&game);
+    }
+
     for (int i = 0; i < 2; i++)
         engine_delete(&engines[i]);
 
@@ -48,6 +64,7 @@ int main(int argc, const char **argv)
     engineOptions[0].cmd = str_dup(argv[1]);
     engineOptions[1].cmd = str_dup(argv[2]);
     options = options_new(argc, argv, 3);
+    openings = openings_new(options.openings.buf, options.random);
 
     threads = calloc(options.concurrency, sizeof(pthread_t));
 
@@ -59,6 +76,7 @@ int main(int argc, const char **argv)
 
     free(threads);
 
+    openings_delete(&openings);
     options_delete(&options);
     str_delete(&engineOptions[0].cmd, &engineOptions[1].cmd);
     return 0;
