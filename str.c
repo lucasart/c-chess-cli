@@ -43,7 +43,6 @@ static void str_resize(str_t *s, size_t len)
     if (s->alloc != str_round_up(len + 1)) {
         s->alloc = str_round_up(len + 1);
         s->buf = realloc(s->buf, s->alloc);
-        countRealloc++;
     }
 
     s->buf[len] = '\0';

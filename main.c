@@ -12,49 +12,10 @@
  * You should have received a copy of the GNU General Public License along with this program. If
  * not, see <http://www.gnu.org/licenses/>.
 */
-#include "game.h"
-#include "gen.h"
-#include <string.h>
-#include "str.h"
-#include "openings.h"
+#include "options.h"
 
-enum {N_GAMES = 10};
-
-int main(int argc, char **argv)
+int main(int argc, const char **argv)
 {
-    if (argc == 4) {
-        Engine engines[2];
-
-        // Prepare engines
-        for (int i = 0; i < 2; i++)
-            engine_create(&engines[i], argv[i + 1], /*stderr*/ NULL);
-
-        Openings o;
-        openings_create(&o, argv[3], false);
-
-        for (int i = 0; i < N_GAMES; i++) {
-            // Load opening and prepare game
-            Game game;
-            str_t fen = openings_get(&o);
-            game_create(&game, false, fen.buf);
-
-            // Play the game
-            game_play(&game, &engines[0], &engines[1]);
-
-            // Print the PGN
-            str_t pgn = game_pgn(&game);
-            puts(pgn.buf);
-
-            // Clean-up
-            str_free(&fen, &pgn);
-            game_destroy(&game);
-        }
-
-        openings_destroy(&o);
-
-        // Kill engines
-        for (int i = 0; i < 2; i++)
-            engine_destroy(&engines[i]);
-    } else
-        gen_run_test();
+    Options options = options_parse(argc, argv);
+    return 0;
 }

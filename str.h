@@ -17,9 +17,9 @@
 #include <stdio.h>
 
 typedef struct {
-    char *buf;     // C-string ('\0' terminated)
+    char *buf;  // C-string ('\0' terminated)
     size_t alloc;  // allocated size (including '\0' terminator)
-    size_t len;    // number of characters for string content, excluding '\0' terminator
+    size_t len;  // number of characters for string content, excluding '\0' terminator
 } str_t;
 
 // checks if string 's' is valid
