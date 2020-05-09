@@ -4,7 +4,7 @@
 #include "options.h"
 #include "util.h"
 
-Options options_new(int argc, const char **argv)
+Options options_new(int argc, const char **argv, int start)
 {
     // Set default values
     Options options = {
@@ -13,13 +13,14 @@ Options options_new(int argc, const char **argv)
         .games = 1,
         .openings = str_new(),
         .random = false,
-        .repeat = false
+        .repeat = false,
+        .debug = false
     };
 
     int i;  // iterator for argv[]
     bool expectValue = false;  // pattern: '-tag [value]'. should next token to be a value or tag ?
 
-    for (i = 1; i < argc; i++) {
+    for (i = start; i < argc; i++) {
         if (argv[i][0] == '-') {
             // process tag
             if (expectValue)
@@ -36,6 +37,8 @@ Options options_new(int argc, const char **argv)
                     options.random = true;
                 else if (!strcmp(argv[i], "-repeat"))
                     options.repeat = true;
+                else if (!strcmp(argv[i], "-debug"))
+                    options.debug = true;
                 else
                     die("invalid tag '%s'\n", argv[i]);
             }

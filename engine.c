@@ -54,22 +54,25 @@ static void engine_spawn(Engine *e, const char *cmd)
         die("fork() failed in engine_spawn()\n");
 }
 
-void engine_create(Engine *e, const char *cmd, FILE *log)
+Engine engine_create(const char *cmd, FILE *log)
 {
-    engine_spawn(e, cmd);  // spawn child process and plug communication pipes
-    e->log = log;
+    Engine e;
 
-    e->name = str_dup(cmd); // FIXME: parse from 'id name %s'
+    engine_spawn(&e, cmd);  // spawn child process and plug communication pipes
+    e.log = log;
 
-    engine_writeln(e, "uci\n");
+    e.name = str_dup(cmd); // FIXME: parse from 'id name %s'
+
+    engine_writeln(&e, "uci\n");
 
     str_t line = str_new();
 
     do {
-        engine_readln(e, &line);
+        engine_readln(&e, &line);
     } while (strcmp(line.buf, "uciok\n"));
 
     str_delete(&line);
+    return e;
 }
 
 void engine_delete(Engine *e)
@@ -93,8 +96,8 @@ void engine_readln(const Engine *e, str_t *line)
 
 void engine_writeln(const Engine *e, char *buf)
 {
-    if (fputs(buf, e->out) >= 0) {
-        if (e->log && fprintf(e->log, "%s <- %s", e->name.buf, buf) <= 0)
+    if (fputs(buf, e->out) >= 0 && fflush(e->out) == 0) {
+        if (e->log && (fprintf(e->log, "%s <- %s", e->name.buf, buf) <= 0 || fflush(e->log) != 0))
             die("engine_writeln() failed writing to log\n");
     } else
         die("engine_writeln() failed writing to engine's input\n");  // FIXME: name faulty engine

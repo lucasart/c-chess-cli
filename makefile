@@ -5,7 +5,7 @@ static = no
 
 # Compilation flags
 CF = -std=gnu99 -mpopcnt -O3 -flto -Wfatal-errors -Wall -Wextra -Wshadow
-LF =
+LF = -lpthread
 
 ifeq ($(debug),no)
 	CF += -DNDEBUG

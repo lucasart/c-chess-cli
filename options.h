@@ -8,7 +8,12 @@ typedef struct {
     str_t openings;  // opening set
     bool random;  // start from a random opening
     bool repeat;  // repeat each opening twice with colors reversed
+    bool debug;  // log all I/O with engines
 } Options;
 
-Options options_new(int argc, const char **argv);
+typedef struct {
+    str_t cmd;
+} EngineOptions;
+
+Options options_new(int argc, const char **argv, int start);
 void options_delete();
