@@ -1,3 +1,4 @@
+#include <stdlib.h>
 #include "game.h"
 #include "gen.h"
 #include "str.h"
@@ -14,7 +15,7 @@ static str_t uci_position_command(const Game *g)
 
     str_t fen = pos_get(&g->pos[ply0]);
     str_cat(&cmd, fen.buf);
-    str_free(&fen);
+    str_delete(&fen);
 
     if (ply0 < g->ply) {
         str_cat(&cmd, " moves");
@@ -22,7 +23,7 @@ static str_t uci_position_command(const Game *g)
         for (int ply = ply0 + 1; ply <= g->ply; ply++) {
             str_t lan = pos_move_to_lan(&g->pos[ply - 1], g->pos[ply].lastMove, g->chess960);
             str_cat(&cmd, " ", lan.buf);
-            str_free(&lan);
+            str_delete(&lan);
         }
     }
 
@@ -65,20 +66,28 @@ bool illegal_move(move_t move, const move_t *begin, const move_t *end)
     return true;
 }
 
-void game_create(Game *g, bool chess960, const char *fen)
+Game game_new(bool chess960, const char *fen)
 {
-    g->chess960 = chess960;
-    g->ply = 0;
-    g->result = RESULT_NONE;
-    pos_set(&g->pos[0], fen);
+    Game g;
 
-    g->names[WHITE] = str_new();
-    g->names[BLACK] = str_new();
+    g.names[WHITE] = str_new();
+    g.names[BLACK] = str_new();
+
+    g.ply = 0;
+    g.maxPly = 256;
+    g.pos = malloc(g.maxPly * sizeof(Position));
+    pos_set(&g.pos[0], fen);
+
+    g.chess960 = chess960;
+    g.result = RESULT_NONE;
+
+    return g;
 }
 
-void game_destroy(Game *g)
+void game_delete(Game *g)
 {
-    str_free(&g->names[WHITE], &g->names[BLACK]);
+    free(g->pos), g->pos = NULL;
+    str_delete(&g->names[WHITE], &g->names[BLACK]);
 }
 
 void game_play(Game *g, const Engine *first, const Engine *second)
@@ -95,8 +104,13 @@ void game_play(Game *g, const Engine *first, const Engine *second)
 
     move_t move = 0;
 
-    for (g->ply = 0; g->ply < MAX_GAME_PLY; g->ply++) {
-        if (g->ply > 0)
+    for (g->ply = 0; ; g->ply++) {
+        if (g->ply >= g->maxPly) {
+            g->maxPly *= 2;
+            g->pos = realloc(g->pos, g->maxPly * sizeof(Position));
+        }
+
+        if (move)
             pos_move(&g->pos[g->ply], &g->pos[g->ply - 1], move);
 
         move_t moves[MAX_MOVES], *end;
@@ -108,14 +122,14 @@ void game_play(Game *g, const Engine *first, const Engine *second)
 
         str_t posCmd = uci_position_command(g);
         engine_writeln(engine, posCmd.buf);
-        str_free(&posCmd);
+        str_delete(&posCmd);
 
         engine_sync(engine);
 
         engine_writeln(engine, "go depth 6\n");
         str_t played = engine_bestmove(engine);
         move = pos_string_to_move(&g->pos[g->ply], played.buf, g->chess960);
-        str_free(&played);
+        str_delete(&played);
 
         if (illegal_move(move, moves, end)) {
             g->result = RESULT_ILLEGAL_MOVE;
@@ -123,16 +137,13 @@ void game_play(Game *g, const Engine *first, const Engine *second)
         }
     }
 
-    if (!g->result) {
-        assert(g->ply == MAX_GAME_PLY);
-        g->result = RESULT_MAX_PLY;
-    }
+    assert(g->result);
 }
 
 str_t game_pgn_result(int result, int lastTurn, str_t *pgnTermination)
 {
     str_t pgnResult = str_new();
-    str_cpy(pgnTermination, "normal");  // default: termination by chess rules
+    str_cpy(pgnTermination, "");  // default: termination by chess rules
 
     if (result == RESULT_NONE) {
         str_cpy(&pgnResult, "*");
@@ -150,10 +161,8 @@ str_t game_pgn_result(int result, int lastTurn, str_t *pgnTermination)
     else if (result == RESULT_ILLEGAL_MOVE) {
         str_cpy(&pgnResult, lastTurn == WHITE ? "0-1" : "1-0");
         str_cpy(pgnTermination, "illegal move");
-    } else if (result == RESULT_MAX_PLY) {
-        str_cpy(&pgnResult, "1/2-1/2");
-        str_cpy(pgnTermination, "max ply");
-    }
+    } else
+        assert(false);
 
     return pgnResult;
 }
@@ -166,18 +175,21 @@ str_t game_pgn(const Game *g)
     str_cat(&pgn, "[White \"", g->names[WHITE].buf, "\"]\n");
     str_cat(&pgn, "[Black \"", g->names[BLACK].buf, "\"]\n");
 
-    str_t fen = pos_get(&g->pos[0]);
-    str_cat(&pgn, "[FEN \"", fen.buf, "\"]\n");
-    str_free(&fen);
-
-    if (g->chess960)
-        str_cat(&pgn, "[Variant \"Chess960\"]\n");
-
     // Result in PGN format "1-0", "0-1", "1/2-1/2" (from white pov)
     str_t pgnTermination = str_new();
     str_t pgnResult = game_pgn_result(g->result, g->pos[g->ply].turn, &pgnTermination);
     str_cat(&pgn, "[Result \"", pgnResult.buf, "\"]\n");
-    str_cat(&pgn, "[Termination \"", pgnTermination.buf, "\"]\n\n");
+
+    if (pgnTermination.len)
+        str_cat(&pgn, "[Termination \"", pgnTermination.buf, "\"]\n");
+
+    str_t fen = pos_get(&g->pos[0]);
+    str_cat(&pgn, "[FEN \"", fen.buf, "\"]\n");
+
+    if (g->chess960)
+        str_cat(&pgn, "[Variant \"Chess960\"]\n");
+
+    str_catf(&pgn, "[PlyCount \"%d\"]\n\n", g->ply);
 
     for (int ply = 1; ply <= g->ply; ply++) {
         // Write move number
@@ -197,10 +209,10 @@ str_t game_pgn(const Game *g)
         }
 
         str_cat(&pgn, san.buf, ply % 10 == 0 ? "\n" : " ");
-        str_free(&san);
+        str_delete(&san);
     }
 
     str_cat(&pgn, pgnResult.buf, "\n\n");
-    str_free(&pgnResult, &pgnTermination);
+    str_delete(&pgnResult, &pgnTermination, &fen);
     return pgn;
 }

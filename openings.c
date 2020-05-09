@@ -21,7 +21,7 @@ void openings_create(Openings *openings, const char *fileName, bool randomStart)
 
         // Consume current line, which is likely broken, as we're somewhere in the middle of it
         str_t line = openings_get(openings);
-        str_free(&line);
+        str_delete(&line);
     }
 }
 
@@ -45,6 +45,6 @@ str_t openings_get(Openings *openings)
     str_tok(line.buf, &fen, ";\n");
     // TODO: proper FEN validation
 
-    str_free(&line);
+    str_delete(&line);
     return fen;
 }

@@ -4,16 +4,14 @@
 #include "options.h"
 #include "util.h"
 
-#include <stdio.h>
-
-Options options_parse(int argc, const char **argv)
+Options options_new(int argc, const char **argv)
 {
     // Set default values
     Options options = {
         .chess960 = false,
         .concurrency = 1,
         .games = 1,
-        .openings = NULL,
+        .openings = str_new(),
         .random = false,
         .repeat = false
     };
@@ -52,7 +50,7 @@ Options options_parse(int argc, const char **argv)
                 options.games = atoi(argv[i]);
             else {
                 assert(!strcmp(argv[i - 1], "-openings"));
-                options.openings = argv[i];
+                str_cpy(&options.openings, argv[i]);
             }
 
             expectValue = false;
@@ -62,10 +60,10 @@ Options options_parse(int argc, const char **argv)
     if (expectValue)
         die("value expected after '%s'\n", argv[i - 1]);
 
-    printf("chess960=%d, concurrency=%d, games=%d, openings='%s', random=%d, repeat=%d\n",
-        options.chess960, options.concurrency, options.games, options.openings, options.random,
-        options.repeat);
- 
    return options;
 }
 
+void options_delete(Options *options)
+{
+    str_delete(&options->openings);
+}

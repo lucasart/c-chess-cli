@@ -321,7 +321,7 @@ void pos_set(Position *pos, const char *fen)
     // Full move counter (in moves, starts at 1): optional, default 1
     pos->fullMove = str_tok(fen, &token, " ") ? atoi(token.buf) : 1;
 
-    str_free(&token);
+    str_delete(&token);
     finish(pos);
 }
 
@@ -380,7 +380,7 @@ str_t pos_get(const Position *pos)
     // En passant and 50 move
     str_t ep = square_to_string(pos->epSquare);
     str_catf(&fen, " %s %d %d", ep.buf, pos->rule50, pos->fullMove);
-    str_free(&ep);
+    str_delete(&ep);
 
     return fen;
 }
@@ -553,7 +553,7 @@ str_t pos_move_to_lan(const Position *pos, move_t m, bool chess960)
     str_t fromStr = square_to_string(from);
     str_t toStr = square_to_string(to);
     str_cat(&lan, fromStr.buf, toStr.buf);
-    str_free(&fromStr, &toStr);
+    str_delete(&fromStr, &toStr);
 
     if (prom < NB_PIECE)
         str_putc(&lan, PieceLabel[BLACK][prom]);
@@ -657,7 +657,7 @@ str_t pos_move_to_san(const Position *pos, move_t m)
 
         str_t toStr = square_to_string(to);
         str_cat(&san, toStr.buf);
-        str_free(&toStr);
+        str_delete(&toStr);
     }
 
     return san;
@@ -681,9 +681,9 @@ void pos_print(const Position *pos)
 
     str_t fen = pos_get(pos);
     puts(fen.buf);
-    str_free(&fen);
+    str_delete(&fen);
 
     str_t lan = pos_move_to_lan(pos, pos->lastMove, true);
     printf("Last move: %s\n", lan.buf);
-    str_free(&lan);
+    str_delete(&lan);
 }

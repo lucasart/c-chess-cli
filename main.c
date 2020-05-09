@@ -16,6 +16,7 @@
 
 int main(int argc, const char **argv)
 {
-    Options options = options_parse(argc, argv);
+    Options options = options_new(argc, argv);
+    options_delete(&options);
     return 0;
 }

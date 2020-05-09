@@ -12,7 +12,7 @@ typedef struct {
 } Engine;
 
 void engine_create(Engine *e, const char *cmd, FILE *log);
-void engine_destroy(Engine *e);
+void engine_delete(Engine *e);
 
 void engine_readln(const Engine *e, str_t *line);
 void engine_writeln(const Engine *e, char *buf);

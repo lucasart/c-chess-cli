@@ -31,8 +31,8 @@ str_t str_new();
 // returns a valid string, copying its content from valid C-string 'src'
 str_t str_dup(const char *src);
 
-// str_free(&s1, ..., &sn): frees a list of n >= 1 valid strings, and marks them as invalid.
-#define str_free(...) str_free_aux(__VA_ARGS__, NULL)
+// str_delete(&s1, ..., &sn): frees a list of n >= 1 valid strings, and marks them as invalid.
+#define str_delete(...) str_free_aux(__VA_ARGS__, NULL)
 void str_free_aux(str_t *s1, ...);
 
 // copies valid C-string 'src' into valid string 'dest'

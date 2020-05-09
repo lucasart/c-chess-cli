@@ -2,8 +2,6 @@
 #include "position.h"
 #include "engine.h"
 
-enum {MAX_GAME_PLY = 2048};
-
 enum {
     RESULT_NONE,
     RESULT_CHECKMATE,  // lost by being checkmated
@@ -11,20 +9,19 @@ enum {
     RESULT_THREEFOLD,  // draw by 3 position repetition
     RESULT_FIFTY_MOVES,  // draw by 50 moves rule
     RESULT_INSUFFICIENT_MATERIAL,  // draw due to insufficient material to deliver checkmate
-    RESULT_ILLEGAL_MOVE,  // lost by playing an illegal move
-    RESULT_MAX_PLY  // not supposed to happen (count as draw but notify user)
+    RESULT_ILLEGAL_MOVE  // lost by playing an illegal move
 };
 
 typedef struct {
-    Position pos[MAX_GAME_PLY];  // list of positions (including moves) since game start
     str_t names[NB_COLOR];  // names of white and black players
-    int ply;
+    Position *pos;  // list of positions (including moves) since game start
+    int ply, maxPly;
     bool chess960;
     int result;
 } Game;
 
-void game_create(Game *g, bool chess960, const char *fen);
-void game_destroy(Game *g);
+Game game_new(bool chess960, const char *fen);
+void game_delete(Game *g);
 
 void game_play(Game *g, const Engine *first, const Engine *second);
 str_t game_pgn(const Game *g);

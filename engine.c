@@ -69,17 +69,17 @@ void engine_create(Engine *e, const char *cmd, FILE *log)
         engine_readln(e, &line);
     } while (strcmp(line.buf, "uciok\n"));
 
-    str_free(&line);
+    str_delete(&line);
 }
 
-void engine_destroy(Engine *e)
+void engine_delete(Engine *e)
 {
     fclose(e->in);
     fclose(e->out);
-    str_free(&e->name);
+    str_delete(&e->name);
 
     if (kill(e->pid, SIGTERM) < 0)
-        die("engine_destroy() failed to kill engine\n");  // FIXME: name faulty engine
+        die("engine_delete() failed to kill engine\n");  // FIXME: name faulty engine
 }
 
 void engine_readln(const Engine *e, str_t *line)
@@ -110,7 +110,7 @@ void engine_sync(const Engine *e)
         engine_readln(e, &line);
     } while (strcmp(line.buf, "readyok\n"));
 
-    str_free(&line);
+    str_delete(&line);
 }
 
 str_t engine_bestmove(const Engine *e)
@@ -130,6 +130,6 @@ str_t engine_bestmove(const Engine *e)
         }
     }
 
-    str_free(&line, &token);
+    str_delete(&line, &token);
     return best;
 }
