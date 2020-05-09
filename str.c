@@ -21,9 +21,9 @@
 #include "str.h"
 
 static size_t str_round_up(size_t n)
-// Round to the next power of 2, which is at least the size of a machine word
+// Round to the next power of 2, at least the size of 2 machine words
 {
-    size_t p2 = sizeof(size_t);
+    size_t p2 = 2 * sizeof(size_t);
 
     while (p2 < n)
         p2 *= 2;
@@ -31,7 +31,25 @@ static size_t str_round_up(size_t n)
     return p2;
 }
 
-static bool str_ok(const str_t *s)
+static void str_resize(str_t *s, size_t len)
+// After this call, 's' may be invalid according to the strict definition of str_ok(), because it
+// may contain 0's before the end. This will cause problems with most code, starting with the C
+// standard library, which is why this function is not exposed to the API.
+{
+    assert(str_ok(s));
+    s->len = len;
+
+    // Implement lazy realloc strategy
+    if (s->alloc != str_round_up(len + 1)) {
+        s->alloc = str_round_up(len + 1);
+        s->buf = realloc(s->buf, s->alloc);
+        countRealloc++;
+    }
+
+    s->buf[len] = '\0';
+}
+
+bool str_ok(const str_t *s)
 {
     return s && s->alloc == str_round_up(s->len + 1)
         && s->buf && s->buf[s->len] == '\0' && !memchr(s->buf, 0, s->len);
@@ -64,18 +82,21 @@ str_t str_dup(const char *src)
     return s;
 }
 
-void str_resize(str_t *s, size_t len)
+void str_free_aux(str_t *s1, ...)
 {
-    assert(str_ok(s));
-    s->len = len;
+    va_list args;
+    va_start(args, s1);
+    str_t *next = s1;
 
-    // Implement lazy realloc strategy
-    if (s->alloc != str_round_up(len + 1)) {
-        s->alloc = str_round_up(len + 1);
-        s->buf = realloc(s->buf, s->alloc);
+    while (next) {
+        assert(str_ok(next));
+        free(next->buf);
+        *next = (str_t){0};
+
+        next = va_arg(args, str_t *);
     }
 
-    s->buf[len] = '\0';
+    va_end(args);
 }
 
 void str_cpy(str_t *dest, const char *src)
@@ -85,6 +106,24 @@ void str_cpy(str_t *dest, const char *src)
     str_resize(dest, strlen(src));
     memcpy(dest->buf, src, dest->len + 1);
 
+    assert(str_ok(dest));
+}
+
+void str_putc_aux(str_t *dest, int c1, ...)
+{
+    assert(str_ok(dest));
+    va_list args;
+    va_start(args, c1);
+    int next = c1;
+
+    while (next) {
+        str_resize(dest, dest->len + 1);
+        dest->buf[dest->len - 1] = (char)next;
+
+        next = va_arg(args, int);
+    }
+
+    va_end(args);
     assert(str_ok(dest));
 }
 
@@ -99,6 +138,26 @@ void str_ncat(str_t *dest, const char *src, size_t n)
     str_resize(dest, dest->len + n);
     memcpy(&dest->buf[oldLen], src, n);
 
+    assert(str_ok(dest));
+}
+
+void str_cat_aux(str_t *dest, const char *s1, ...)
+{
+    assert(str_ok(dest));
+    va_list args;
+    va_start(args, s1);
+    const char *next = s1;
+
+    while (next) {
+        const size_t initial = dest->len, additional = strlen(next);
+        str_resize(dest, initial + additional);
+        memcpy(&dest->buf[initial], next, additional + 1);
+        assert(str_ok(dest));
+
+        next = va_arg(args, const char *);
+    }
+
+    va_end(args);
     assert(str_ok(dest));
 }
 
@@ -178,9 +237,9 @@ const char *str_tok(const char *s, str_t *token, const char *delim)
     return token->len ? s : NULL;
 }
 
-size_t str_getdelim(str_t *out, int delim, FILE *in)
+size_t str_getline(str_t *out, FILE *in)
 {
-    assert(str_ok(out) && in && delim);
+    assert(str_ok(out) && in);
     str_cpy(out, "");
     int c;
 
@@ -191,65 +250,10 @@ size_t str_getdelim(str_t *out, int delim, FILE *in)
 
         if (c != EOF)
             str_putc(out, c);
-    } while (c != delim && c != EOF);
+    } while (c != '\n' && c != EOF);
 
     funlockfile(in);
 
     assert(str_ok(out));
     return out->len;
-}
-
-void str_putc_aux(str_t *dest, int c1, ...)
-{
-    assert(str_ok(dest));
-    va_list args;
-    va_start(args, c1);
-    int next = c1;
-
-    while (next) {
-        str_resize(dest, dest->len + 1);
-        dest->buf[dest->len - 1] = (char)next;
-
-        next = va_arg(args, int);
-    }
-
-    va_end(args);
-    assert(str_ok(dest));
-}
-
-void str_cat_aux(str_t *dest, const char *s1, ...)
-{
-    assert(str_ok(dest));
-    va_list args;
-    va_start(args, s1);
-    const char *next = s1;
-
-    while (next) {
-        const size_t initial = dest->len, additional = strlen(next);
-        str_resize(dest, initial + additional);
-        memcpy(&dest->buf[initial], next, additional + 1);
-        assert(str_ok(dest));
-
-        next = va_arg(args, const char *);
-    }
-
-    va_end(args);
-    assert(str_ok(dest));
-}
-
-void str_free_aux(str_t *s1, ...)
-{
-    va_list args;
-    va_start(args, s1);
-    str_t *next = s1;
-
-    while (next) {
-        assert(str_ok(next));
-        free(next->buf);
-        *next = (str_t){0};
-
-        next = va_arg(args, str_t *);
-    }
-
-    va_end(args);
 }

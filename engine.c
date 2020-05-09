@@ -93,7 +93,7 @@ void engine_destroy(Engine *e)
 
 void engine_readln(const Engine *e, str_t *line)
 {
-    if (str_getdelim(line, '\n', e->in)) {
+    if (str_getline(line, e->in)) {
         if (e->log && fprintf(e->log, "%s -> %s", e->name.buf, line->buf) <= 0)
             die("engine_writeln() failed writing to e->log");
     } else

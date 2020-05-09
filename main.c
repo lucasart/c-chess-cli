@@ -30,7 +30,7 @@ int main(int argc, char **argv)
             engine_create(&engines[i], argv[i + 1], /*stderr*/ NULL);
 
         Openings o;
-        openings_create(&o, argv[3], true);
+        openings_create(&o, argv[3], false);
 
         for (int i = 0; i < N_GAMES; i++) {
             // Load opening and prepare game

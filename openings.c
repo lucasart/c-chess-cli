@@ -34,11 +34,11 @@ str_t openings_get(Openings *openings)
 {
     str_t line = str_new(), fen = str_new();
 
-    if (!str_getdelim(&line, '\n', openings->file)) {
+    if (!str_getline(&line, openings->file)) {
         // Try (once) to wrap around EOF
         rewind(openings->file);
 
-        if (!str_getdelim(&line, '\n', openings->file))
+        if (!str_getline(&line, openings->file))
             die("openings_get(): cannot read a single line");
     }
 

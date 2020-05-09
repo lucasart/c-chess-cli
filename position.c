@@ -18,8 +18,6 @@
 #include "position.h"
 #include "util.h"
 
-enum {MAX_SQUARE_CHAR = 3};
-
 static const char *PieceLabel[NB_COLOR] = {"NBRQKP.", "nbrqkp."};
 
 static uint64_t ZobristKey[NB_COLOR][NB_PIECE][NB_SQUARE];
@@ -58,18 +56,19 @@ static uint64_t zobrist_castling(bitboard_t castleRooks)
     return k;
 }
 
-static void square_to_string(int square, char *str)
+static str_t square_to_string(int square)
 {
     BOUNDS(square, NB_SQUARE + 1);
+    str_t str = str_new();
 
     if (square == NB_SQUARE)
-        *str++ = '-';
+        str_putc(&str, '-');
     else {
-        *str++ = file_of(square) + 'a';
-        *str++ = rank_of(square) + '1';
+        str_putc(&str, file_of(square) + 'a');
+        str_putc(&str, rank_of(square) + '1');
     }
 
-    *str = '\0';
+    return str;
 }
 
 static int string_to_square(const char *str)
@@ -379,9 +378,9 @@ str_t pos_get(const Position *pos)
     }
 
     // En passant and 50 move
-    char str[MAX_SQUARE_CHAR];
-    square_to_string(pos->epSquare, str);
-    str_catf(&fen, " %s %d %d", str, pos->rule50, pos->fullMove);
+    str_t ep = square_to_string(pos->epSquare);
+    str_catf(&fen, " %s %d %d", ep.buf, pos->rule50, pos->fullMove);
+    str_free(&ep);
 
     return fen;
 }
@@ -540,21 +539,21 @@ bool pos_move_is_castling(const Position *pos, move_t m)
 str_t pos_move_to_lan(const Position *pos, move_t m, bool chess960)
 {
     str_t lan = str_new();
-    const int from = move_from(m), to = move_to(m), prom = move_prom(m);
+    const int from = move_from(m), prom = move_prom(m);
+    int to = move_to(m);
 
     if (!(from | to | prom)) {
         str_cpy(&lan, "0000");
         return lan;
     }
 
-    const int _to = !chess960 && pos_move_is_castling(pos, m)
-        ? (to > from ? from + 2 : from - 2)  // e1h1 -> e1g1, e1a1 -> e1c1
-        : to;
+    if (!chess960 && pos_move_is_castling(pos, m))
+        to = to > from ? from + 2 : from - 2;  // e1h1 -> e1g1, e1a1 -> e1c1
 
-    char fromStr[MAX_SQUARE_CHAR], toStr[MAX_SQUARE_CHAR];
-    square_to_string(from, fromStr);
-    square_to_string(_to, toStr);
-    str_cat(&lan, fromStr, toStr);
+    str_t fromStr = square_to_string(from);
+    str_t toStr = square_to_string(to);
+    str_cat(&lan, fromStr.buf, toStr.buf);
+    str_free(&fromStr, &toStr);
 
     if (prom < NB_PIECE)
         str_putc(&lan, PieceLabel[BLACK][prom]);
@@ -601,9 +600,6 @@ str_t pos_move_to_san(const Position *pos, move_t m)
     } else {
         str_putc(&san, PieceLabel[WHITE][piece]);
 
-        if (piece == KING)
-            goto disambiguation_done;
-
         // ** SAN disambiguation **
 
         // 1. Build a list of 'contesters', which are all our pieces of the same type that can also
@@ -612,7 +608,10 @@ str_t pos_move_to_san(const Position *pos, move_t m)
         bitboard_t contesters = pos_pieces_cp(pos, us, piece);
         bb_clear(&contesters, from);
 
-        if (piece == KNIGHT)
+         if (piece == KING)
+             // 1.0. Trivial case. Skip the swhole SAN disambiguation process.
+             contesters = 0;
+         if (piece == KNIGHT)
             // 1.1. Knights. Restrict to those within a knight jump of of 'to' that are not pinned.
             contesters &= KnightAttacks[to] & ~pins;
         else {
@@ -653,14 +652,12 @@ str_t pos_move_to_san(const Position *pos, move_t m)
             // Note that 2.1 and 2.2 are not mutually exclusive
         }
 
-        disambiguation_done:
-
         if (pos_move_is_capture(pos, m))
             str_putc(&san, 'x');
 
-        char toStr[MAX_SQUARE_CHAR];
-        square_to_string(to, toStr);
-        str_cat(&san, toStr);
+        str_t toStr = square_to_string(to);
+        str_cat(&san, toStr.buf);
+        str_free(&toStr);
     }
 
     return san;
