@@ -75,7 +75,7 @@ str_t str_dup(const char *src)
     s.len = strlen(src);
     s.alloc = str_round_up(s.len + 1);
     s.buf = malloc(s.alloc);
-    strcpy(s.buf, src);
+    memcpy(s.buf, src, s.len + 1);
 
     assert(str_ok(&s));
     return s;
@@ -98,7 +98,7 @@ void str_free_aux(str_t *s1, ...)
     va_end(args);
 }
 
-void str_cpy(str_t *dest, const char *src)
+void str_cpy(str_t *dest, const char *restrict src)
 {
     assert(str_ok(dest) && src);
 
@@ -150,7 +150,7 @@ void str_cat_aux(str_t *dest, const char *s1, ...)
     while (next) {
         const size_t initial = dest->len, additional = strlen(next);
         str_resize(dest, initial + additional);
-        memcpy(&dest->buf[initial], next, additional + 1);
+        memcpy(&dest->buf[initial], next, additional);
         assert(str_ok(dest));
 
         next = va_arg(args, const char *);

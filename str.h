@@ -28,34 +28,34 @@ bool str_ok(const str_t *s);
 // returns a valid string with value ""
 str_t str_new();
 
-// returns a valid string, copying its content from valid C-string 'src'
+// returns a valid string, copying its content from C-string 'src'
 str_t str_dup(const char *src);
 
-// str_delete(&s1, ..., &sn): frees a list of n >= 1 valid strings, and marks them as invalid.
+// str_delete(&s1, ..., &sn): frees a list of n >= 1 valid strings, and marks them as invalid
 #define str_delete(...) str_free_aux(__VA_ARGS__, NULL)
 void str_free_aux(str_t *s1, ...);
 
-// copies valid C-string 'src' into valid string 'dest'
-void str_cpy(str_t *dest, const char *src);
+// copies C-string 'src' into valid string 'dest'
+void str_cpy(str_t *dest, const char *restrict src);
 
-// str_putc(&dest, c1, ..., cn): appends n >= 1 characters c1...cn, to a valid string 'dest'.
+// str_putc(&dest, c1, ..., cn): appends n >= 1 characters c1...cn, to a valid string 'dest'
 #define str_putc(...) str_putc_aux(__VA_ARGS__, NULL)
 void str_putc_aux(str_t *dest, int c1, ...);
 
-// appends at most n characters of src into valid string dest
+// appends at most n characters of C-string 'src' into valid string 'dest'
 void str_ncat(str_t *dest, const char *src, size_t n);
 
-// str_cat(&dest, &s1, ..., &sn) appends n >= 1 strings to a valid string dest
+// str_cat(&dest, &s1, ..., &sn) appends n >= 1 C-strings to a valid string dest
 #define str_cat(...) str_cat_aux(__VA_ARGS__, NULL)
 void str_cat_aux(str_t *dest, const char *s1, ...);
 
 // same as sprintf(), but appends, instead of replace, to valid string s1
-void str_catf(str_t *s1, const char *fmt, ...);
+void str_catf(str_t *dest, const char *fmt, ...);
 
 // reads a token into valid string 'token', from s, using delim characters as a generalisation for
 // white spaces. returns tail pointer on success, otherwise NULL (no more tokens to read).
 const char *str_tok(const char *s, str_t *token, const char *delim);
 
-// reads a line from valid file 'in', into valid string 'out', including the '\n' (if any). returns
+// reads a line from file 'in', into valid string 'out', including the '\n' (if any). returns
 // the number of characters read (including the '\n' if any).
 size_t str_getline(str_t *out, FILE *in);
