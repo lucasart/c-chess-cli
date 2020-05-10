@@ -12,6 +12,7 @@
  * You should have received a copy of the GNU General Public License along with this program. If
  * not, see <http://www.gnu.org/licenses/>.
 */
+#include <assert.h>
 #include <signal.h>
 #include <string.h>
 #include <unistd.h>
@@ -54,7 +55,7 @@ static void engine_spawn(Engine *e, const char *cmd)
         die("fork() failed in engine_spawn()\n");
 }
 
-Engine engine_create(const char *cmd, FILE *log)
+Engine engine_create(const char *cmd, FILE *log, const char *uciOptions)
 {
     Engine e;
 
@@ -71,7 +72,21 @@ Engine engine_create(const char *cmd, FILE *log)
         engine_readln(&e, &line);
     } while (strcmp(line.buf, "uciok\n"));
 
-    str_delete(&line);
+    // Parses uciOptions (eg. "Hash=16,Threads=8"), assumed to be in the correct format
+    str_t token = str_new();
+
+    while ((uciOptions = str_tok(uciOptions, &token, ","))) {
+        const char *c = memchr(token.buf, '=', token.len);
+        assert(c);
+
+        str_cpy(&line, "setoption name ");
+        str_ncat(&line, token.buf, c - token.buf);
+        str_cat(&line, " value ", c + 1, "\n");
+
+        engine_writeln(&e, line.buf);
+    }
+
+    str_delete(&line, &token);
     return e;
 }
 
@@ -82,7 +97,7 @@ void engine_delete(Engine *e)
     str_delete(&e->name);
 
     if (kill(e->pid, SIGTERM) < 0)
-        die("engine_delete() failed to kill engine\n");  // FIXME: name faulty engine
+        die("engine_delete() failed to kill '%s'\n", e->name);
 }
 
 void engine_readln(const Engine *e, str_t *line)
@@ -91,7 +106,7 @@ void engine_readln(const Engine *e, str_t *line)
         if (e->log && fprintf(e->log, "%s -> %s", e->name.buf, line->buf) <= 0)
             die("engine_writeln() failed writing to log\n");
     } else
-        die("engine_readln() failed reading from engine's output\n");  // FIXME: name faulty engine
+        die("engine_readln() failed reading from '%s'\n", e->name);
 }
 
 void engine_writeln(const Engine *e, char *buf)
@@ -100,7 +115,7 @@ void engine_writeln(const Engine *e, char *buf)
         if (e->log && (fprintf(e->log, "%s <- %s", e->name.buf, buf) <= 0 || fflush(e->log) != 0))
             die("engine_writeln() failed writing to log\n");
     } else
-        die("engine_writeln() failed writing to engine's input\n");  // FIXME: name faulty engine
+        die("engine_writeln() failed writing to '%s'\n", e->name);
 }
 
 void engine_sync(const Engine *e)

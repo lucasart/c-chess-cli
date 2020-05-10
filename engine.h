@@ -11,7 +11,7 @@ typedef struct {
     str_t name;
 } Engine;
 
-Engine engine_create(const char *cmd, FILE *log);
+Engine engine_create(const char *cmd, FILE *log, const char *uciOptions);
 void engine_delete(Engine *e);
 
 void engine_readln(const Engine *e, str_t *line);

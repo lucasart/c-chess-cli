@@ -37,7 +37,7 @@ void *thread_start(void *arg)
     str_delete(&logName);
 
     for (int i = 0; i < 2; i++)
-        engines[i] = engine_create(engineOptions[i].cmd.buf, log);
+        engines[i] = engine_create(engineOptions[i].cmd.buf, log, options.uciOptions.buf);
 
     for (int i = 0; i < options.games; i++) {
         str_t fen = openings_get(&openings);
