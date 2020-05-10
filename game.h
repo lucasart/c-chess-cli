@@ -24,4 +24,5 @@ Game game_new(bool chess960, const char *fen);
 void game_delete(Game *g);
 
 void game_play(Game *g, const Engine *first, const Engine *second);
+str_t game_decode_result(const Game *g, str_t *reason);
 str_t game_pgn(const Game *g);

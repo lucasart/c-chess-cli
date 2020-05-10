@@ -1,4 +1,4 @@
-CC = musl-clang
+CC = musl-clang  # gcc, musl-gcc, clang, musl-clang
 OUT = c-chess-cli
 debug = no
 static = no

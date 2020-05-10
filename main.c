@@ -22,16 +22,17 @@
 Options options;
 EngineOptions engineOptions[2];
 Openings openings;
-
+FILE *pgnout;
 pthread_t *threads;
 
 void *thread_start(void *arg)
 {
     pthread_t *thread = arg;
+    const int threadId = thread - threads;  // starts at 0
     Engine engines[2];
 
     str_t logName = str_new();
-    str_catf(&logName, "c-chess-cli.%d.log", thread - threads);
+    str_catf(&logName, "c-chess-cli.%d.log", threadId);
     FILE *log = options.debug ? fopen(logName.buf, "w") : NULL;
     str_delete(&logName);
 
@@ -42,11 +43,23 @@ void *thread_start(void *arg)
         str_t fen = openings_get(&openings);
         Game game = game_new(options.chess960, fen.buf);
 
-        game_play(&game, &engines[0], &engines[1]);
-        str_t pgn = game_pgn(&game);
-        puts(pgn.buf);
+        game_play(&game, &engines[i % 2], &engines[(i + 1) % 2]);
 
-        str_delete(&pgn, &fen);
+        // Write to stdout a one line summary
+        str_t result = str_new(), reason = str_new();
+        result = game_decode_result(&game, &reason);
+        printf("[%d] %s vs. %s: %s (%s)\n", threadId, game.names[WHITE].buf, game.names[BLACK].buf,
+            result.buf, reason.buf);
+        str_delete(&result, &reason);
+
+        // Write to PGN file
+        if (pgnout) {
+            str_t pgn = game_pgn(&game);
+            fputs(pgn.buf, pgnout);
+            str_delete(&pgn);
+        }
+
+        str_delete(&fen);
         game_delete(&game);
     }
 
@@ -63,8 +76,10 @@ int main(int argc, const char **argv)
 {
     engineOptions[0].cmd = str_dup(argv[1]);
     engineOptions[1].cmd = str_dup(argv[2]);
-    options = options_new(argc, argv, 3);
-    openings = openings_new(options.openings.buf, options.random);
+
+    options = options_new(argc, argv, 4);
+    openings = openings_new(argv[3], options.random);
+    pgnout = options.pgnout.len ? fopen(options.pgnout.buf, "w") : NULL;
 
     threads = calloc(options.concurrency, sizeof(pthread_t));
 
@@ -75,6 +90,9 @@ int main(int argc, const char **argv)
         pthread_join(threads[i], NULL);
 
     free(threads);
+
+    if (pgnout)
+        fclose(pgnout);
 
     openings_delete(&openings);
     options_delete(&options);

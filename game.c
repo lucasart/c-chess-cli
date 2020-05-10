@@ -98,6 +98,9 @@ void game_play(Game *g, const Engine *first, const Engine *second)
         str_cpy(&g->names[color], engines[color ^ g->pos[0].turn]->name.buf);
 
     for (int i = 0; i < 2; i++) {
+        if (g->chess960)
+            engine_writeln(engines[i], "setoption name UCI_Chess960 value true\n");
+
         engine_writeln(engines[i], "ucinewgame\n");
         engine_sync(engines[i]);
     }
@@ -126,7 +129,7 @@ void game_play(Game *g, const Engine *first, const Engine *second)
 
         engine_sync(engine);
 
-        engine_writeln(engine, "go depth 6\n");
+        engine_writeln(engine, "go movetime 100\n");
         str_t played = engine_bestmove(engine);
         move = pos_string_to_move(&g->pos[g->ply], played.buf, g->chess960);
         str_delete(&played);
@@ -140,31 +143,36 @@ void game_play(Game *g, const Engine *first, const Engine *second)
     assert(g->result);
 }
 
-str_t game_pgn_result(int result, int lastTurn, str_t *pgnTermination)
+str_t game_decode_result(const Game *g, str_t *reason)
 {
-    str_t pgnResult = str_new();
-    str_cpy(pgnTermination, "");  // default: termination by chess rules
+    str_t result = str_new();
+    str_cpy(reason, "");  // default: termination by chess rules
 
-    if (result == RESULT_NONE) {
-        str_cpy(&pgnResult, "*");
-        str_cpy(pgnTermination, "unterminated");
-    } else if (result == RESULT_CHECKMATE)
-        str_cpy(&pgnResult, lastTurn == WHITE ? "0-1" : "1-0");
-    else if (result == RESULT_STALEMATE)
-        str_cpy(&pgnResult, "1/2-1/2");
-    else if (result == RESULT_THREEFOLD)
-        str_cpy(&pgnResult, "1/2-1/2");
-    else if (result == RESULT_FIFTY_MOVES)
-        str_cpy(&pgnResult, "1/2-1/2");
-    else if (result ==RESULT_INSUFFICIENT_MATERIAL)
-        str_cpy(&pgnResult, "1/2-1/2");
-    else if (result == RESULT_ILLEGAL_MOVE) {
-        str_cpy(&pgnResult, lastTurn == WHITE ? "0-1" : "1-0");
-        str_cpy(pgnTermination, "illegal move");
+    if (g->result == RESULT_NONE) {
+        str_cpy(&result, "*");
+        str_cpy(reason, "unterminated");
+    } else if (g->result == RESULT_CHECKMATE) {
+        str_cpy(&result, g->pos[g->ply].turn == WHITE ? "0-1" : "1-0");
+        str_cpy(reason, "checkmate");
+    } else if (g->result == RESULT_STALEMATE) {
+        str_cpy(&result, "1/2-1/2");
+        str_cpy(reason, "stalemate");
+    } else if (g->result == RESULT_THREEFOLD) {
+        str_cpy(&result, "1/2-1/2");
+        str_cpy(reason, "3-fold repetitions");
+    } else if (g->result == RESULT_FIFTY_MOVES) {
+        str_cpy(&result, "1/2-1/2");
+        str_cpy(reason, "50 move rule");
+    } else if (g->result ==RESULT_INSUFFICIENT_MATERIAL) {
+        str_cpy(&result, "1/2-1/2");
+        str_cpy(reason, "insufficient material");
+    } else if (g->result == RESULT_ILLEGAL_MOVE) {
+        str_cpy(&result, g->pos[g->ply].turn == WHITE ? "0-1" : "1-0");
+        str_cpy(reason, "illegal move");
     } else
         assert(false);
 
-    return pgnResult;
+    return result;
 }
 
 str_t game_pgn(const Game *g)
@@ -176,12 +184,10 @@ str_t game_pgn(const Game *g)
     str_cat(&pgn, "[Black \"", g->names[BLACK].buf, "\"]\n");
 
     // Result in PGN format "1-0", "0-1", "1/2-1/2" (from white pov)
-    str_t pgnTermination = str_new();
-    str_t pgnResult = game_pgn_result(g->result, g->pos[g->ply].turn, &pgnTermination);
-    str_cat(&pgn, "[Result \"", pgnResult.buf, "\"]\n");
-
-    if (pgnTermination.len)
-        str_cat(&pgn, "[Termination \"", pgnTermination.buf, "\"]\n");
+    str_t reason = str_new();
+    str_t result = game_decode_result(g, &reason);
+    str_cat(&pgn, "[Result \"", result.buf, "\"]\n");
+    str_cat(&pgn, "[Termination \"", reason.buf, "\"]\n");
 
     str_t fen = pos_get(&g->pos[0]);
     str_cat(&pgn, "[FEN \"", fen.buf, "\"]\n");
@@ -212,7 +218,7 @@ str_t game_pgn(const Game *g)
         str_delete(&san);
     }
 
-    str_cat(&pgn, pgnResult.buf, "\n");
-    str_delete(&pgnResult, &pgnTermination, &fen);
+    str_cat(&pgn, result.buf, "\n");
+    str_delete(&result, &reason, &fen);
     return pgn;
 }

@@ -37,6 +37,8 @@ str_t openings_get(Openings *openings)
 {
     str_t line = str_new(), fen = str_new();
 
+    flockfile(openings->file);
+
     if (!str_getline(&line, openings->file)) {
         // Try (once) to wrap around EOF
         rewind(openings->file);
@@ -44,6 +46,8 @@ str_t openings_get(Openings *openings)
         if (!str_getline(&line, openings->file))
             die("openings_get(): cannot read a single line");
     }
+
+    funlockfile(openings->file);
 
     str_tok(line.buf, &fen, ";\n");
     // TODO: proper FEN validation
