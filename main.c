@@ -34,10 +34,17 @@ void *thread_start(void *arg)
     str_t logName = str_new();
     str_catf(&logName, "c-chess-cli.%d.log", threadId);
     FILE *log = options.debug ? fopen(logName.buf, "w") : NULL;
-    str_delete(&logName);
 
-    for (int i = 0; i < 2; i++)
-        engines[i] = engine_create(engineOptions[i].cmd.buf, log, options.uciOptions.buf);
+    const char *tail = options.uciOptions.buf;
+    str_t uciOptions = str_new();
+
+    for (int i = 0; i < 2; i++) {
+        tail = str_tok(tail, &uciOptions, ":");
+        assert(tail);
+        engines[i] = engine_create(engineOptions[i].cmd.buf, log, uciOptions.buf);
+    }
+
+    str_delete(&logName, &uciOptions);
 
     for (int i = 0; i < options.games; i++) {
         str_t fen = openings_get(&openings);

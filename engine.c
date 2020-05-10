@@ -76,7 +76,7 @@ Engine engine_create(const char *cmd, FILE *log, const char *uciOptions)
     str_t token = str_new();
 
     while ((uciOptions = str_tok(uciOptions, &token, ","))) {
-        const char *c = memchr(token.buf, '=', token.len);
+        const char *c = strchr(token.buf, '=');
         assert(c);
 
         str_cpy(&line, "setoption name ");

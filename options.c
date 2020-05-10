@@ -57,9 +57,13 @@ Options options_new(int argc, const char **argv, int start)
                 str_cpy(&options.openings, argv[i]);
             else if (!strcmp(argv[i - 1], "-pgnout"))
                 str_cpy(&options.pgnout, argv[i]);
-            else if (!strcmp(argv[i - 1], "-ucioptions"))
-                str_cpy(&options.uciOptions, argv[i]);  // TODO: validate syntax
-            else
+            else if (!strcmp(argv[i - 1], "-ucioptions")) {
+                str_cpy(&options.uciOptions, argv[i]);
+
+                // Duplicate UCI option list, if only one is given
+                if (!strchr(options.uciOptions.buf, ':'))
+                    str_cat(&options.uciOptions, ":", options.uciOptions.buf);
+            } else
                 assert(false);
 
             expectValue = false;
