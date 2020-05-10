@@ -77,8 +77,8 @@ int main(int argc, const char **argv)
     engineOptions[0].cmd = str_dup(argv[1]);
     engineOptions[1].cmd = str_dup(argv[2]);
 
-    options = options_new(argc, argv, 4);
-    openings = openings_new(argv[3], options.random);
+    options = options_new(argc, argv, 3);
+    openings = openings_new(options.openings.buf, options.random);
     pgnout = options.pgnout.len ? fopen(options.pgnout.buf, "w") : NULL;
 
     threads = calloc(options.concurrency, sizeof(pthread_t));

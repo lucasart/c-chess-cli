@@ -4,12 +4,14 @@
 Openings openings_new(const char *fileName, bool randomStart)
 {
     Openings openings;
-    openings.file = fopen(fileName, "r");
 
-    if (!openings.file)
-        die("openings_create() failed");
+    if (*fileName) {
+        if (!(openings.file = fopen(fileName, "r")))
+            die("openings_create() failed to open '%s'\n", fileName);
+    } else
+        openings.file = NULL;
 
-    if (randomStart) {
+    if (openings.file && randomStart) {
         // Start from random position in the file
         fseek(openings.file, 0, SEEK_END);
         uint64_t seed = system_msec();
@@ -30,13 +32,16 @@ Openings openings_new(const char *fileName, bool randomStart)
 
 void openings_delete(Openings *openings)
 {
-    fclose(openings->file);
+    if (openings->file)
+        fclose(openings->file);
 }
 
 str_t openings_get(Openings *openings)
 {
-    str_t line = str_new(), fen = str_new();
+    if (!openings->file)
+        return str_dup("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");  // start pos
 
+    str_t line = str_new(), fen = str_new();
     flockfile(openings->file);
 
     if (!str_getline(&line, openings->file)) {
@@ -48,10 +53,7 @@ str_t openings_get(Openings *openings)
     }
 
     funlockfile(openings->file);
-
     str_tok(line.buf, &fen, ";\n");
-    // TODO: proper FEN validation
-
     str_delete(&line);
     return fen;
 }

@@ -46,7 +46,7 @@ int game_result(const Game *g, move_t *begin, move_t **end)
     } else if (pos_insufficient_material(pos))
         return RESULT_INSUFFICIENT_MATERIAL;
     else {
-        // Scan for 3-fold repetition
+        // Scan for 3 repetitions
         int repetitions = 1;
 
         for (int i = 4; i <= pos->rule50 && i <= g->ply; i += 2)
@@ -159,7 +159,7 @@ str_t game_decode_result(const Game *g, str_t *reason)
         str_cpy(reason, "stalemate");
     } else if (g->result == RESULT_THREEFOLD) {
         str_cpy(&result, "1/2-1/2");
-        str_cpy(reason, "3-fold repetitions");
+        str_cpy(reason, "3 repetitions");
     } else if (g->result == RESULT_FIFTY_MOVES) {
         str_cpy(&result, "1/2-1/2");
         str_cpy(reason, "50 move rule");

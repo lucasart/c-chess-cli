@@ -11,6 +11,7 @@ Options options_new(int argc, const char **argv, int start)
         .chess960 = false,
         .concurrency = 1,
         .games = 1,
+        .openings = str_new(),
         .pgnout = str_new(),
         .random = false,
         .repeat = false,
@@ -26,7 +27,7 @@ Options options_new(int argc, const char **argv, int start)
             if (expectValue)
                 die("value expected after '%s'. found tag '%s' instead.\n", argv[i - 1], argv[i]);
 
-            if (strstr("-concurrency -games -pgnout", argv[i]))
+            if (strstr("-concurrency -games -openings -pgnout", argv[i]))
                 // process tags followed by value
                 expectValue = true;
             else {
@@ -51,6 +52,8 @@ Options options_new(int argc, const char **argv, int start)
                 options.concurrency = atoi(argv[i]);
             else if (!strcmp(argv[i - 1], "-games"))
                 options.games = atoi(argv[i]);
+            else if (!strcmp(argv[i - 1], "-openings"))
+                str_cpy(&options.openings, argv[i]);
             else if (!strcmp(argv[i - 1], "-pgnout"))
                 str_cpy(&options.pgnout, argv[i]);
             else
@@ -68,5 +71,5 @@ Options options_new(int argc, const char **argv, int start)
 
 void options_delete(Options *options)
 {
-    str_delete(&options->pgnout);
+    str_delete(&options->openings, &options->pgnout);
 }
