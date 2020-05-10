@@ -56,6 +56,6 @@ void str_catf(str_t *dest, const char *fmt, ...);
 // white spaces. returns tail pointer on success, otherwise NULL (no more tokens to read).
 const char *str_tok(const char *s, str_t *token, const char *delim);
 
-// reads a line from file 'in', into valid string 'out', including the '\n' (if any). returns
-// the number of characters read (including the '\n' if any).
-size_t str_getline(str_t *out, FILE *in);
+// reads a line from file 'in', into valid string 'out', and return the number of characters read
+// (including the '\n' if any). When trim = true, the '\n' is discarded (but counted).
+size_t str_getline(str_t *out, FILE *in, bool trim);

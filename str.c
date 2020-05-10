@@ -236,7 +236,7 @@ const char *str_tok(const char *s, str_t *token, const char *delim)
     return token->len ? s : NULL;
 }
 
-size_t str_getline(str_t *out, FILE *in)
+size_t str_getline(str_t *out, FILE *in, bool trim)
 {
     assert(str_ok(out) && in);
     str_cpy(out, "");
@@ -244,15 +244,22 @@ size_t str_getline(str_t *out, FILE *in)
 
     flockfile(in);
 
-    do {
+    while (true) {
         c = getc_unlocked(in);
 
-        if (c != EOF)
+        if (c != '\n' && c != EOF)
             str_putc(out, c);
-    } while (c != '\n' && c != EOF);
+        else
+            break;
+    }
 
     funlockfile(in);
 
+    const size_t n = out->len + (c == '\n');
+
+    if (!trim && c == '\n')
+        str_putc(out, c);
+
     assert(str_ok(out));
-    return out->len;
+    return n;
 }

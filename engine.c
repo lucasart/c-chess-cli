@@ -58,22 +58,26 @@ static void engine_spawn(Engine *e, const char *cmd)
 Engine engine_create(const char *cmd, FILE *log, const char *uciOptions)
 {
     Engine e;
-
-    engine_spawn(&e, cmd);  // spawn child process and plug communication pipes
     e.log = log;
+    e.name = str_dup(cmd); // default value
 
-    e.name = str_dup(cmd); // FIXME: parse from 'id name %s'
+    engine_spawn(&e, cmd);  // spawn child process and plug pipes
 
-    engine_writeln(&e, "uci\n");
+    engine_writeln(&e, "uci");
 
-    str_t line = str_new();
+    str_t line = str_new(), token = str_new();
 
     do {
         engine_readln(&e, &line);
-    } while (strcmp(line.buf, "uciok\n"));
+
+        const char *tail = line.buf;
+
+        if ((tail = str_tok(tail, &token, " ")) && !strcmp(token.buf, "id")
+                && (tail = str_tok(tail, &token, " ")) && !strcmp(token.buf, "name") && tail)
+            str_cpy(&e.name, tail + 1);
+    } while (strcmp(line.buf, "uciok"));
 
     // Parses uciOptions (eg. "Hash=16,Threads=8"), assumed to be in the correct format
-    str_t token = str_new();
 
     while ((uciOptions = str_tok(uciOptions, &token, ","))) {
         const char *c = strchr(token.buf, '=');
@@ -81,7 +85,7 @@ Engine engine_create(const char *cmd, FILE *log, const char *uciOptions)
 
         str_cpy(&line, "setoption name ");
         str_ncat(&line, token.buf, c - token.buf);
-        str_cat(&line, " value ", c + 1, "\n");
+        str_cat(&line, " value ", c + 1);
 
         engine_writeln(&e, line.buf);
     }
@@ -102,8 +106,8 @@ void engine_delete(Engine *e)
 
 void engine_readln(const Engine *e, str_t *line)
 {
-    if (str_getline(line, e->in)) {
-        if (e->log && fprintf(e->log, "%s -> %s", e->name.buf, line->buf) <= 0)
+    if (str_getline(line, e->in, true)) {
+        if (e->log && fprintf(e->log, "%s -> %s\n", e->name.buf, line->buf) <= 0)
             die("engine_writeln() failed writing to log\n");
     } else
         die("engine_readln() failed reading from '%s'\n", e->name);
@@ -111,8 +115,8 @@ void engine_readln(const Engine *e, str_t *line)
 
 void engine_writeln(const Engine *e, char *buf)
 {
-    if (fputs(buf, e->out) >= 0 && fflush(e->out) == 0) {
-        if (e->log && (fprintf(e->log, "%s <- %s", e->name.buf, buf) <= 0 || fflush(e->log) != 0))
+    if (fputs(buf, e->out) >= 0 && fputs("\n", e->out) >= 0 && fflush(e->out) == 0) {
+        if (e->log && (fprintf(e->log, "%s <- %s\n", e->name.buf, buf) <= 0 || fflush(e->log) != 0))
             die("engine_writeln() failed writing to log\n");
     } else
         die("engine_writeln() failed writing to '%s'\n", e->name);
@@ -120,13 +124,13 @@ void engine_writeln(const Engine *e, char *buf)
 
 void engine_sync(const Engine *e)
 {
-    engine_writeln(e, "isready\n");
+    engine_writeln(e, "isready");
 
     str_t line = str_new();
 
     do {
         engine_readln(e, &line);
-    } while (strcmp(line.buf, "readyok\n"));
+    } while (strcmp(line.buf, "readyok"));
 
     str_delete(&line);
 }
@@ -138,10 +142,10 @@ str_t engine_bestmove(const Engine *e)
 
     while (true) {
         engine_readln(e, &line);
-        const char *tail = str_tok(line.buf, &token, " \n");
+        const char *tail = str_tok(line.buf, &token, " ");
 
         if (tail && !strcmp(token.buf, "bestmove")) {
-            if (str_tok(tail, &token, " \n"))
+            if (str_tok(tail, &token, " "))
                 str_cpy(&best, token.buf);
 
             break;

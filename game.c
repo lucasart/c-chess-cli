@@ -27,7 +27,6 @@ static str_t uci_position_command(const Game *g)
         }
     }
 
-    str_cat(&cmd, "\n");
     return cmd;
 }
 
@@ -99,9 +98,9 @@ void game_play(Game *g, const Engine *first, const Engine *second)
 
     for (int i = 0; i < 2; i++) {
         if (g->chess960)
-            engine_writeln(engines[i], "setoption name UCI_Chess960 value true\n");
+            engine_writeln(engines[i], "setoption name UCI_Chess960 value true");
 
-        engine_writeln(engines[i], "ucinewgame\n");
+        engine_writeln(engines[i], "ucinewgame");
         engine_sync(engines[i]);
     }
 
@@ -129,7 +128,7 @@ void game_play(Game *g, const Engine *first, const Engine *second)
 
         engine_sync(engine);
 
-        engine_writeln(engine, "go movetime 100\n");
+        engine_writeln(engine, "go movetime 100");
         str_t played = engine_bestmove(engine);
         move = pos_string_to_move(&g->pos[g->ply], played.buf, g->chess960);
         str_delete(&played);
