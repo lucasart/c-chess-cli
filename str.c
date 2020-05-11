@@ -108,6 +108,19 @@ void str_cpy(str_t *dest, const char *restrict src)
     assert(str_ok(dest));
 }
 
+void str_ncpy(str_t *dest, const char *restrict src, size_t n)
+{
+    assert(str_ok(dest));
+
+    if (strlen(src) < n)
+        n = strlen(src);
+
+    str_resize(dest, n);
+    memcpy(dest->buf, src, n);
+
+    assert(str_ok(dest));
+}
+
 void str_putc_aux(str_t *dest, int c1, ...)
 {
     assert(str_ok(dest));

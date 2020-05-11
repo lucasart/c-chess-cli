@@ -7,15 +7,12 @@ typedef struct {
     int games;  // number of games
     str_t openings;  // openings (EPD file)
     str_t pgnout;  // pgn output file
-    str_t uciOptions;  // UCI options (eg. "Hash=16,Threads=8")
+    str_t cmd[2];  // command per engine
+    str_t uciOptions[2];  // UCI options per engine (eg. "Hash=16,Threads=8")
     bool random;  // start from a random opening
     bool repeat;  // repeat each opening twice with colors reversed
     bool debug;  // log all I/O with engines
 } Options;
 
-typedef struct {
-    str_t cmd;
-} EngineOptions;
-
-Options options_new(int argc, const char **argv, int start);
+Options options_new(int argc, const char **argv);
 void options_delete();

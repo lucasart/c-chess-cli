@@ -38,6 +38,9 @@ void str_free_aux(str_t *s1, ...);
 // copies C-string 'src' into valid string 'dest'
 void str_cpy(str_t *dest, const char *restrict src);
 
+// copy at most n characters of C-string 'src' into valid string 'dest'
+void str_ncpy(str_t *dest, const char *restrict src, size_t n);
+
 // str_putc(&dest, c1, ..., cn): appends n >= 1 characters c1...cn, to a valid string 'dest'
 #define str_putc(...) str_putc_aux(__VA_ARGS__, NULL)
 void str_putc_aux(str_t *dest, int c1, ...);

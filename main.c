@@ -20,7 +20,6 @@
 #include "options.h"
 
 Options options;
-EngineOptions engineOptions[2];
 Openings openings;
 FILE *pgnout;
 pthread_t *threads;
@@ -34,17 +33,10 @@ void *thread_start(void *arg)
     str_t logName = str_new();
     str_catf(&logName, "c-chess-cli.%d.log", threadId);
     FILE *log = options.debug ? fopen(logName.buf, "w") : NULL;
+    str_delete(&logName);
 
-    const char *tail = options.uciOptions.buf;
-    str_t uciOptions = str_new();
-
-    for (int i = 0; i < 2; i++) {
-        tail = str_tok(tail, &uciOptions, ":");
-        assert(tail);
-        engines[i] = engine_create(engineOptions[i].cmd.buf, log, uciOptions.buf);
-    }
-
-    str_delete(&logName, &uciOptions);
+    for (int i = 0; i < 2; i++)
+        engines[i] = engine_create(options.cmd[i].buf, log, options.uciOptions[i].buf);
 
     for (int i = 0; i < options.games; i++) {
         str_t fen = openings_get(&openings);
@@ -81,10 +73,7 @@ void *thread_start(void *arg)
 
 int main(int argc, const char **argv)
 {
-    engineOptions[0].cmd = str_dup(argv[1]);
-    engineOptions[1].cmd = str_dup(argv[2]);
-
-    options = options_new(argc, argv, 3);
+    options = options_new(argc, argv);
     openings = openings_new(options.openings.buf, options.random);
     pgnout = options.pgnout.len ? fopen(options.pgnout.buf, "w") : NULL;
 
@@ -103,6 +92,5 @@ int main(int argc, const char **argv)
 
     openings_delete(&openings);
     options_delete(&options);
-    str_delete(&engineOptions[0].cmd, &engineOptions[1].cmd);
     return 0;
 }
