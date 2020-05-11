@@ -1,3 +1,17 @@
+/*
+ * c-chess-cli, a command line interface for UCI chess engines. Copyright 2020 lucasart.
+ *
+ * c-chess-cli is free software: you can redistribute it and/or modify it under the terms of the GNU
+ * General Public License as published by the Free Software Foundation, either version 3 of the
+ * License, or (at your option) any later version.
+ *
+ * c-chess-cli is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without
+ * even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along with this program. If
+ * not, see <http://www.gnu.org/licenses/>.
+*/
 #include <stdlib.h>
 #include "game.h"
 #include "gen.h"
@@ -29,7 +43,6 @@ static str_t uci_position_command(const Game *g)
 
     return cmd;
 }
-
 
 int game_result(const Game *g, move_t *begin, move_t **end)
 {
@@ -65,7 +78,7 @@ bool illegal_move(move_t move, const move_t *begin, const move_t *end)
     return true;
 }
 
-Game game_new(bool chess960, const char *fen)
+Game game_new(bool chess960, const char *fen, uint64_t nodes[2], int depth[2], int movetime[2])
 {
     Game g;
 
@@ -79,6 +92,10 @@ Game game_new(bool chess960, const char *fen)
 
     g.chess960 = chess960;
     g.result = RESULT_NONE;
+
+    memcpy(g.nodes, nodes, 2 * sizeof(uint64_t));
+    memcpy(g.depth, depth, 2 * sizeof(int));
+    memcpy(g.movetime, movetime, 2 * sizeof(int));
 
     return g;
 }
@@ -104,7 +121,19 @@ void game_play(Game *g, const Engine *first, const Engine *second)
         engine_sync(engines[i]);
     }
 
-    move_t move = 0;
+    move_t played = 0;
+    str_t goCmd[2] = {str_dup("go"), str_dup("go")};
+
+    for (int i = 0; i < 2; i++) {
+        if (g->nodes[i])
+            str_catf(&goCmd[i], " nodes %d", (int)g->nodes[i]);  // FIXME: uint64_t in str_catf()
+
+        if (g->depth[i])
+            str_catf(&goCmd[i], " depth %d", g->depth[i]);
+
+        if (g->movetime[i])
+            str_catf(&goCmd[i], " movetime %d", g->movetime[i]);
+    }
 
     for (g->ply = 0; ; g->ply++) {
         if (g->ply >= g->maxPly) {
@@ -112,33 +141,35 @@ void game_play(Game *g, const Engine *first, const Engine *second)
             g->pos = realloc(g->pos, g->maxPly * sizeof(Position));
         }
 
-        if (move)
-            pos_move(&g->pos[g->ply], &g->pos[g->ply - 1], move);
+        if (played)
+            pos_move(&g->pos[g->ply], &g->pos[g->ply - 1], played);
 
         move_t moves[MAX_MOVES], *end;
 
         if ((g->result = game_result(g, moves, &end)))
             break;
 
-        const Engine *engine = engines[g->ply % 2];  // engine whose turn it is to play
+        const int turn = g->ply % 2;
+        const Engine *e = engines[turn];
 
         str_t posCmd = uci_position_command(g);
-        engine_writeln(engine, posCmd.buf);
+        engine_writeln(e, posCmd.buf);
         str_delete(&posCmd);
 
-        engine_sync(engine);
+        engine_sync(e);
 
-        engine_writeln(engine, "go movetime 100");
-        str_t played = engine_bestmove(engine);
-        move = pos_string_to_move(&g->pos[g->ply], played.buf, g->chess960);
-        str_delete(&played);
+        engine_writeln(e, goCmd[turn].buf);
+        str_t lan = engine_bestmove(e);
+        played = pos_lan_to_move(&g->pos[g->ply], lan.buf, g->chess960);
+        str_delete(&lan);
 
-        if (illegal_move(move, moves, end)) {
+        if (illegal_move(played, moves, end)) {
             g->result = RESULT_ILLEGAL_MOVE;
             break;
         }
     }
 
+    str_delete(&goCmd[0], &goCmd[1]);
     assert(g->result);
 }
 

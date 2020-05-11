@@ -24,16 +24,24 @@ Options options_new(int argc, const char **argv)
 {
     // Set default values
     Options options = {
-        .chess960 = false,
+        // options (-tag value)
         .concurrency = 1,
         .games = 1,
         .openings = str_new(),
         .pgnout = str_new(),
-        .cmd = {str_new(), str_new()},
-        .uciOptions = {str_new(), str_new()},
+
+        // flags (-tag)
+        .chess960 = false,
         .random = false,
         .repeat = false,
-        .debug = false
+        .debug = false,
+
+        // engine options (-tag value1[:value2])
+        .cmd = {str_new(), str_new()},
+        .uciOptions = {str_new(), str_new()},
+        .nodes = {0},
+        .depth = {0},
+        .movetime = {0}
     };
 
     int i;  // iterator for argv[]
@@ -45,7 +53,7 @@ Options options_new(int argc, const char **argv)
             if (expectValue)
                 die("value expected after '%s'. found tag '%s' instead.\n", argv[i - 1], argv[i]);
 
-            if (strstr("-concurrency -games -openings -pgnout -cmd -ucioptions", argv[i]))
+            if (strstr("-concurrency -games -openings -pgnout -cmd -ucioptions -nodes -depth -movetime", argv[i]))
                 // process tags followed by value
                 expectValue = true;
             else {
@@ -78,7 +86,25 @@ Options options_new(int argc, const char **argv)
                 parse_engine_option(argv[i], options.cmd);
             else if (!strcmp(argv[i - 1], "-ucioptions"))
                 parse_engine_option(argv[i], options.uciOptions);
-            else
+            else if (!strcmp(argv[i - 1], "-nodes")) {
+                str_t nodes[2] = {str_new(), str_new()};
+                parse_engine_option(argv[i], nodes);
+                options.nodes[0] = atoll(nodes[0].buf);
+                options.nodes[1] = atoll(nodes[1].buf);
+                str_delete(&nodes[0], &nodes[1]);
+            } else if (!strcmp(argv[i - 1], "-depth")) {
+                str_t depth[2] = {str_new(), str_new()};
+                parse_engine_option(argv[i], depth);
+                options.depth[0] = atoi(depth[0].buf);
+                options.depth[1] = atoi(depth[1].buf);
+                str_delete(&depth[0], &depth[1]);
+            } else if (!strcmp(argv[i - 1], "-movetime")) {
+                str_t movetime[2] = {str_new(), str_new()};
+                parse_engine_option(argv[i], movetime);
+                options.movetime[0] = atoi(movetime[0].buf);
+                options.movetime[1] = atoi(movetime[1].buf);
+                str_delete(&movetime[0], &movetime[1]);
+            } else
                 assert(false);
 
             expectValue = false;

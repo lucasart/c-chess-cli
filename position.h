@@ -1,3 +1,17 @@
+/*
+ * c-chess-cli, a command line interface for UCI chess engines. Copyright 2020 lucasart.
+ *
+ * c-chess-cli is free software: you can redistribute it and/or modify it under the terms of the GNU
+ * General Public License as published by the Free Software Foundation, either version 3 of the
+ * License, or (at your option) any later version.
+ *
+ * c-chess-cli is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without
+ * even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along with this program. If
+ * not, see <http://www.gnu.org/licenses/>.
+*/
 #pragma once
 #include "bitboard.h"
 #include "str.h"
@@ -38,6 +52,6 @@ int pos_piece_on(const Position *pos, int square);
 bool pos_move_is_castling(const Position *pos, move_t m);
 str_t pos_move_to_lan(const Position *pos, move_t m, bool chess960);
 str_t pos_move_to_san(const Position *pos, move_t m);
-move_t pos_string_to_move(const Position *pos, const char *str, bool chess960);
+move_t pos_lan_to_move(const Position *pos, const char *str, bool chess960);
 
 void pos_print(const Position *pos);

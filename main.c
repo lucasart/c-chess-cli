@@ -40,7 +40,8 @@ void *thread_start(void *arg)
 
     for (int i = 0; i < options.games; i++) {
         str_t fen = openings_get(&openings);
-        Game game = game_new(options.chess960, fen.buf);
+        Game game = game_new(options.chess960, fen.buf, options.nodes, options.depth,
+            options.movetime);
 
         game_play(&game, &engines[i % 2], &engines[(i + 1) % 2]);
 

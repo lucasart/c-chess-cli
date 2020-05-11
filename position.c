@@ -561,7 +561,7 @@ str_t pos_move_to_lan(const Position *pos, move_t m, bool chess960)
     return lan;
 }
 
-move_t pos_string_to_move(const Position *pos, const char *str, bool chess960)
+move_t pos_lan_to_move(const Position *pos, const char *str, bool chess960)
 {
     const int prom = str[4] ? (int)(strchr(PieceLabel[BLACK], str[4]) - PieceLabel[BLACK]) : NB_PIECE;
     const int from = square_from(str[1] - '1', str[0] - 'a');
