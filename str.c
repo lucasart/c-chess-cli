@@ -31,7 +31,7 @@ static size_t str_round_up(size_t n)
     return p2;
 }
 
-static void str_resize(str_t *s, size_t len)
+static void str_grow(str_t *s, size_t len)
 // After this call, 's' may be invalid according to the strict definition of str_ok(), because it
 // may contain 0's before the end. This will cause problems with most code, starting with the C
 // standard library, which is why this function is not exposed to the API.
@@ -40,7 +40,7 @@ static void str_resize(str_t *s, size_t len)
     s->len = len;
 
     // Implement lazy realloc strategy
-    if (s->alloc != str_round_up(len + 1)) {
+    if (s->alloc < str_round_up(len + 1)) {
         s->alloc = str_round_up(len + 1);
         s->buf = realloc(s->buf, s->alloc);
     }
@@ -102,7 +102,7 @@ void str_cpy(str_t *dest, const char *restrict src)
 {
     assert(str_ok(dest) && src);
 
-    str_resize(dest, strlen(src));
+    str_grow(dest, strlen(src));
     memcpy(dest->buf, src, dest->len + 1);
 
     assert(str_ok(dest));
@@ -115,7 +115,7 @@ void str_ncpy(str_t *dest, const char *restrict src, size_t n)
     if (strlen(src) < n)
         n = strlen(src);
 
-    str_resize(dest, n);
+    str_grow(dest, n);
     memcpy(dest->buf, src, n);
 
     assert(str_ok(dest));
@@ -129,7 +129,7 @@ void str_putc_aux(str_t *dest, int c1, ...)
     int next = c1;
 
     while (next) {
-        str_resize(dest, dest->len + 1);
+        str_grow(dest, dest->len + 1);
         dest->buf[dest->len - 1] = (char)next;
 
         next = va_arg(args, int);
@@ -147,7 +147,7 @@ void str_ncat(str_t *dest, const char *src, size_t n)
         n = strlen(src);
 
     const size_t oldLen = dest->len;
-    str_resize(dest, dest->len + n);
+    str_grow(dest, dest->len + n);
     memcpy(&dest->buf[oldLen], src, n);
 
     assert(str_ok(dest));
@@ -162,7 +162,7 @@ void str_cat_aux(str_t *dest, const char *s1, ...)
 
     while (next) {
         const size_t initial = dest->len, additional = strlen(next);
-        str_resize(dest, initial + additional);
+        str_grow(dest, initial + additional);
         memcpy(&dest->buf[initial], next, additional);
         assert(str_ok(dest));
 
