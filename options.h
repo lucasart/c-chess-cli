@@ -32,7 +32,7 @@ typedef struct {
     // engine options
     str_t cmd[2];  // command per engine
     str_t uciOptions[2];  // UCI options per engine (eg. "Hash=16,Threads=8")
-    uint64_t nodes[2];  // node limit per move
+    unsigned nodes[2];  // node limit per move
     int depth[2];  // depth limit per move
     int movetime[2];  // time limit per move
 } Options;

@@ -78,7 +78,7 @@ bool illegal_move(move_t move, const move_t *begin, const move_t *end)
     return true;
 }
 
-Game game_new(bool chess960, const char *fen, uint64_t nodes[2], int depth[2], int movetime[2])
+Game game_new(bool chess960, const char *fen, unsigned nodes[2], int depth[2], int movetime[2])
 {
     Game g;
 
@@ -93,7 +93,7 @@ Game game_new(bool chess960, const char *fen, uint64_t nodes[2], int depth[2], i
     g.chess960 = chess960;
     g.result = RESULT_NONE;
 
-    memcpy(g.nodes, nodes, 2 * sizeof(uint64_t));
+    memcpy(g.nodes, nodes, 2 * sizeof(unsigned));
     memcpy(g.depth, depth, 2 * sizeof(int));
     memcpy(g.movetime, movetime, 2 * sizeof(int));
 
@@ -126,7 +126,7 @@ void game_play(Game *g, const Engine *first, const Engine *second)
 
     for (int i = 0; i < 2; i++) {
         if (g->nodes[i])
-            str_catf(&goCmd[i], " nodes %d", (int)g->nodes[i]);  // FIXME: uint64_t in str_catf()
+            str_catf(&goCmd[i], " nodes %u", (int)g->nodes[i]);
 
         if (g->depth[i])
             str_catf(&goCmd[i], " depth %d", g->depth[i]);

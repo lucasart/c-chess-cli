@@ -201,11 +201,15 @@ void str_catf(str_t *dest, const char *fmt, ...)
         fmt = pct + 2;  // move past the '%?' to prepare next loop iteration
         assert(strlen(fmt) == bytesLeft);
 
+        char buf[16];  // only for integers (known max char)
+
         if (pct[1] == 's')
             str_cat(dest, va_arg(args, const char *));
         else if (pct[1] == 'd') {
-            char buf[16];
             sprintf(buf, "%d", va_arg(args, int));
+            str_cat(dest, buf);
+        } else if (pct[1] == 'u') {
+            sprintf(buf, "%u", va_arg(args, unsigned));
             str_cat(dest, buf);
         } else
             assert(false);  // add your format specifier handler here
