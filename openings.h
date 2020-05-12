@@ -10,4 +10,4 @@ typedef struct {
 Openings openings_new(const char *fileName, bool randomStart);
 void openings_delete(Openings *openings);
 
-str_t openings_get(Openings *openings);  // FIXME: lock this
+void openings_get(Openings *openings, str_t *fen);

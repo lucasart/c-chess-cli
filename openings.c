@@ -22,9 +22,10 @@ Openings openings_new(const char *fileName, bool randomStart)
 
         fseek(openings.file, prng(&seed) % size, SEEK_SET);
 
-        // Consume current line, which is likely broken, as we're somewhere in the middle of it
-        str_t line = openings_get(&openings);
-        str_delete(&line);
+        // Consume current line, likely broken, as we're somewhere in the middle of it
+        str_t fen = str_new();
+        openings_get(&openings, &fen);
+        str_delete(&fen);
     }
 
     return openings;
@@ -36,12 +37,14 @@ void openings_delete(Openings *openings)
         fclose(openings->file);
 }
 
-str_t openings_get(Openings *openings)
+void openings_get(Openings *openings, str_t *fen)
 {
-    if (!openings->file)
-        return str_dup("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");  // start pos
+    if (!openings->file) {
+        str_cpy(fen, "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");  // start pos
+        return;
+    }
 
-    str_t line = str_new(), fen = str_new();
+    str_t line = str_new();
     flockfile(openings->file);
 
     if (!str_getline(&line, openings->file, true)) {
@@ -53,7 +56,6 @@ str_t openings_get(Openings *openings)
     }
 
     funlockfile(openings->file);
-    str_tok(line.buf, &fen, ";");
+    str_tok(line.buf, fen, ";");
     str_delete(&line);
-    return fen;
 }

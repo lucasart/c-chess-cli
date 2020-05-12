@@ -38,8 +38,12 @@ void *thread_start(void *arg)
     for (int i = 0; i < 2; i++)
         engines[i] = engine_create(options.cmd[i].buf, log, options.uciOptions[i].buf);
 
+    str_t fen = str_new();
+
     for (int i = 0; i < options.games; i++) {
-        str_t fen = openings_get(&openings);
+        if (!options.repeat || i % 2 == 0)
+            openings_get(&openings, &fen);
+
         Game game = game_new(options.chess960, fen.buf, options.nodes, options.depth,
             options.movetime);
 
@@ -59,9 +63,10 @@ void *thread_start(void *arg)
             str_delete(&pgn);
         }
 
-        str_delete(&fen);
         game_delete(&game);
     }
+
+    str_delete(&fen);
 
     for (int i = 0; i < 2; i++)
         engine_delete(&engines[i]);
