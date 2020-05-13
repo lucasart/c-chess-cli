@@ -1,7 +1,20 @@
 #include "openings.h"
 #include "util.h"
 
-Openings openings_new(const char *fileName, int rounds, bool random)
+static void read_infinite(FILE *in, str_t *line)
+// Read from an infinite file (wrap around EOF)
+{
+    if (!str_getline(line, in, true)) {
+        // Failed ? wrap around EOF
+        rewind(in);
+
+        // Still fail ? die
+        if (!str_getline(line, in, true))
+            die("read_infinite(): cannot read a single line\n");
+    }
+}
+
+Openings openings_new(const char *fileName, bool random, int repeat)
 {
     Openings o;
 
@@ -23,13 +36,15 @@ Openings openings_new(const char *fileName, int rounds, bool random)
         fseek(o.file, prng(&seed) % size, SEEK_SET);
 
         // Consume current line, likely broken, as we're somewhere in the middle of it
-        str_t fen = str_new();
-        openings_get(&o, &fen);
-        str_delete(&fen);
+        str_t line = str_new();
+        read_infinite(o.file, &line);
+        str_delete(&line);
     }
 
     pthread_mutex_init(&o.mtx, NULL);
-    o.roundsLeft = rounds;
+    o.lastFen = str_new();
+    o.repeat = repeat;
+    o.next = 0;
 
     return o;
 }
@@ -40,37 +55,36 @@ void openings_delete(Openings *o)
         fclose(o->file);
 
     pthread_mutex_destroy(&o->mtx);
+    str_delete(&o->lastFen);
 }
 
-bool openings_get(Openings *o, str_t *fen)
+int openings_next(Openings *o, str_t *fen)
 {
     if (!o->file) {
         pthread_mutex_lock(&o->mtx);
-        const bool done = o->roundsLeft-- <= 0;
+        const int next = ++o->next;
         pthread_mutex_unlock(&o->mtx);
 
         str_cpy(fen, "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");  // start pos
-        return !done;
+        return next;
     }
-
-    str_t line = str_new();
 
     pthread_mutex_lock(&o->mtx);
 
-    if (!str_getline(&line, o->file, true)) {
-        // Try (once) to wrap around EOF
-        rewind(o->file);
-
-        if (!str_getline(&line, o->file, true))
-            die("openings_get(): cannot read a single line");
+    if (o->repeat && o->next % 2 == 1)
+        // Repeat last opening
+        str_cpy(fen, o->lastFen.buf);
+    else {
+        // Read 'fen' from file, and save in 'o->lastFen'
+        str_t line = str_new();
+        read_infinite(o->file, &line);
+        str_tok(line.buf, fen, ";");
+        str_cpy(&o->lastFen, fen->buf);
+        str_delete(&line);
     }
 
-    const bool done = o->roundsLeft-- <= 0;
+    const int next = ++o->next;
 
     pthread_mutex_unlock(&o->mtx);
-
-    str_tok(line.buf, fen, ";");
-    str_delete(&line);
-
-    return !done;
+    return next;
 }

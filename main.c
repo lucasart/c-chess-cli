@@ -38,32 +38,30 @@ void *thread_start(void *arg)
     for (int i = 0; i < 2; i++)
         engines[i] = engine_create(options.cmd[i].buf, log, options.uciOptions[i].buf);
 
+    int next;
     str_t fen = str_new();
 
-    while (openings_get(&openings, &fen)) {
-        // Play 1 round (=single FEN): 1 or 2 games (if repeat)
-        for (int i = 0; i < 1 + options.repeat; i++) {
-            // Play 1 game
-            Game game = game_new(options.chess960, fen.buf, options.nodes, options.depth,
-                options.movetime);
-            game_play(&game, &engines[i], &engines[1 - i]);
+    while ((next = openings_next(&openings, &fen)) <= options.games) {
+        // Play 1 game
+        Game game = game_new(options.chess960, fen.buf, options.nodes, options.depth,
+            options.movetime);
+        game_play(&game, &engines[(next - 1) % 2], &engines[next % 2]);
 
-            // Write to stdout a one line summary
-            str_t result = str_new(), reason = str_new();
-            result = game_decode_result(&game, &reason);
-            printf("[%d] %s vs. %s: %s (%s)\n", threadId, game.names[WHITE].buf, game.names[BLACK].buf,
-                result.buf, reason.buf);
-            str_delete(&result, &reason);
+        // Write to stdout a one line summary
+        str_t result = str_new(), reason = str_new();
+        result = game_decode_result(&game, &reason);
+        printf("[%d] %s vs. %s: %s (%s)\n", threadId, game.names[WHITE].buf, game.names[BLACK].buf,
+            result.buf, reason.buf);
+        str_delete(&result, &reason);
 
-            // Write to PGN file
-            if (pgnout) {
-                str_t pgn = game_pgn(&game);
-                fputs(pgn.buf, pgnout);
-                str_delete(&pgn);
-            }
-
-            game_delete(&game);
+        // Write to PGN file
+        if (pgnout) {
+            str_t pgn = game_pgn(&game);
+            fputs(pgn.buf, pgnout);
+            str_delete(&pgn);
         }
+
+        game_delete(&game);
     }
 
     str_delete(&fen);
@@ -80,8 +78,7 @@ void *thread_start(void *arg)
 int main(int argc, const char **argv)
 {
     options = options_new(argc, argv);
-    openings = openings_new(options.openings.buf, options.games / (1 + options.repeat),
-        options.random);
+    openings = openings_new(options.openings.buf, options.random, options.repeat);
     pgnout = options.pgnout.len ? fopen(options.pgnout.buf, "w") : NULL;
 
     threads = calloc(options.concurrency, sizeof(pthread_t));

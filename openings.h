@@ -5,12 +5,14 @@
 #include "str.h"
 
 typedef struct {
-    FILE *file;
-    int roundsLeft;
     pthread_mutex_t mtx;
+    FILE *file;
+    str_t lastFen;
+    int next;
+    bool repeat;
 } Openings;
 
-Openings openings_new(const char *fileName, int rounds, bool random);
+Openings openings_new(const char *fileName, bool random, int repeat);
 void openings_delete(Openings *openings);
 
-bool openings_get(Openings *o, str_t *fen);
+int openings_next(Openings *o, str_t *fen);
