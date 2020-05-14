@@ -27,17 +27,23 @@ enum {
 };
 
 typedef struct {
-    str_t names[NB_COLOR];  // names of players, by color
-    Position *pos;  // list of positions (including moves) since game start
+    int resignCount, resignScore;
+    int drawCount, drawScore;
     unsigned nodes[2];  // node limit per move (per player, by order)
     int depth[2];  // depth limit per move (per player, by order)
     int movetime[2];  // time limit per move (per player, by order)
-    int ply, maxPly;
     bool chess960;
+} GameOptions;
+
+typedef struct {
+    str_t names[NB_COLOR];  // names of players, by color
+    Position *pos;  // list of positions (including moves) since game start
+    int ply, maxPly;
     int result;
+    GameOptions go;
 } Game;
 
-Game game_new(bool chess960, const char *fen, unsigned nodes[2], int depth[2], int movetime[2]);
+Game game_new(const char *fen, const GameOptions *go);
 void game_delete(Game *g);
 
 void game_play(Game *g, const Engine *first, const Engine *second);

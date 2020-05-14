@@ -14,6 +14,7 @@
 */
 #pragma once
 #include <inttypes.h>
+#include "game.h"
 #include "str.h"
 
 typedef struct {
@@ -24,7 +25,6 @@ typedef struct {
     str_t pgnout;  // pgn output file
 
     // flags
-    bool chess960;  // play Chess960
     bool random;  // start from a random opening
     bool repeat;  // repeat each opening twice with colors reversed
     bool debug;  // log all I/O with engines
@@ -32,9 +32,8 @@ typedef struct {
     // engine options
     str_t cmd[2];  // command per engine
     str_t uciOptions[2];  // UCI options per engine (eg. "Hash=16,Threads=8")
-    unsigned nodes[2];  // node limit per move
-    int depth[2];  // depth limit per move
-    int movetime[2];  // time limit per move
+
+    GameOptions go;
 } Options;
 
 Options options_new(int argc, const char **argv);

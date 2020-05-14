@@ -35,7 +35,7 @@ static str_t uci_position_command(const Game *g)
         str_cat(&cmd, " moves");
 
         for (int ply = ply0 + 1; ply <= g->ply; ply++) {
-            str_t lan = pos_move_to_lan(&g->pos[ply - 1], g->pos[ply].lastMove, g->chess960);
+            str_t lan = pos_move_to_lan(&g->pos[ply - 1], g->pos[ply].lastMove, g->go.chess960);
             str_cat(&cmd, " ", lan.buf);
             str_delete(&lan);
         }
@@ -78,7 +78,7 @@ bool illegal_move(move_t move, const move_t *begin, const move_t *end)
     return true;
 }
 
-Game game_new(bool chess960, const char *fen, unsigned nodes[2], int depth[2], int movetime[2])
+Game game_new(const char *fen, const GameOptions *go)
 {
     Game g;
 
@@ -90,12 +90,9 @@ Game game_new(bool chess960, const char *fen, unsigned nodes[2], int depth[2], i
     g.pos = malloc(g.maxPly * sizeof(Position));
     pos_set(&g.pos[0], fen);
 
-    g.chess960 = chess960;
     g.result = RESULT_NONE;
 
-    memcpy(g.nodes, nodes, 2 * sizeof(unsigned));
-    memcpy(g.depth, depth, 2 * sizeof(int));
-    memcpy(g.movetime, movetime, 2 * sizeof(int));
+    memcpy(&g.go, go, sizeof(*go));
 
     return g;
 }
@@ -114,7 +111,7 @@ void game_play(Game *g, const Engine *first, const Engine *second)
         str_cpy(&g->names[color], engines[color ^ g->pos[0].turn]->name.buf);
 
     for (int i = 0; i < 2; i++) {
-        if (g->chess960)
+        if (g->go.chess960)
             engine_writeln(engines[i], "setoption name UCI_Chess960 value true");
 
         engine_writeln(engines[i], "ucinewgame");
@@ -125,14 +122,14 @@ void game_play(Game *g, const Engine *first, const Engine *second)
     str_t goCmd[2] = {str_dup("go"), str_dup("go")};
 
     for (int i = 0; i < 2; i++) {
-        if (g->nodes[i])
-            str_catf(&goCmd[i], " nodes %u", (int)g->nodes[i]);
+        if (g->go.nodes[i])
+            str_catf(&goCmd[i], " nodes %u", (int)g->go.nodes[i]);
 
-        if (g->depth[i])
-            str_catf(&goCmd[i], " depth %d", g->depth[i]);
+        if (g->go.depth[i])
+            str_catf(&goCmd[i], " depth %d", g->go.depth[i]);
 
-        if (g->movetime[i])
-            str_catf(&goCmd[i], " movetime %d", g->movetime[i]);
+        if (g->go.movetime[i])
+            str_catf(&goCmd[i], " movetime %d", g->go.movetime[i]);
     }
 
     for (g->ply = 0; ; g->ply++) {
@@ -160,7 +157,7 @@ void game_play(Game *g, const Engine *first, const Engine *second)
 
         engine_writeln(e, goCmd[turn].buf);
         str_t lan = engine_bestmove(e);
-        played = pos_lan_to_move(&g->pos[g->ply], lan.buf, g->chess960);
+        played = pos_lan_to_move(&g->pos[g->ply], lan.buf, g->go.chess960);
         str_delete(&lan);
 
         if (illegal_move(played, moves, end)) {
@@ -222,7 +219,7 @@ str_t game_pgn(const Game *g)
     str_t fen = pos_get(&g->pos[0]);
     str_cat(&pgn, "[FEN \"", fen.buf, "\"]\n");
 
-    if (g->chess960)
+    if (g->go.chess960)
         str_cat(&pgn, "[Variant \"Chess960\"]\n");
 
     str_catf(&pgn, "[PlyCount \"%d\"]\n\n", g->ply);

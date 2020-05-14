@@ -43,8 +43,7 @@ void *thread_start(void *arg)
 
     while ((next = openings_next(&openings, &fen)) <= options.games) {
         // Play 1 game
-        Game game = game_new(options.chess960, fen.buf, options.nodes, options.depth,
-            options.movetime);
+        Game game = game_new(fen.buf, &options.go);
         game_play(&game, &engines[(next - 1) % 2], &engines[next % 2]);
 
         // Write to stdout a one line summary
