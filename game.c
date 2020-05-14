@@ -17,7 +17,7 @@
 #include "gen.h"
 #include "str.h"
 
-static str_t uci_position_command(const Game *g)
+void uci_position_command(const Game *g, str_t *cmd)
 // Builds a string of the form "position fen ... [moves ...]". Implements rule50 pruning: start from
 // the last position that reset the rule50 counter, to reduce the move list to the minimum, without
 // losing information.
@@ -25,23 +25,20 @@ static str_t uci_position_command(const Game *g)
     // Index of the starting FEN, where rule50 was last reset
     const int ply0 = max(g->ply - g->pos[g->ply].rule50, 0);
 
-    str_t cmd = str_dup("position fen ");
-
+    str_cpy(cmd, "position fen ");
     str_t fen = pos_get(&g->pos[ply0]);
-    str_cat(&cmd, fen.buf);
+    str_cat(cmd, fen.buf);
     str_delete(&fen);
 
     if (ply0 < g->ply) {
-        str_cat(&cmd, " moves");
+        str_cat(cmd, " moves");
 
         for (int ply = ply0 + 1; ply <= g->ply; ply++) {
             str_t lan = pos_move_to_lan(&g->pos[ply - 1], g->pos[ply].lastMove, g->go.chess960);
-            str_cat(&cmd, " ", lan.buf);
+            str_cat(cmd, " ", lan.buf);
             str_delete(&lan);
         }
     }
-
-    return cmd;
 }
 
 int game_result(const Game *g, move_t *begin, move_t **end)
@@ -132,6 +129,8 @@ void game_play(Game *g, const Engine *first, const Engine *second)
             str_catf(&goCmd[i], " movetime %d", g->go.movetime[i]);
     }
 
+    str_t posCmd = str_new();
+
     for (g->ply = 0; ; g->ply++) {
         if (g->ply >= g->maxPly) {
             g->maxPly *= 2;
@@ -149,9 +148,8 @@ void game_play(Game *g, const Engine *first, const Engine *second)
         const int turn = g->ply % 2;
         const Engine *e = engines[turn];
 
-        str_t posCmd = uci_position_command(g);
+        uci_position_command(g, &posCmd);
         engine_writeln(e, posCmd.buf);
-        str_delete(&posCmd);
 
         engine_sync(e);
 
@@ -166,7 +164,7 @@ void game_play(Game *g, const Engine *first, const Engine *second)
         }
     }
 
-    str_delete(&goCmd[0], &goCmd[1]);
+    str_delete(&goCmd[0], &goCmd[1], &posCmd);
     assert(g->result);
 }
 
