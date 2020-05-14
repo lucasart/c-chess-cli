@@ -50,7 +50,7 @@ static void str_grow(str_t *s, size_t len)
 
 bool str_ok(const str_t *s)
 {
-    return s && s->alloc == str_round_up(s->len + 1)
+    return s && s->alloc >= str_round_up(s->len + 1)
         && s->buf && s->buf[s->len] == '\0' && !memchr(s->buf, 0, s->len);
 }
 
