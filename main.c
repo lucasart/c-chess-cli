@@ -47,8 +47,8 @@ void *thread_start(void *arg)
         game_play(&game, &engines[(next - 1) % 2], &engines[next % 2]);
 
         // Write to stdout a one line summary
-        str_t result = str_new(), reason = str_new();
-        result = game_decode_result(&game, &reason);
+        str_t reason = str_new();
+        str_t result = game_decode_result(&game, &reason);
         printf("[%d] %s vs. %s: %s (%s)\n", threadId, game.names[WHITE].buf, game.names[BLACK].buf,
             result.buf, reason.buf);
         str_delete(&result, &reason);
