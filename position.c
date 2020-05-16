@@ -596,6 +596,19 @@ str_t pos_move_to_san(const Position *pos, move_t m)
 
         if (prom < NB_PIECE)
             str_putc(&san, '=', PieceLabel[WHITE][prom]);
+    } else if (piece == KING) {
+        if (pos_move_is_castling(pos, m))
+            str_cpy(&san, to > from ? "O-O" : "O-O-O");
+        else {
+            str_putc(&san, 'K');
+
+            if (pos_move_is_capture(pos, m))
+                str_putc(&san, 'x');
+
+            str_t toStr = square_to_string(to);
+            str_cat_s(&san, &toStr);
+            str_delete(&toStr);
+        }
     } else {
         str_putc(&san, PieceLabel[WHITE][piece]);
 
@@ -607,14 +620,12 @@ str_t pos_move_to_san(const Position *pos, move_t m)
         bitboard_t contesters = pos_pieces_cp(pos, us, piece);
         bb_clear(&contesters, from);
 
-         if (piece == KING)
-             // 1.0. Trivial case. Skip the swhole SAN disambiguation process.
-             contesters = 0;
-         if (piece == KNIGHT)
+        if (piece == KNIGHT)
             // 1.1. Knights. Restrict to those within a knight jump of of 'to' that are not pinned.
             contesters &= KnightAttacks[to] & ~pins;
         else {
             // 1.2. Sliders
+            assert(BISHOP <= piece && piece <= QUEEN);
 
             // 1.2.1. Restrict to those that can pseudo-legally reach the 'to' square.
             bitboard_t occ = pos_pieces(pos);
@@ -640,15 +651,18 @@ str_t pos_move_to_san(const Position *pos, move_t m)
 
         // 2. Use the contesters to disambiguate
         if (contesters) {
-            // 2.1. Contested rank. Use file to disambiguate
-            if (Rank[rank_of(from)] & contesters)
+            // 2.1. Same file or rank, use either or both to disambiguate.
+            if (bb_rook_attacks(from, 0) & contesters) {
+                // 2.1.1. Contested rank. Use file to disambiguate
+                if (Rank[rank_of(from)] & contesters)
+                    str_putc(&san, file_of(from) + 'a');
+
+                // 2.1.2. Contested file. Use rank to disambiguate
+                if (File[file_of(from)] & contesters)
+                    str_putc(&san, rank_of(from) + '1');
+            } else
+                // 2.2. No file or rank in common, use file to disambiguate.
                 str_putc(&san, file_of(from) + 'a');
-
-            // 2.2. Contested file. Use rank to disambiguate
-            if (File[file_of(from)] & contesters)
-                str_putc(&san, rank_of(from) + '1');
-
-            // Note that 2.1 and 2.2 are not mutually exclusive
         }
 
         if (pos_move_is_capture(pos, m))

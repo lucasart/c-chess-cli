@@ -166,7 +166,7 @@ void game_play(Game *g, const Engine *first, const Engine *second)
             break;
         }
 
-        if (abs(score) <= g->go.drawScore) {
+        if (g->go.drawCount && abs(score) <= g->go.drawScore) {
             if (++drawPlyCount >= 2 * g->go.drawCount) {
                 g->result = RESULT_DRAW_ADJUDICATION;
                 break;

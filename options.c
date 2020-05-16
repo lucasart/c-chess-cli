@@ -43,9 +43,9 @@ Options options_new(int argc, const char **argv)
 
         // Game options
         .go = {
-            .resignCount = INT_MAX,
+            .resignCount = 0,
             .resignScore = 0,
-            .drawCount = INT_MAX,
+            .drawCount = 0,
             .drawScore = 0,
             .nodes = {0},
             .depth = {0},
