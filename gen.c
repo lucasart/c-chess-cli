@@ -280,12 +280,12 @@ void gen_run_test()
     for (size_t i = 0; i < sizeof(tests) / sizeof(Test); i++) {
         pos_set(&pos, tests[i].fen);
         pos_print(&pos);
-        printf("depth %d:\n", tests[i].depth);
+        printf("depth %i:\n", tests[i].depth);
 
         const int leaves = gen_leaves(&pos, tests[i].depth, 0, true);
 
         if (leaves != tests[i].leaves) {
-            printf("FAILED: fen '%s', depth %d, expected %d, found %d\n", tests[i].fen,
+            printf("FAILED: fen '%s', depth %i, expected %i, found %i\n", tests[i].fen,
                 tests[i].depth, tests[i].leaves, leaves);
             break;
         } else

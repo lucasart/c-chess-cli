@@ -106,7 +106,7 @@ void engine_delete(Engine *e)
 
 void engine_readln(const Engine *e, str_t *line)
 {
-    if (str_getline(line, e->in, true)) {
+    if (str_getline(line, e->in)) {
         if (e->log && fprintf(e->log, "%s -> %s\n", e->name.buf, line->buf) <= 0)
             die("engine_writeln() failed writing to log\n");
     } else
@@ -146,7 +146,7 @@ str_t engine_bestmove(const Engine *e)
 
         if (tail && !strcmp(token.buf, "bestmove")) {
             if (str_tok(tail, &token, " "))
-                str_cpy(&best, token.buf);
+                str_cpy_s(&best, &token);
 
             break;
         }

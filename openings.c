@@ -4,12 +4,12 @@
 static void read_infinite(FILE *in, str_t *line)
 // Read from an infinite file (wrap around EOF)
 {
-    if (!str_getline(line, in, true)) {
+    if (!str_getline(line, in)) {
         // Failed ? wrap around EOF
         rewind(in);
 
         // Still fail ? die
-        if (!str_getline(line, in, true))
+        if (!str_getline(line, in))
             die("read_infinite(): cannot read a single line\n");
     }
 }
@@ -73,13 +73,13 @@ int openings_next(Openings *o, str_t *fen)
 
     if (o->repeat && o->next % 2 == 1)
         // Repeat last opening
-        str_cpy(fen, o->lastFen.buf);
+        str_cpy_s(fen, &o->lastFen);
     else {
         // Read 'fen' from file, and save in 'o->lastFen'
         str_t line = str_new();
         read_infinite(o->file, &line);
         str_tok(line.buf, fen, ";");
-        str_cpy(&o->lastFen, fen->buf);
+        str_cpy_s(&o->lastFen, fen);
         str_delete(&line);
     }
 

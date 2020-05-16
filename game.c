@@ -27,7 +27,7 @@ void uci_position_command(const Game *g, str_t *cmd)
 
     str_cpy(cmd, "position fen ");
     str_t fen = pos_get(&g->pos[ply0]);
-    str_cat(cmd, fen.buf);
+    str_cat_s(cmd, &fen);
     str_delete(&fen);
 
     if (ply0 < g->ply) {
@@ -105,7 +105,7 @@ void game_play(Game *g, const Engine *first, const Engine *second)
     const Engine *engines[2] = {first, second};  // more practical for loops
 
     for (int color = WHITE; color <= BLACK; color++)
-        str_cpy(&g->names[color], engines[color ^ g->pos[0].turn]->name.buf);
+        str_cpy_s(&g->names[color], &engines[color ^ g->pos[0].turn]->name);
 
     for (int i = 0; i < 2; i++) {
         if (g->go.chess960)
@@ -123,10 +123,10 @@ void game_play(Game *g, const Engine *first, const Engine *second)
             str_catf(&goCmd[i], " nodes %u", (int)g->go.nodes[i]);
 
         if (g->go.depth[i])
-            str_catf(&goCmd[i], " depth %d", g->go.depth[i]);
+            str_catf(&goCmd[i], " depth %i", g->go.depth[i]);
 
         if (g->go.movetime[i])
-            str_catf(&goCmd[i], " movetime %d", g->go.movetime[i]);
+            str_catf(&goCmd[i], " movetime %i", g->go.movetime[i]);
     }
 
     str_t posCmd = str_new();
@@ -205,27 +205,27 @@ str_t game_pgn(const Game *g)
 {
     str_t pgn = str_new();
 
-    str_cat(&pgn, "[White \"", g->names[WHITE].buf, "\"]\n");
-    str_cat(&pgn, "[Black \"", g->names[BLACK].buf, "\"]\n");
+    str_catf(&pgn, "[White \"%S\"]\n", &g->names[WHITE]);
+    str_catf(&pgn, "[Black \"%S\"]\n", &g->names[BLACK]);
 
     // Result in PGN format "1-0", "0-1", "1/2-1/2" (from white pov)
     str_t reason = str_new();
     str_t result = game_decode_result(g, &reason);
-    str_cat(&pgn, "[Result \"", result.buf, "\"]\n");
-    str_cat(&pgn, "[Termination \"", reason.buf, "\"]\n");
+    str_catf(&pgn, "[Result \"%S\"]\n", &result);
+    str_catf(&pgn, "[Termination \"%S\"]\n", &reason);
 
     str_t fen = pos_get(&g->pos[0]);
-    str_cat(&pgn, "[FEN \"", fen.buf, "\"]\n");
+    str_catf(&pgn, "[FEN \"%S\"]\n", &fen);
 
     if (g->go.chess960)
         str_cat(&pgn, "[Variant \"Chess960\"]\n");
 
-    str_catf(&pgn, "[PlyCount \"%d\"]\n\n", g->ply);
+    str_catf(&pgn, "[PlyCount \"%i\"]\n\n", g->ply);
 
     for (int ply = 1; ply <= g->ply; ply++) {
         // Write move number
         if (g->pos[ply - 1].turn == WHITE || ply == 1)
-            str_catf(&pgn, g->pos[ply - 1].turn == WHITE ? "%d. " : "%d.. ",
+            str_catf(&pgn, g->pos[ply - 1].turn == WHITE ? "%i. " : "%i.. ",
                 g->pos[ply - 1].fullMove);
 
         // Prepare SAN base

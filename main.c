@@ -31,7 +31,7 @@ void *thread_start(void *arg)
     Engine engines[2];
 
     str_t logName = str_new();
-    str_catf(&logName, "c-chess-cli.%d.log", threadId);
+    str_catf(&logName, "c-chess-cli.%i.log", threadId);
     FILE *log = options.debug ? fopen(logName.buf, "w") : NULL;
     str_delete(&logName);
 
@@ -49,7 +49,7 @@ void *thread_start(void *arg)
         // Write to stdout a one line summary
         str_t reason = str_new();
         str_t result = game_decode_result(&game, &reason);
-        printf("[%d] %s vs. %s: %s (%s)\n", threadId, game.names[WHITE].buf, game.names[BLACK].buf,
+        printf("[%i] %s vs. %s: %s (%s)\n", threadId, game.names[WHITE].buf, game.names[BLACK].buf,
             result.buf, reason.buf);
         str_delete(&result, &reason);
 

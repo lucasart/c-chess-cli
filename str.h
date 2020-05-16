@@ -32,11 +32,12 @@ str_t str_new();
 str_t str_dup(const char *src);
 
 // str_delete(&s1, ..., &sn): frees a list of n >= 1 valid strings, and marks them as invalid
-#define str_delete(...) str_free_aux(__VA_ARGS__, NULL)
-void str_free_aux(str_t *s1, ...);
+#define str_delete(...) str_delete_aux(__VA_ARGS__, NULL)
+void str_delete_aux(str_t *s1, ...);
 
-// copies C-string 'src' into valid string 'dest'
-void str_cpy(str_t *dest, const char *restrict src);
+// copies 'src' into valid string 'dest'
+void str_cpy(str_t *dest, const char *restrict src);  // C-string version
+void str_cpy_s(str_t *dest, const str_t *src);  // string version (faster and safer)
 
 // copy at most n characters of C-string 'src' into valid string 'dest'
 void str_ncpy(str_t *dest, const char *restrict src, size_t n);
@@ -48,9 +49,11 @@ void str_putc_aux(str_t *dest, int c1, ...);
 // appends at most n characters of C-string 'src' into valid string 'dest'
 void str_ncat(str_t *dest, const char *src, size_t n);
 
-// str_cat(&dest, &s1, ..., &sn) appends n >= 1 C-strings to a valid string dest
+// str_cat(&dest, &s1, ..., &sn) appends n >= 1 strings to a valid string dest
 #define str_cat(...) str_cat_aux(__VA_ARGS__, NULL)
-void str_cat_aux(str_t *dest, const char *s1, ...);
+#define str_cat_s(...) str_cat_s_aux(__VA_ARGS__, NULL)
+void str_cat_aux(str_t *dest, const char *s1, ...);  // C-string version
+void str_cat_s_aux(str_t *dest, const str_t *s1, ...);  // string version (faster and safer)
 
 // same as sprintf(), but appends, instead of replace, to valid string s1
 void str_catf(str_t *dest, const char *fmt, ...);
@@ -60,5 +63,5 @@ void str_catf(str_t *dest, const char *fmt, ...);
 const char *str_tok(const char *s, str_t *token, const char *delim);
 
 // reads a line from file 'in', into valid string 'out', and return the number of characters read
-// (including the '\n' if any). When trim = true, the '\n' is discarded (but counted).
-size_t str_getline(str_t *out, FILE *in, bool trim);
+// (including the '\n' if any). The '\n' is discarded from the output, but still counted.
+size_t str_getline(str_t *out, FILE *in);

@@ -379,7 +379,7 @@ str_t pos_get(const Position *pos)
 
     // En passant and 50 move
     str_t ep = square_to_string(pos->epSquare);
-    str_catf(&fen, " %s %d %d", ep.buf, pos->rule50, pos->fullMove);
+    str_catf(&fen, " %S %i %i", &ep, pos->rule50, pos->fullMove);
     str_delete(&ep);
 
     return fen;
@@ -550,9 +550,8 @@ str_t pos_move_to_lan(const Position *pos, move_t m, bool chess960)
     if (!chess960 && pos_move_is_castling(pos, m))
         to = to > from ? from + 2 : from - 2;  // e1h1 -> e1g1, e1a1 -> e1c1
 
-    str_t fromStr = square_to_string(from);
-    str_t toStr = square_to_string(to);
-    str_cat(&lan, fromStr.buf, toStr.buf);
+    str_t fromStr = square_to_string(from), toStr = square_to_string(to);
+    str_cat_s(&lan, &fromStr, &toStr);
     str_delete(&fromStr, &toStr);
 
     if (prom < NB_PIECE)
@@ -656,7 +655,7 @@ str_t pos_move_to_san(const Position *pos, move_t m)
             str_putc(&san, 'x');
 
         str_t toStr = square_to_string(to);
-        str_cat(&san, toStr.buf);
+        str_cat_s(&san, &toStr);
         str_delete(&toStr);
     }
 

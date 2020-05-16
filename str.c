@@ -81,7 +81,7 @@ str_t str_dup(const char *src)
     return s;
 }
 
-void str_free_aux(str_t *s1, ...)
+void str_delete_aux(str_t *s1, ...)
 {
     va_list args;
     va_start(args, s1);
@@ -98,13 +98,23 @@ void str_free_aux(str_t *s1, ...)
     va_end(args);
 }
 
+static void do_str_cpy(str_t *dest, const char *restrict src, size_t n)
+{
+    str_grow(dest, n);
+    memcpy(dest->buf, src, dest->len + 1);
+}
+
 void str_cpy(str_t *dest, const char *restrict src)
 {
     assert(str_ok(dest) && src);
+    do_str_cpy(dest, src, strlen(src));
+    assert(str_ok(dest));
+}
 
-    str_grow(dest, strlen(src));
-    memcpy(dest->buf, src, dest->len + 1);
-
+void str_cpy_s(str_t *dest, const str_t *src)
+{
+    assert(str_ok(dest) && str_ok(src));
+    do_str_cpy(dest, src->buf, src->len);
     assert(str_ok(dest));
 }
 
@@ -153,6 +163,13 @@ void str_ncat(str_t *dest, const char *src, size_t n)
     assert(str_ok(dest));
 }
 
+static void do_str_cat(str_t *dest, const char *src, size_t n)
+{
+    const size_t oldLen = dest->len;
+    str_grow(dest, oldLen + n);
+    memcpy(&dest->buf[oldLen], src, n);
+}
+
 void str_cat_aux(str_t *dest, const char *s1, ...)
 {
     assert(str_ok(dest));
@@ -161,12 +178,30 @@ void str_cat_aux(str_t *dest, const char *s1, ...)
     const char *next = s1;
 
     while (next) {
-        const size_t initial = dest->len, additional = strlen(next);
-        str_grow(dest, initial + additional);
-        memcpy(&dest->buf[initial], next, additional);
+        assert(next);
+        do_str_cat(dest, next, strlen(next));
         assert(str_ok(dest));
 
         next = va_arg(args, const char *);
+    }
+
+    va_end(args);
+    assert(str_ok(dest));
+}
+
+void str_cat_s_aux(str_t *dest, const str_t *s1, ...)
+{
+    assert(str_ok(dest));
+    va_list args;
+    va_start(args, s1);
+    const str_t *next = s1;
+
+    while (next) {
+        assert(str_ok(next));
+        do_str_cat(dest, next->buf, next->len);
+        assert(str_ok(dest));
+
+        next = va_arg(args, const str_t *);
     }
 
     va_end(args);
@@ -204,9 +239,11 @@ void str_catf(str_t *dest, const char *fmt, ...)
         char buf[16];  // only for integers (known max char)
 
         if (pct[1] == 's')
-            str_cat(dest, va_arg(args, const char *));
-        else if (pct[1] == 'd') {
-            sprintf(buf, "%d", va_arg(args, int));
+            str_cat(dest, va_arg(args, const char *));  // C-string
+        else if (pct[1] == 'S')
+            str_cat_s(dest, va_arg(args, const str_t *));  // string
+        else if (pct[1] == 'i') {
+            sprintf(buf, "%i", va_arg(args, int));
             str_cat(dest, buf);
         } else if (pct[1] == 'u') {
             sprintf(buf, "%u", va_arg(args, unsigned));
@@ -253,7 +290,7 @@ const char *str_tok(const char *s, str_t *token, const char *delim)
     return token->len ? s : NULL;
 }
 
-size_t str_getline(str_t *out, FILE *in, bool trim)
+size_t str_getline(str_t *out, FILE *in)
 {
     assert(str_ok(out) && in);
     str_cpy(out, "");
@@ -273,9 +310,6 @@ size_t str_getline(str_t *out, FILE *in, bool trim)
     funlockfile(in);
 
     const size_t n = out->len + (c == '\n');
-
-    if (!trim && c == '\n')
-        str_putc(out, c);
 
     assert(str_ok(out));
     return n;
