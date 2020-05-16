@@ -31,7 +31,7 @@ void *thread_start(void *arg)
     Engine engines[2];
 
     str_t logName = str_new();
-    str_catf(&logName, "c-chess-cli.%i.log", threadId);
+    str_cat_fmt(&logName, "c-chess-cli.%i.log", threadId);
     FILE *log = options.debug ? fopen(logName.buf, "w") : NULL;
     str_delete(&logName);
 

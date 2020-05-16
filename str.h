@@ -56,7 +56,7 @@ void str_cat_aux(str_t *dest, const char *s1, ...);  // C-string version
 void str_cat_s_aux(str_t *dest, const str_t *s1, ...);  // string version (faster and safer)
 
 // same as sprintf(), but appends, instead of replace, to valid string s1
-void str_catf(str_t *dest, const char *fmt, ...);
+void str_cat_fmt(str_t *dest, const char *fmt, ...);
 
 // reads a token into valid string 'token', from s, using delim characters as a generalisation for
 // white spaces. returns tail pointer on success, otherwise NULL (no more tokens to read).

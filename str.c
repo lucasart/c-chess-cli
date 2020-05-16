@@ -208,7 +208,18 @@ void str_cat_s_aux(str_t *dest, const str_t *s1, ...)
     assert(str_ok(dest));
 }
 
-void str_catf(str_t *dest, const char *fmt, ...)
+static char *do_fmt_u(unsigned n, char *s)
+{
+    *s-- = '\0';
+
+    do {
+        *s-- = '0' + n % 10;
+    } while (n /= 10);
+
+    return s + 1;
+}
+
+void str_cat_fmt(str_t *dest, const char *fmt, ...)
 {
     assert(str_ok(dest) && fmt);
 
@@ -236,19 +247,21 @@ void str_catf(str_t *dest, const char *fmt, ...)
         fmt = pct + 2;  // move past the '%?' to prepare next loop iteration
         assert(strlen(fmt) == bytesLeft);
 
-        char buf[16];  // only for integers (known max char)
+        assert(sizeof(int) <= 8);
+        char buf[24];  // enough to fit a int with sign prefix '-' and '\0' terminator
 
         if (pct[1] == 's')
             str_cat(dest, va_arg(args, const char *));  // C-string
         else if (pct[1] == 'S')
             str_cat_s(dest, va_arg(args, const str_t *));  // string
         else if (pct[1] == 'i') {
-            sprintf(buf, "%i", va_arg(args, int));
-            str_cat(dest, buf);
-        } else if (pct[1] == 'u') {
-            sprintf(buf, "%u", va_arg(args, unsigned));
-            str_cat(dest, buf);
-        } else
+            const int i = va_arg(args, int);
+            char *c = do_fmt_u(abs(i), &buf[23]);
+            if (i < 0) *--c = '-';
+            str_cat(dest, c);
+        } else if (pct[1] == 'u')
+            str_cat(dest, do_fmt_u(va_arg(args, unsigned), &buf[23]));
+        else
             assert(false);  // add your format specifier handler here
     }
 

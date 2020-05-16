@@ -379,7 +379,7 @@ str_t pos_get(const Position *pos)
 
     // En passant and 50 move
     str_t ep = square_to_string(pos->epSquare);
-    str_catf(&fen, " %S %i %i", &ep, pos->rule50, pos->fullMove);
+    str_cat_fmt(&fen, " %S %i %i", &ep, pos->rule50, pos->fullMove);
     str_delete(&ep);
 
     return fen;

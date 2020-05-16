@@ -120,13 +120,13 @@ void game_play(Game *g, const Engine *first, const Engine *second)
 
     for (int i = 0; i < 2; i++) {
         if (g->go.nodes[i])
-            str_catf(&goCmd[i], " nodes %u", (int)g->go.nodes[i]);
+            str_cat_fmt(&goCmd[i], " nodes %u", (int)g->go.nodes[i]);
 
         if (g->go.depth[i])
-            str_catf(&goCmd[i], " depth %i", g->go.depth[i]);
+            str_cat_fmt(&goCmd[i], " depth %i", g->go.depth[i]);
 
         if (g->go.movetime[i])
-            str_catf(&goCmd[i], " movetime %i", g->go.movetime[i]);
+            str_cat_fmt(&goCmd[i], " movetime %i", g->go.movetime[i]);
     }
 
     str_t posCmd = str_new();
@@ -205,27 +205,27 @@ str_t game_pgn(const Game *g)
 {
     str_t pgn = str_new();
 
-    str_catf(&pgn, "[White \"%S\"]\n", &g->names[WHITE]);
-    str_catf(&pgn, "[Black \"%S\"]\n", &g->names[BLACK]);
+    str_cat_fmt(&pgn, "[White \"%S\"]\n", &g->names[WHITE]);
+    str_cat_fmt(&pgn, "[Black \"%S\"]\n", &g->names[BLACK]);
 
     // Result in PGN format "1-0", "0-1", "1/2-1/2" (from white pov)
     str_t reason = str_new();
     str_t result = game_decode_result(g, &reason);
-    str_catf(&pgn, "[Result \"%S\"]\n", &result);
-    str_catf(&pgn, "[Termination \"%S\"]\n", &reason);
+    str_cat_fmt(&pgn, "[Result \"%S\"]\n", &result);
+    str_cat_fmt(&pgn, "[Termination \"%S\"]\n", &reason);
 
     str_t fen = pos_get(&g->pos[0]);
-    str_catf(&pgn, "[FEN \"%S\"]\n", &fen);
+    str_cat_fmt(&pgn, "[FEN \"%S\"]\n", &fen);
 
     if (g->go.chess960)
         str_cat(&pgn, "[Variant \"Chess960\"]\n");
 
-    str_catf(&pgn, "[PlyCount \"%i\"]\n\n", g->ply);
+    str_cat_fmt(&pgn, "[PlyCount \"%i\"]\n\n", g->ply);
 
     for (int ply = 1; ply <= g->ply; ply++) {
         // Write move number
         if (g->pos[ply - 1].turn == WHITE || ply == 1)
-            str_catf(&pgn, g->pos[ply - 1].turn == WHITE ? "%i. " : "%i.. ",
+            str_cat_fmt(&pgn, g->pos[ply - 1].turn == WHITE ? "%i. " : "%i.. ",
                 g->pos[ply - 1].fullMove);
 
         // Prepare SAN base
