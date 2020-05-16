@@ -13,7 +13,9 @@
  * not, see <http://www.gnu.org/licenses/>.
 */
 #include <assert.h>
+#include <limits.h>
 #include <signal.h>
+#include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 #include "engine.h"
@@ -135,7 +137,7 @@ void engine_sync(const Engine *e)
     str_delete(&line);
 }
 
-str_t engine_bestmove(const Engine *e)
+str_t engine_bestmove(const Engine *e, int *score)
 {
     str_t best = str_dup("0000");  // default value
     str_t line = str_new(), token = str_new();
@@ -144,7 +146,21 @@ str_t engine_bestmove(const Engine *e)
         engine_readln(e, &line);
         const char *tail = str_tok(line.buf, &token, " ");
 
-        if (tail && !strcmp(token.buf, "bestmove")) {
+        if (!tail)  // empty line
+            continue;
+
+        if (!strcmp(token.buf, "info")) {
+            while ((tail = str_tok(tail, &token, " ")) && strcmp(token.buf, "score"));
+
+            if ((tail = str_tok(tail, &token, " "))) {
+                if (!strcmp(token.buf, "cp") && (tail = str_tok(tail, &token, " ")))
+                    *score = atoi(token.buf);
+                else if (!strcmp(token.buf, "mate") && (tail = str_tok(tail, &token, " ")))
+                    *score = atoi(token.buf) < 0 ? INT_MIN : INT_MAX;
+                else
+                    die("illegal syntax after 'score' in 'info' line\n");
+            }
+        } else if (!strcmp(token.buf, "bestmove")) {
             if (str_tok(tail, &token, " "))
                 str_cpy_s(&best, &token);
 
