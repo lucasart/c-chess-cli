@@ -112,7 +112,6 @@ void game_play(Game *g, const Engine *first, const Engine *second)
             engine_writeln(engines[i], "setoption name UCI_Chess960 value true");
 
         engine_writeln(engines[i], "ucinewgame");
-        engine_sync(engines[i]);
     }
 
     move_t played = 0;
@@ -130,6 +129,7 @@ void game_play(Game *g, const Engine *first, const Engine *second)
     }
 
     str_t posCmd = str_new();
+    int drawPlyCount = 0;
 
     for (g->ply = 0; ; g->ply++) {
         if (g->ply >= g->maxPly) {
@@ -165,6 +165,14 @@ void game_play(Game *g, const Engine *first, const Engine *second)
             g->result = RESULT_ILLEGAL_MOVE;
             break;
         }
+
+        if (abs(score) <= g->go.drawScore) {
+            if (++drawPlyCount >= 2 * g->go.drawCount) {
+                g->result = RESULT_DRAW_ADJUDICATION;
+                break;
+            }
+        } else
+            drawPlyCount = 0;
     }
 
     str_delete(&goCmd[0], &goCmd[1], &posCmd);
@@ -197,6 +205,9 @@ str_t game_decode_result(const Game *g, str_t *reason)
     } else if (g->result == RESULT_ILLEGAL_MOVE) {
         str_cpy(&result, g->pos[g->ply].turn == WHITE ? "0-1" : "1-0");
         str_cpy(reason, "illegal move");
+    } else if (g->result == RESULT_DRAW_ADJUDICATION) {
+        str_cpy(&result, "1/2-1/2");
+        str_cpy(reason, "draw by adjudication");
     } else
         assert(false);
 

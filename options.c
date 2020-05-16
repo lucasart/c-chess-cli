@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <limits.h>
 #include <stdlib.h>
 #include <string.h>
 #include "options.h"
@@ -42,10 +43,14 @@ Options options_new(int argc, const char **argv)
 
         // Game options
         .go = {
-            .chess960 = false,
+            .resignCount = INT_MAX,
+            .resignScore = 0,
+            .drawCount = INT_MAX,
+            .drawScore = 0,
             .nodes = {0},
             .depth = {0},
-            .movetime = {0}
+            .movetime = {0},
+            .chess960 = false
         }
     };
 
@@ -58,7 +63,7 @@ Options options_new(int argc, const char **argv)
             if (expectValue)
                 die("value expected after '%s'. found tag '%s' instead.\n", argv[i - 1], argv[i]);
 
-            if (strstr("-concurrency -games -openings -pgnout -cmd -ucioptions -nodes -depth "
+            if (strstr("-concurrency -games -openings -pgnout -cmd -ucioptions -nodes -depth -draw -resign"
                     "-movetime", argv[i]))
                 // process tags followed by value
                 expectValue = true;
