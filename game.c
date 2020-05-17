@@ -101,18 +101,16 @@ void game_delete(Game *g)
     str_delete(&g->names[WHITE], &g->names[BLACK]);
 }
 
-void game_play(Game *g, const Engine *first, const Engine *second)
+void game_play(Game *g, const Engine engines[2], bool reverse)
 {
-    const Engine *engines[2] = {first, second};  // more practical for loops
-
     for (int color = WHITE; color <= BLACK; color++)
-        str_cpy_s(&g->names[color], &engines[color ^ g->pos[0].turn]->name);
+        str_cpy_s(&g->names[color], &engines[color ^ g->pos[0].turn ^ reverse].name);
 
     for (int i = 0; i < 2; i++) {
         if (g->go.chess960)
-            engine_writeln(engines[i], "setoption name UCI_Chess960 value true");
+            engine_writeln(&engines[i], "setoption name UCI_Chess960 value true");
 
-        engine_writeln(engines[i], "ucinewgame");
+        engine_writeln(&engines[i], "ucinewgame");
     }
 
     move_t played = 0;
@@ -147,18 +145,15 @@ void game_play(Game *g, const Engine *first, const Engine *second)
         if ((g->result = game_result(g, moves, &end)))
             break;
 
-        const int turn = g->ply % 2;  // turn=0/1 means first/second, not white/black
-        const Engine *e = engines[turn];
+        const int ei = (g->ply % 2) ^ reverse;  // engine[ei] has the move
 
         uci_position_command(g, &posCmd);
-        engine_writeln(e, posCmd.buf);
-
-        engine_sync(e);
-
-        engine_writeln(e, goCmd[turn].buf);
+        engine_writeln(&engines[ei], posCmd.buf);
+        engine_sync(&engines[ei]);
+        engine_writeln(&engines[ei], goCmd[ei].buf);
 
         int score = 0;
-        str_t lan = engine_bestmove(e, &score);
+        str_t lan = engine_bestmove(&engines[ei], &score);
 
         played = pos_lan_to_move(&g->pos[g->ply], lan.buf, g->go.chess960);
         str_delete(&lan);
@@ -179,12 +174,12 @@ void game_play(Game *g, const Engine *first, const Engine *second)
 
         // Apply resign rule
         if (g->go.resignCount && score <= -g->go.resignScore) {
-            if (++resignCount[turn] >= g->go.resignCount) {
+            if (++resignCount[ei] >= g->go.resignCount) {
                 g->result = RESULT_RESIGN;
                 break;
             }
         } else
-            resignCount[turn] = 0;
+            resignCount[ei] = 0;
     }
 
     str_delete(&goCmd[0], &goCmd[1], &posCmd);

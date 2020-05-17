@@ -5,57 +5,39 @@
 #include "options.h"
 #include "util.h"
 
-static void parse_engine_option(const char *in, str_t out[2], char delim, bool duplicate)
-// Parses in=foo into out=(foo,foo), and in=foo:bar into out=(foo,bar)
+static void split_engine_option(const char *in, str_t out[2])
 {
-    char *c = strchr(in, delim);
+    char *c = strchr(in, ':');
 
     if (c) {
         // break foo:bar -> (foo,bar)
         str_ncpy(&out[0], in, c - in);
         str_ncpy(&out[1], c + 1, strlen(in) - (c + 1 - in));
-    } else if (duplicate) {
+    } else {
         // duplicate foo -> (foo,foo)
         str_cpy(&out[0], in);
         str_cpy(&out[1], in);
-    } else
-        die("could not parse '%s'\n", in);
+    }
 }
 
 Options options_new(int argc, const char **argv)
 {
     // Set default values
-    Options o = {
-        // options (-tag value)
-        .concurrency = 1,
-        .games = 1,
-        .openings = str_new(),
-        .pgnout = str_new(),
+    Options o;
+    memset(&o, 0, sizeof(o));
 
-        // flags (-tag)
-        .random = false,
-        .repeat = false,
-        .debug = false,
+    o.concurrency = 1;
+    o.games = 1;
+    o.openings = str_new();
+    o.pgnout = str_new();
 
-        // engine options (-tag value1[:value2])
-        .cmd = {str_new(), str_new()},
-        .uciOptions = {str_new(), str_new()},
+    for (int i = 0; i < 2; i++) {
+        o.cmd[i] = str_new();
+        o.uciOptions[i] = str_new();
+    }
 
-        // Game options
-        .go = {
-            .resignCount = 0,
-            .resignScore = 0,
-            .drawCount = 0,
-            .drawScore = 0,
-            .nodes = {0},
-            .depth = {0},
-            .movetime = {0},
-            .chess960 = false
-        }
-    };
-
-    int i;  // iterator for argv[]
-    bool expectValue = false;  // pattern: '-tag [value]'. should next token to be a value or tag ?
+    int i;
+    bool expectValue = false;  // pattern: '-tag [value]'. should next arg be a value or tag ?
 
     for (i = 1; i < argc; i++) {
         if (argv[i][0] == '-') {
@@ -63,8 +45,8 @@ Options options_new(int argc, const char **argv)
             if (expectValue)
                 die("value expected after '%s'. found tag '%s' instead.\n", argv[i - 1], argv[i]);
 
-            if (strstr("-concurrency -games -openings -pgnout -cmd -options -nodes -depth -draw -resign"
-                    "-movetime", argv[i]))
+            if (strstr("-concurrency -games -openings -pgnout -cmd -options -nodes -depth -draw "
+                    "-resign -movetime -tc", argv[i]))
                 // process tags followed by value
                 expectValue = true;
             else {
@@ -94,39 +76,43 @@ Options options_new(int argc, const char **argv)
             else if (!strcmp(argv[i - 1], "-pgnout"))
                 str_cpy(&o.pgnout, argv[i]);
             else if (!strcmp(argv[i - 1], "-cmd"))
-                parse_engine_option(argv[i], o.cmd, ':', true);
+                split_engine_option(argv[i], o.cmd);
             else if (!strcmp(argv[i - 1], "-options"))
-                parse_engine_option(argv[i], o.uciOptions, ':', true);
+                split_engine_option(argv[i], o.uciOptions);
             else if (!strcmp(argv[i - 1], "-nodes")) {
                 str_t nodes[2] = {str_new(), str_new()};
-                parse_engine_option(argv[i], nodes, ':', true);
+                split_engine_option(argv[i], nodes);
                 o.go.nodes[0] = atoi(nodes[0].buf);
                 o.go.nodes[1] = atoi(nodes[1].buf);
                 str_delete(&nodes[0], &nodes[1]);
             } else if (!strcmp(argv[i - 1], "-depth")) {
                 str_t depth[2] = {str_new(), str_new()};
-                parse_engine_option(argv[i], depth, ':', true);
+                split_engine_option(argv[i], depth);
                 o.go.depth[0] = atoi(depth[0].buf);
                 o.go.depth[1] = atoi(depth[1].buf);
                 str_delete(&depth[0], &depth[1]);
             } else if (!strcmp(argv[i - 1], "-movetime")) {
                 str_t movetime[2] = {str_new(), str_new()};
-                parse_engine_option(argv[i], movetime, ':', true);
+                split_engine_option(argv[i], movetime);
                 o.go.movetime[0] = atoi(movetime[0].buf);
                 o.go.movetime[1] = atoi(movetime[1].buf);
                 str_delete(&movetime[0], &movetime[1]);
-            } else if (!strcmp(argv[i - 1], "-resign")) {
-                str_t resign[2] = {str_new(), str_new()};
-                parse_engine_option(argv[i], resign, ',', false);
-                o.go.resignCount = atoi(resign[0].buf);
-                o.go.resignScore = atoi(resign[1].buf);
-                str_delete(&resign[0], &resign[1]);
-            } else if (!strcmp(argv[i - 1], "-draw")) {
-                str_t draw[2] = {str_new(), str_new()};
-                parse_engine_option(argv[i], draw, ',', false);
-                o.go.drawCount = atoi(draw[0].buf);
-                o.go.drawScore = atoi(draw[1].buf);
-                str_delete(&draw[0], &draw[1]);
+            } else if (!strcmp(argv[i - 1], "-resign"))
+                sscanf(argv[i], "%d,%d", &o.go.resignCount, &o.go.resignScore);
+            else if (!strcmp(argv[i - 1], "-draw"))
+                sscanf(argv[i], "%d,%d", &o.go.drawCount, &o.go.drawScore);
+            else if (!strcmp(argv[i - 1], "-tc")) {
+                str_t tc[2] = {str_new(), str_new()};
+                split_engine_option(argv[i], tc);
+
+                for (int j = 0; j < 2; j++) {
+                    if (strchr(tc[j].buf, '/'))
+                        sscanf(tc[j].buf, "%d/%d+%d", &o.go.movestogo[j], &o.go.time[j], &o.go.increment[j]);
+                    else
+                        sscanf(tc[j].buf, "%d+%d", &o.go.time[j], &o.go.increment[j]);
+                }
+
+                str_delete(&tc[0], &tc[1]);
             } else
                 assert(false);
 

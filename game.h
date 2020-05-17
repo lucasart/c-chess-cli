@@ -34,6 +34,7 @@ typedef struct {
     unsigned nodes[2];  // node limit per move (per player, by order)
     int depth[2];  // depth limit per move (per player, by order)
     int movetime[2];  // time limit per move (per player, by order)
+    int time[2], increment[2], movestogo[2];  // clock parameters (tournament or increment)
     bool chess960;
 } GameOptions;
 
@@ -48,6 +49,6 @@ typedef struct {
 Game game_new(const char *fen, const GameOptions *go);
 void game_delete(Game *g);
 
-void game_play(Game *g, const Engine *first, const Engine *second);
+void game_play(Game *g, const Engine engines[2], bool reverse);
 str_t game_decode_result(const Game *g, str_t *reason);
 str_t game_pgn(const Game *g);

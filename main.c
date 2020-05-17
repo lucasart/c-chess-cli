@@ -44,7 +44,7 @@ void *thread_start(void *arg)
     while ((next = openings_next(&openings, &fen)) <= options.games) {
         // Play 1 game
         Game game = game_new(fen.buf, &options.go);
-        game_play(&game, &engines[(next - 1) % 2], &engines[next % 2]);
+        game_play(&game, engines, options.repeat ? next % 2 == 0 : false);
 
         // Write to stdout a one line summary
         str_t reason = str_new();
