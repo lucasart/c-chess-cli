@@ -42,6 +42,7 @@ void uci_position_command(const Game *g, str_t *cmd)
 }
 
 int game_result(const Game *g, move_t *begin, move_t **end)
+// See if the current position is game over by chess rules
 {
     const Position *pos = &g->pos[g->ply];
 
@@ -130,6 +131,7 @@ void game_play(Game *g, const Engine *first, const Engine *second)
 
     str_t posCmd = str_new();
     int drawPlyCount = 0;
+    int resignCount[NB_COLOR] = {0};
 
     for (g->ply = 0; ; g->ply++) {
         if (g->ply >= g->maxPly) {
@@ -145,7 +147,7 @@ void game_play(Game *g, const Engine *first, const Engine *second)
         if ((g->result = game_result(g, moves, &end)))
             break;
 
-        const int turn = g->ply % 2;
+        const int turn = g->ply % 2;  // turn=0/1 means first/second, not white/black
         const Engine *e = engines[turn];
 
         uci_position_command(g, &posCmd);
@@ -166,6 +168,7 @@ void game_play(Game *g, const Engine *first, const Engine *second)
             break;
         }
 
+        // Apply draw adjudication rule
         if (g->go.drawCount && abs(score) <= g->go.drawScore) {
             if (++drawPlyCount >= 2 * g->go.drawCount) {
                 g->result = RESULT_DRAW_ADJUDICATION;
@@ -173,6 +176,15 @@ void game_play(Game *g, const Engine *first, const Engine *second)
             }
         } else
             drawPlyCount = 0;
+
+        // Apply resign rule
+        if (g->go.resignCount && score <= -g->go.resignScore) {
+            if (++resignCount[turn] >= g->go.resignCount) {
+                g->result = RESULT_RESIGN;
+                break;
+            }
+        } else
+            resignCount[turn] = 0;
     }
 
     str_delete(&goCmd[0], &goCmd[1], &posCmd);
@@ -208,6 +220,9 @@ str_t game_decode_result(const Game *g, str_t *reason)
     } else if (g->result == RESULT_DRAW_ADJUDICATION) {
         str_cpy(&result, "1/2-1/2");
         str_cpy(reason, "draw by adjudication");
+    } else if (g->result == RESULT_RESIGN) {
+        str_cpy(&result, g->pos[g->ply].turn == WHITE ? "0-1" : "1-0");
+        str_cpy(reason, g->pos[g->ply].turn == WHITE ? "white resigns" : "black resigns");
     } else
         assert(false);
 
@@ -215,7 +230,6 @@ str_t game_decode_result(const Game *g, str_t *reason)
 }
 
 str_t game_pgn(const Game *g)
-// FIXME: Use SAN as required by PGN
 {
     str_t pgn = str_new();
 

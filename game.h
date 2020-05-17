@@ -24,7 +24,8 @@ enum {
     RESULT_FIFTY_MOVES,  // draw by 50 moves rule
     RESULT_INSUFFICIENT_MATERIAL,  // draw due to insufficient material to deliver checkmate
     RESULT_ILLEGAL_MOVE,  // lost by playing an illegal move
-    RESULT_DRAW_ADJUDICATION  // draw by adjudication
+    RESULT_DRAW_ADJUDICATION,  // draw by adjudication
+    RESULT_RESIGN  // resigned on behalf of the engine
 };
 
 typedef struct {

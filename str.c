@@ -126,6 +126,8 @@ void str_ncpy(str_t *dest, const char *restrict src, size_t n)
         n = strlen(src);
 
     do_str_cpy(dest, src, n);
+    dest->buf[n] = '\0';
+
     assert(str_ok(dest));
 }
 

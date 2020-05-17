@@ -63,7 +63,7 @@ Options options_new(int argc, const char **argv)
             if (expectValue)
                 die("value expected after '%s'. found tag '%s' instead.\n", argv[i - 1], argv[i]);
 
-            if (strstr("-concurrency -games -openings -pgnout -cmd -ucioptions -nodes -depth -draw -resign"
+            if (strstr("-concurrency -games -openings -pgnout -cmd -options -nodes -depth -draw -resign"
                     "-movetime", argv[i]))
                 // process tags followed by value
                 expectValue = true;
@@ -95,7 +95,7 @@ Options options_new(int argc, const char **argv)
                 str_cpy(&o.pgnout, argv[i]);
             else if (!strcmp(argv[i - 1], "-cmd"))
                 parse_engine_option(argv[i], o.cmd, ':', true);
-            else if (!strcmp(argv[i - 1], "-ucioptions"))
+            else if (!strcmp(argv[i - 1], "-options"))
                 parse_engine_option(argv[i], o.uciOptions, ':', true);
             else if (!strcmp(argv[i - 1], "-nodes")) {
                 str_t nodes[2] = {str_new(), str_new()};

@@ -1,6 +1,6 @@
 ## c-chess-cli
 
-c-chess-cli is a command line interface for UCI chess engines written in C.
+c-chess-cli is a command line interface for UCI chess engines written in C, for POSIX systems.
 
 ## How to compile ?
 
@@ -17,29 +17,39 @@ make [CC=comp] [OUT=file] [debug=yes/no] [static=yes/no]
 
 `c-chess-cli [-option [value1[:value2]]] ...`
 
+### Example
+
+```
+./c-chess-cli -cmd demolito:../Engines/critter_1.6a -options Hash=8,Threads=2:Threads=1 \
+    -games 8 -concurrency 4 -openings ../spsa/book.epd -repeat -movetime 100 -depth 10 \
+    -resign 3,700 -draw 8,10 -pgnout out.pgn
+```
+
 ### General options
 
-Syntax: `-option [value]`, where some options expect a value, others don't (just flags).
+Syntax: `-option value`, where some options expect a value, others don't (just flags).
 
+- chess960: Use Chess960/FRC castling rules.
 - concurrency c: Number of threads used to play games concurrently.
+- debug: Write all I/O communication with engines to file(s). This produces `c-chess-cli.id.log`,
+where `id` is the thread id (range `0..concurrency-1`).
+- draw n,s: Draw when |score| <= s (in cp) for n consecutive moves, for both sides.
 - games n: Number of games
 - openings file: Takes `file` in EPD format for opening positions.
 - pgnout file: Output file where games are written, in PGN format.
-- chess960: Use Chess960/FRC castling rules.
 - random: Start from a random opening in the EPD file. Proceed sequentially afterwards.
+- resign n,s: Resign when score <= -s (in cp) for n consecutive moves, for the losing side.
 - repeat: Repeat each opening twice, with each engine playing both sides.
-- debug: Write all I/O communication with engines to file(s). This produces `c-chess-cli.id.log`,
-where `id` is the thread id (range `0..concurrency-1`).
 
-### Per engine options
+### Engine options
 
-Syntax: `-option value1[:value2]`, where value1 applies to the first engine, and value2 to
-the second. If value 2 is omitted, value1 is applied to both.
+Syntax:
+- `-option value1`: gives value1 to both engines.
+- `-option value1:value2`: gives value1 to the first engine, and value2 to the second engine.
+- `-option value1:`: gives value1 to the first engine, and nothing to the second.
+- `-option :value2`: can you guess? good.
 
-- cmd `engine1:[engine2]`: sets first engine to `engine1`, and (optionally) second engine to `engine2`.
-- ucioptions: List of UCI options per engine (default none). For example `-ucioptions Hash=2,Threads=4`
-giving both engines the same option list. Or `-ucioptions Hash=2:Threads=4,Hash=8` giving different
-option list per engine.
-- nodes: Node limit per move (default none).
-- depth: Depth limit per move (default none).
+- cmd `engine1:[engine2]`: sets first engine to `engine1`, and second engine to `engine2`.
 - movetime: Time limit per move in milliseconds (default none).
+- nodes: Node limit per move (default none).
+- options: List of UCI options per engine (default none).
