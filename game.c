@@ -157,7 +157,7 @@ void game_play(Game *g, const Engine *first, const Engine *second)
 
         engine_writeln(e, goCmd[turn].buf);
 
-        int score;
+        int score = 0;
         str_t lan = engine_bestmove(e, &score);
 
         played = pos_lan_to_move(&g->pos[g->ply], lan.buf, g->go.chess960);
