@@ -25,16 +25,20 @@ enum {
     RESULT_INSUFFICIENT_MATERIAL,  // draw due to insufficient material to deliver checkmate
     RESULT_ILLEGAL_MOVE,  // lost by playing an illegal move
     RESULT_DRAW_ADJUDICATION,  // draw by adjudication
-    RESULT_RESIGN  // resigned on behalf of the engine
+    RESULT_RESIGN,  // resigned on behalf of the engine
+    RESULT_TIME_LOSS
 };
 
 typedef struct {
+    // Per engine, by index in engines[] array (not the same as color)
+    int movetime[2];
+    int time[2], increment[2];
+    int movestogo[2];
+    unsigned nodes[2];
+    int depth[2];
+
     int resignCount, resignScore;
     int drawCount, drawScore;
-    unsigned nodes[2];  // node limit per move (per player, by order)
-    int depth[2];  // depth limit per move (per player, by order)
-    int movetime[2];  // time limit per move (per player, by order)
-    int time[2], increment[2], movestogo[2];  // clock parameters (tournament or increment)
     bool chess960;
 } GameOptions;
 
@@ -44,6 +48,7 @@ typedef struct {
     int ply, maxPly;
     int result;
     GameOptions go;
+
 } Game;
 
 Game game_new(const char *fen, const GameOptions *go);

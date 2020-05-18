@@ -40,6 +40,9 @@ where `id` is the thread id (range `0..concurrency-1`).
 - random: Start from a random opening in the EPD file. Proceed sequentially afterwards.
 - resign n,s: Resign when score <= -s (in cp) for n consecutive moves, for the losing side.
 - repeat: Repeat each opening twice, with each engine playing both sides.
+- tc x/y+z: set time control to x moves in y sec (repeating) + z sec increment per move. x/y
+  corresponds to a standard tournament time control, y+z corresponds to a standard increment time
+  control, and y corresponds to a sudden death time control.
 
 ### Engine options
 

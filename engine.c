@@ -137,10 +137,13 @@ void engine_sync(const Engine *e)
     str_delete(&line);
 }
 
-str_t engine_bestmove(const Engine *e, int *score)
+str_t engine_bestmove(const Engine *e, int *score, int *elapsed)
 {
+    *score = 0;
     str_t best = str_dup("0000");  // default value
     str_t line = str_new(), token = str_new();
+
+    const int start = system_msec();
 
     while (true) {
         engine_readln(e, &line);
@@ -168,6 +171,7 @@ str_t engine_bestmove(const Engine *e, int *score)
         }
     }
 
+    *elapsed = system_msec() - start;
     str_delete(&line, &token);
     return best;
 }

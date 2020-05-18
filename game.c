@@ -101,6 +101,25 @@ void game_delete(Game *g)
     str_delete(&g->names[WHITE], &g->names[BLACK]);
 }
 
+void uci_go_command(GameOptions *go, int ei, const int timeLeft[2], int color, str_t *cmd)
+{
+    str_cpy(cmd, "go");
+
+    if (go->nodes[ei])
+        str_cat_fmt(cmd, " nodes %u", go->nodes[ei]);
+
+    if (go->depth[ei])
+        str_cat_fmt(cmd, " depth %i", go->depth[ei]);
+
+    if (go->movetime[ei])
+        str_cat_fmt(cmd, " movetime %i", go->movetime[ei]);
+
+    if (go->time[ei] || go->increment[ei] || go->movestogo[ei])
+        str_cat_fmt(cmd, " wtime %i winc %i btime %i binc %i",
+            timeLeft[ei ^ color], go->increment[ei ^ color],
+            timeLeft[ei ^ color ^ BLACK], go->increment[ei ^ color ^ BLACK]);
+}
+
 void game_play(Game *g, const Engine engines[2], bool reverse)
 {
     for (int color = WHITE; color <= BLACK; color++)
@@ -113,23 +132,11 @@ void game_play(Game *g, const Engine engines[2], bool reverse)
         engine_writeln(&engines[i], "ucinewgame");
     }
 
+    str_t posCmd = str_new(), goCmd = str_new();
     move_t played = 0;
-    str_t goCmd[2] = {str_dup("go"), str_dup("go")};
-
-    for (int i = 0; i < 2; i++) {
-        if (g->go.nodes[i])
-            str_cat_fmt(&goCmd[i], " nodes %u", (int)g->go.nodes[i]);
-
-        if (g->go.depth[i])
-            str_cat_fmt(&goCmd[i], " depth %i", g->go.depth[i]);
-
-        if (g->go.movetime[i])
-            str_cat_fmt(&goCmd[i], " movetime %i", g->go.movetime[i]);
-    }
-
-    str_t posCmd = str_new();
     int drawPlyCount = 0;
     int resignCount[NB_COLOR] = {0};
+    int timeLeft[2] = {g->go.time[0], g->go.time[1]};
 
     for (g->ply = 0; ; g->ply++) {
         if (g->ply >= g->maxPly) {
@@ -150,16 +157,25 @@ void game_play(Game *g, const Engine engines[2], bool reverse)
         uci_position_command(g, &posCmd);
         engine_writeln(&engines[ei], posCmd.buf);
         engine_sync(&engines[ei]);
-        engine_writeln(&engines[ei], goCmd[ei].buf);
 
-        int score = 0;
-        str_t lan = engine_bestmove(&engines[ei], &score);
+        uci_go_command(&g->go, ei, timeLeft, g->pos[g->ply].turn, &goCmd);
+        engine_writeln(&engines[ei], goCmd.buf);
+
+        int score, elapsed;
+        str_t lan = engine_bestmove(&engines[ei], &score, &elapsed);
 
         played = pos_lan_to_move(&g->pos[g->ply], lan.buf, g->go.chess960);
         str_delete(&lan);
 
         if (illegal_move(played, moves, end)) {
             g->result = RESULT_ILLEGAL_MOVE;
+            break;
+        }
+
+        timeLeft[ei] = timeLeft[ei] - elapsed + g->go.increment[ei];
+
+        if (timeLeft[ei] < 0) {
+            g->result = RESULT_TIME_LOSS;
             break;
         }
 
@@ -182,7 +198,7 @@ void game_play(Game *g, const Engine engines[2], bool reverse)
             resignCount[ei] = 0;
     }
 
-    str_delete(&goCmd[0], &goCmd[1], &posCmd);
+    str_delete(&goCmd, &posCmd);
     assert(g->result);
 }
 
@@ -218,6 +234,9 @@ str_t game_decode_result(const Game *g, str_t *reason)
     } else if (g->result == RESULT_RESIGN) {
         str_cpy(&result, g->pos[g->ply].turn == WHITE ? "0-1" : "1-0");
         str_cpy(reason, g->pos[g->ply].turn == WHITE ? "white resigns" : "black resigns");
+    } else if (g->result == RESULT_TIME_LOSS) {
+        str_cpy(&result, g->pos[g->ply].turn == WHITE ? "0-1" : "1-0");
+        str_cpy(reason, g->pos[g->ply].turn == WHITE ? "white lost on time" : "black lost on time");
     } else
         assert(false);
 

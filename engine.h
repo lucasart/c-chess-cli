@@ -32,4 +32,4 @@ void engine_readln(const Engine *e, str_t *line);
 void engine_writeln(const Engine *e, char *buf);
 
 void engine_sync(const Engine *e);
-str_t engine_bestmove(const Engine *e, int *score);
+str_t engine_bestmove(const Engine *e, int *score, int *elapsed);

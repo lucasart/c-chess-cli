@@ -149,6 +149,13 @@ void str_putc_aux(str_t *dest, int c1, ...)
     assert(str_ok(dest));
 }
 
+static void do_str_cat(str_t *dest, const char *src, size_t n)
+{
+    const size_t oldLen = dest->len;
+    str_resize(dest, oldLen + n);
+    memcpy(&dest->buf[oldLen], src, n);
+}
+
 void str_ncat(str_t *dest, const char *src, size_t n)
 {
     assert(str_ok(dest));
@@ -156,18 +163,9 @@ void str_ncat(str_t *dest, const char *src, size_t n)
     if (strlen(src) < n)
         n = strlen(src);
 
-    const size_t oldLen = dest->len;
-    str_resize(dest, dest->len + n);
-    memcpy(&dest->buf[oldLen], src, n);
+    do_str_cat(dest, src, n);
 
     assert(str_ok(dest));
-}
-
-static void do_str_cat(str_t *dest, const char *src, size_t n)
-{
-    const size_t oldLen = dest->len;
-    str_resize(dest, oldLen + n);
-    memcpy(&dest->buf[oldLen], src, n);
 }
 
 void str_cat_aux(str_t *dest, const char *s1, ...)
