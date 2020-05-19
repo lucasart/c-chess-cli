@@ -94,28 +94,27 @@ Options options_new(int argc, const char **argv)
             } else if (!strcmp(argv[i - 1], "-movetime")) {
                 str_t movetime[2] = {str_new(), str_new()};
                 split_engine_option(argv[i], movetime);
-                o.go.movetime[0] = atoi(movetime[0].buf);
-                o.go.movetime[1] = atoi(movetime[1].buf);
+                o.go.movetime[0] = atof(movetime[0].buf) * 1000;
+                o.go.movetime[1] = atof(movetime[1].buf) * 1000;
                 str_delete(&movetime[0], &movetime[1]);
             } else if (!strcmp(argv[i - 1], "-resign"))
-                sscanf(argv[i], "%d,%d", &o.go.resignCount, &o.go.resignScore);
+                sscanf(argv[i], "%i,%i", &o.go.resignCount, &o.go.resignScore);
             else if (!strcmp(argv[i - 1], "-draw"))
-                sscanf(argv[i], "%d,%d", &o.go.drawCount, &o.go.drawScore);
+                sscanf(argv[i], "%i,%i", &o.go.drawCount, &o.go.drawScore);
             else if (!strcmp(argv[i - 1], "-tc")) {
                 str_t tc[2] = {str_new(), str_new()};
                 split_engine_option(argv[i], tc);
 
                 for (int j = 0; j < 2; j++) {
-                    float time = 0, increment = 0, movestogo = 0;
+                    float time = 0, increment = 0;
 
                     if (strchr(tc[j].buf, '/'))
-                        sscanf(tc[j].buf, "%f/%f+%f", &movestogo, &time, &increment);
+                        sscanf(tc[j].buf, "%i/%f+%f", &o.go.movestogo[j], &time, &increment);
                     else
                         sscanf(tc[j].buf, "%f+%f", &time, &increment);
 
                     o.go.time[j] = time * 1000;
                     o.go.increment[j] = increment * 1000;
-                    o.go.movestogo[j] = movestogo * 1000;
                 }
 
                 str_delete(&tc[0], &tc[1]);

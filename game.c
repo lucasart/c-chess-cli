@@ -101,7 +101,7 @@ void game_delete(Game *g)
     str_delete(&g->names[WHITE], &g->names[BLACK]);
 }
 
-void uci_go_command(GameOptions *go, int ei, const int timeLeft[2], int color, str_t *cmd)
+void uci_go_command(GameOptions *go, int ei, const int timeLeft[2], int color, int ply, str_t *cmd)
 {
     str_cpy(cmd, "go");
 
@@ -114,10 +114,13 @@ void uci_go_command(GameOptions *go, int ei, const int timeLeft[2], int color, s
     if (go->movetime[ei])
         str_cat_fmt(cmd, " movetime %i", go->movetime[ei]);
 
-    if (go->time[ei] || go->increment[ei] || go->movestogo[ei])
+    if (go->time[ei])
         str_cat_fmt(cmd, " wtime %i winc %i btime %i binc %i",
             timeLeft[ei ^ color], go->increment[ei ^ color],
             timeLeft[ei ^ color ^ BLACK], go->increment[ei ^ color ^ BLACK]);
+
+    if (go->movestogo[ei])
+        str_cat_fmt(cmd, " movestogo %i", go->movestogo[ei] - ((ply / 2) % go->movestogo[ei]));
 }
 
 void game_play(Game *g, const Engine engines[2], bool reverse)
@@ -158,7 +161,7 @@ void game_play(Game *g, const Engine engines[2], bool reverse)
         engine_writeln(&engines[ei], posCmd.buf);
         engine_sync(&engines[ei]);
 
-        uci_go_command(&g->go, ei, timeLeft, g->pos[g->ply].turn, &goCmd);
+        uci_go_command(&g->go, ei, timeLeft, g->pos[g->ply].turn, g->ply, &goCmd);
         engine_writeln(&engines[ei], goCmd.buf);
 
         int score, elapsed;
@@ -174,7 +177,8 @@ void game_play(Game *g, const Engine engines[2], bool reverse)
 
         timeLeft[ei] = timeLeft[ei] - elapsed + g->go.increment[ei];
 
-        if (timeLeft[ei] < 0) {
+        if ((g->go.time[ei] && timeLeft[ei] < 0)
+                || (g->go.movetime[ei] && elapsed > g->go.movetime[ei])) {
             g->result = RESULT_TIME_LOSS;
             break;
         }

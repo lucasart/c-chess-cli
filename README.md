@@ -15,34 +15,39 @@ make [CC=comp] [OUT=file] [debug=yes/no] [static=yes/no]
 
 ## How to use ?
 
-`c-chess-cli [-option [value1[:value2]]] ...`
-
 ### Example
 
 ```
 ./c-chess-cli -cmd demolito:../Engines/critter_1.6a -options Hash=8,Threads=2:Threads=1 \
-    -games 8 -concurrency 4 -openings ../spsa/book.epd -repeat -movetime 100 -depth 10 \
+    -games 8 -concurrency 4 -openings ../spsa/book.epd -repeat -movetime 0.15 -depth 10 \
     -resign 3,700 -draw 8,10 -pgnout out.pgn
 ```
 
-### General options
+### Options
 
-Syntax: `-option value`, where some options expect a value, others don't (just flags).
+Syntax: `-option value`.
 
-- chess960: Use Chess960/FRC castling rules.
+List:
 - concurrency c: Number of threads used to play games concurrently.
-- debug: Write all I/O communication with engines to file(s). This produces `c-chess-cli.id.log`,
-where `id` is the thread id (range `0..concurrency-1`).
 - draw n,s: Draw when |score| <= s (in cp) for n consecutive moves, for both sides.
 - games n: Number of games
 - openings file: Takes `file` in EPD format for opening positions.
 - pgnout file: Output file where games are written, in PGN format.
-- random: Start from a random opening in the EPD file. Proceed sequentially afterwards.
 - resign n,s: Resign when score <= -s (in cp) for n consecutive moves, for the losing side.
-- repeat: Repeat each opening twice, with each engine playing both sides.
 - tc x/y+z: set time control to x moves in y sec (repeating) + z sec increment per move. x/y
   corresponds to a standard tournament time control, y+z corresponds to a standard increment time
   control, and y corresponds to a sudden death time control.
+
+### Flags
+
+Syntax: `-flag`.
+
+List:
+- chess960: Use Chess960/FRC castling rules.
+- debug: Write all I/O communication with engines to file(s). This produces `c-chess-cli.id.log`,
+where `id` is the thread id (range `0..concurrency-1`).
+- random: Start from a random opening in the EPD file. Proceed sequentially afterwards.
+- repeat: Repeat each opening twice, with each engine playing both sides.
 
 ### Engine options
 
@@ -52,7 +57,8 @@ Syntax:
 - `-option value1:`: gives value1 to the first engine, and nothing to the second.
 - `-option :value2`: can you guess? good.
 
+List:
 - cmd `engine1:[engine2]`: sets first engine to `engine1`, and second engine to `engine2`.
-- movetime: Time limit per move in milliseconds (default none).
+- movetime: Time limit per move in seconds (default none).
 - nodes: Node limit per move (default none).
 - options: List of UCI options per engine (default none).
