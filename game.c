@@ -161,6 +161,13 @@ void game_play(Game *g, const Engine engines[2], bool reverse)
         engine_writeln(&engines[ei], posCmd.buf);
         engine_sync(&engines[ei]);
 
+        // Apply increment
+        timeLeft[ei] += g->go.increment[ei];
+
+        // Apply movestogo time increment
+        if (g->go.movestogo[ei] && g->ply > 1 && ((g->ply / 2) % g->go.movestogo[ei]) == 0)
+            timeLeft[ei] += g->go.time[ei];
+
         uci_go_command(&g->go, ei, timeLeft, g->pos[g->ply].turn, g->ply, &goCmd);
         engine_writeln(&engines[ei], goCmd.buf);
 
@@ -175,7 +182,8 @@ void game_play(Game *g, const Engine engines[2], bool reverse)
             break;
         }
 
-        timeLeft[ei] = timeLeft[ei] - elapsed + g->go.increment[ei];
+        // Apply time usage
+        timeLeft[ei] = timeLeft[ei] - elapsed;
 
         if ((g->go.time[ei] && timeLeft[ei] < 0)
                 || (g->go.movetime[ei] && elapsed > g->go.movetime[ei])) {
