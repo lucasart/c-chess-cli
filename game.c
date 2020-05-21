@@ -137,6 +137,7 @@ void game_play(Game *g, const Engine engines[2], bool reverse)
             engine_writeln(&engines[i], "setoption name UCI_Chess960 value true");
 
         engine_writeln(&engines[i], "ucinewgame");
+        engine_sync(&engines[i]);
     }
 
     str_t posCmd = str_new(), goCmd = str_new();
