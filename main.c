@@ -18,20 +18,21 @@
 #include "game.h"
 #include "openings.h"
 #include "options.h"
+#include "workers.h"
 
 Options options;
 Openings openings;
 FILE *pgnout;
-pthread_t *threads;
+
+Worker *Workers = NULL;
 
 void *thread_start(void *arg)
 {
-    pthread_t *thread = arg;
-    const int threadId = thread - threads;  // starts at 0
+    Worker *worker = arg;
     Engine engines[2];
 
     str_t logName = str_new();
-    str_cat_fmt(&logName, "c-chess-cli.%i.log", threadId);
+    str_cat_fmt(&logName, "c-chess-cli.%i.log", worker->id);
     FILE *log = options.debug ? fopen(logName.buf, "w") : NULL;
     str_delete(&logName);
 
@@ -49,8 +50,8 @@ void *thread_start(void *arg)
         // Write to stdout a one line summary
         str_t reason = str_new();
         str_t result = game_decode_result(&game, &reason);
-        printf("[%i] %s vs. %s: %s (%s)\n", threadId, game.names[WHITE].buf, game.names[BLACK].buf,
-            result.buf, reason.buf);
+        printf("[%i] %s vs. %s: %s (%s)\n", worker->id, game.names[WHITE].buf,
+            game.names[BLACK].buf, result.buf, reason.buf);
         str_delete(&result, &reason);
 
         // Write to PGN file
@@ -80,15 +81,18 @@ int main(int argc, const char **argv)
     openings = openings_new(options.openings.buf, options.random, options.repeat);
     pgnout = options.pgnout.len ? fopen(options.pgnout.buf, "w") : NULL;
 
-    threads = calloc(options.concurrency, sizeof(pthread_t));
+    pthread_t threads[options.concurrency];
+    Workers = realloc(Workers, sizeof(Worker) * options.concurrency);
 
-    for (int i = 0; i < options.concurrency; i++)
-        pthread_create(&threads[i], NULL, thread_start, &threads[i]);
+    for (int i = 0; i < options.concurrency; i++) {
+        Workers[i].id = i;
+        pthread_create(&threads[i], NULL, thread_start, &Workers[i]);
+    }
 
     for (int i = 0; i < options.concurrency; i++)
         pthread_join(threads[i], NULL);
 
-    free(threads);
+    free(Workers);
 
     if (pgnout)
         fclose(pgnout);
