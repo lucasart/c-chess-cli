@@ -258,10 +258,10 @@ str_t game_decode_result(const Game *g, str_t *reason)
         str_cpy(reason, "draw by adjudication");
     } else if (g->result == RESULT_RESIGN) {
         str_cpy(&result, g->pos[g->ply].turn == WHITE ? "0-1" : "1-0");
-        str_cpy(reason, g->pos[g->ply].turn == WHITE ? "white resigns" : "black resigns");
+        str_cat_fmt(reason, "%s resigns", g->pos[g->ply].turn == WHITE ? "white" : "black");
     } else if (g->result == RESULT_TIME_LOSS) {
         str_cpy(&result, g->pos[g->ply].turn == WHITE ? "0-1" : "1-0");
-        str_cpy(reason, g->pos[g->ply].turn == WHITE ? "white lost on time" : "black lost on time");
+        str_cat_fmt(reason, "%s lost on time", g->pos[g->ply].turn == WHITE ? "white" : "black");
     } else
         assert(false);
 
@@ -292,7 +292,7 @@ str_t game_pgn(const Game *g)
     for (int ply = 1; ply <= g->ply; ply++) {
         // Write move number
         if (g->pos[ply - 1].turn == WHITE || ply == 1)
-            str_cat_fmt(&pgn, g->pos[ply - 1].turn == WHITE ? "%i. " : "%i.. ",
+            str_cat_fmt(&pgn, g->pos[ply - 1].turn == WHITE ? "%i. " : "%i... ",
                 g->pos[ply - 1].fullMove);
 
         // Prepare SAN base
