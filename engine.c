@@ -137,28 +137,23 @@ void engine_sync(const Engine *e)
     str_delete(&line);
 }
 
-str_t engine_bestmove(const Engine *e, int *score, int64_t *timeLeft)
+bool engine_bestmove(const Engine *e, int *score, int64_t *timeLeft, str_t *best)
 {
+    int result = false;
     *score = 0;
-    str_t best = str_dup("0000");  // default value
     str_t line = str_new(), token = str_new();
 
     const int64_t start = system_msec(), deadline = start + *timeLeft;
 
-    while (true) {
+    while (*timeLeft >= 0 && !result) {
         engine_readln(e, &line);
-
         *timeLeft = deadline - system_msec();
-
-        if (*timeLeft < 0)
-            break;
 
         const char *tail = str_tok(line.buf, &token, " ");
 
-        if (!tail)  // empty line
-            continue;
-
-        if (!strcmp(token.buf, "info")) {
+        if (!tail)
+            ;  // empty line, nothing to do
+        else if (!strcmp(token.buf, "info")) {
             while ((tail = str_tok(tail, &token, " ")) && strcmp(token.buf, "score"));
 
             if ((tail = str_tok(tail, &token, " "))) {
@@ -169,14 +164,12 @@ str_t engine_bestmove(const Engine *e, int *score, int64_t *timeLeft)
                 else
                     die("illegal syntax after 'score' in 'info' line\n");
             }
-        } else if (!strcmp(token.buf, "bestmove")) {
-            if (str_tok(tail, &token, " "))
-                str_cpy_s(&best, &token);
-
-            break;
+        } else if (!strcmp(token.buf, "bestmove") && str_tok(tail, &token, " ")) {
+            str_cpy_s(best, &token);
+            result = true;
         }
     }
 
     str_delete(&line, &token);
-    return best;
+    return result;
 }

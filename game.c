@@ -140,7 +140,7 @@ void game_play(Game *g, const Engine engines[2], bool reverse)
         engine_sync(&engines[i]);
     }
 
-    str_t posCmd = str_new(), goCmd = str_new();
+    str_t posCmd = str_new(), goCmd = str_new(), best = str_new();
     move_t played = 0;
     int drawPlyCount = 0;
     int resignCount[NB_COLOR] = {0};
@@ -185,10 +185,14 @@ void game_play(Game *g, const Engine engines[2], bool reverse)
         engine_writeln(&engines[ei], goCmd.buf);
 
         int score;
-        str_t lan = engine_bestmove(&engines[ei], &score, &timeLeft[ei]);
+        const bool ok = engine_bestmove(&engines[ei], &score, &timeLeft[ei], &best);
 
-        played = pos_lan_to_move(&g->pos[g->ply], lan.buf, g->go.chess960);
-        str_delete(&lan);
+        if (!ok) {  // engine_bestmove() time out before parsing a bestmove
+            g->result = RESULT_TIME_LOSS;
+            break;
+        }
+
+        played = pos_lan_to_move(&g->pos[g->ply], best.buf, g->go.chess960);
 
         if (illegal_move(played, moves, end)) {
             g->result = RESULT_ILLEGAL_MOVE;
@@ -219,7 +223,7 @@ void game_play(Game *g, const Engine engines[2], bool reverse)
             resignCount[ei] = 0;
     }
 
-    str_delete(&goCmd, &posCmd);
+    str_delete(&goCmd, &posCmd, &best);
     assert(g->result);
 }
 
