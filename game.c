@@ -106,7 +106,7 @@ void uci_go_command(Game *g, int ei, const int64_t timeLeft[2], str_t *cmd)
     str_cpy(cmd, "go");
 
     if (g->go.nodes[ei])
-        str_cat_fmt(cmd, " nodes %u", g->go.nodes[ei]);
+        str_cat_fmt(cmd, " nodes %U", g->go.nodes[ei]);
 
     if (g->go.depth[ei])
         str_cat_fmt(cmd, " depth %i", g->go.depth[ei]);
