@@ -170,6 +170,15 @@ bool engine_bestmove(const Engine *e, int *score, int64_t *timeLeft, str_t *best
         }
     }
 
+    // Time out. We can't leave the engine in limbo for the next ucinewgame. Stop the search asap.
+    if (!result) {
+        engine_writeln(e, "stop");
+
+        do {
+            engine_readln(e, &line);
+        } while (strncmp(line.buf, "bestmove ", strlen("bestmove ")));
+    }
+
     str_delete(&line, &token);
     return result;
 }
