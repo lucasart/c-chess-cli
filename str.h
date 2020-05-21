@@ -32,7 +32,7 @@ str_t str_new();
 str_t str_dup(const char *src);
 
 // str_delete(&s1, ..., &sn): frees a list of n >= 1 valid strings, and marks them as invalid
-#define str_delete(...) str_delete_aux(__VA_ARGS__, NULL)
+#define str_delete(...) str_delete_aux(__VA_ARGS__, (void *)0)
 void str_delete_aux(str_t *s1, ...);
 
 // copies 'src' into valid string 'dest'
@@ -43,15 +43,15 @@ void str_cpy_s(str_t *dest, const str_t *src);  // string version (faster and sa
 void str_ncpy(str_t *dest, const char *restrict src, size_t n);
 
 // str_putc(&dest, c1, ..., cn): appends n >= 1 characters c1...cn, to a valid string 'dest'
-#define str_putc(...) str_putc_aux(__VA_ARGS__, NULL)
+#define str_putc(...) str_putc_aux(__VA_ARGS__, (void *)0)
 void str_putc_aux(str_t *dest, int c1, ...);
 
 // appends at most n characters of C-string 'src' into valid string 'dest'
 void str_ncat(str_t *dest, const char *src, size_t n);
 
 // str_cat(&dest, &s1, ..., &sn) appends n >= 1 strings to a valid string dest
-#define str_cat(...) str_cat_aux(__VA_ARGS__, NULL)
-#define str_cat_s(...) str_cat_s_aux(__VA_ARGS__, NULL)
+#define str_cat(...) str_cat_aux(__VA_ARGS__, (void *)0)
+#define str_cat_s(...) str_cat_s_aux(__VA_ARGS__, (void *)0)
 void str_cat_aux(str_t *dest, const char *s1, ...);  // C-string version
 void str_cat_s_aux(str_t *dest, const str_t *s1, ...);  // string version (faster and safer)
 
