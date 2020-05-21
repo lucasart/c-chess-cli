@@ -166,18 +166,26 @@ void game_play(Game *g, const Engine engines[2], bool reverse)
         engine_writeln(&engines[ei], posCmd.buf);
         engine_sync(&engines[ei]);
 
-        // Apply increment
-        timeLeft[ei] += g->go.increment[ei];
+        // Prepare timeLeft[ei]
+        if (g->go.movetime[ei])
+            // movetime is special: discard movestogo, time, increment
+            timeLeft[ei] = g->go.movetime[ei];
+        else if (g->go.time[ei]) {
+            // Always apply increment (can be zero)
+            timeLeft[ei] += g->go.increment[ei];
 
-        // Apply movestogo time increment
-        if (g->go.movestogo[ei] && g->ply > 1 && ((g->ply / 2) % g->go.movestogo[ei]) == 0)
-            timeLeft[ei] += g->go.time[ei];
+            // movestogo specific clock reset event
+            if (g->go.movestogo[ei] && g->ply > 1 && ((g->ply / 2) % g->go.movestogo[ei]) == 0)
+                timeLeft[ei] += g->go.time[ei];
+        } else
+            // Only depth and/or nodes limit
+            timeLeft[ei] = INT64_MAX / 2;  // HACK: system_msec() + timeLeft must not overflow
 
         uci_go_command(g, ei, timeLeft, &goCmd);
         engine_writeln(&engines[ei], goCmd.buf);
 
-        int score, elapsed;
-        str_t lan = engine_bestmove(&engines[ei], &score, &elapsed);
+        int score;
+        str_t lan = engine_bestmove(&engines[ei], &score, &timeLeft[ei]);
 
         played = pos_lan_to_move(&g->pos[g->ply], lan.buf, g->go.chess960);
         str_delete(&lan);
@@ -187,11 +195,7 @@ void game_play(Game *g, const Engine engines[2], bool reverse)
             break;
         }
 
-        // Apply time usage
-        timeLeft[ei] = timeLeft[ei] - elapsed;
-
-        if ((g->go.time[ei] && timeLeft[ei] < 0)
-                || (g->go.movetime[ei] && elapsed > g->go.movetime[ei])) {
+        if ((g->go.time[ei] || g->go.movetime[ei]) && timeLeft[ei] < 0) {
             g->result = RESULT_TIME_LOSS;
             break;
         }
