@@ -106,12 +106,12 @@ Options options_new(int argc, const char **argv)
                 split_engine_option(argv[i], tc);
 
                 for (int j = 0; j < 2; j++) {
-                    float time = 0, increment = 0;
+                    double time = 0, increment = 0;
 
                     if (strchr(tc[j].buf, '/'))
-                        sscanf(tc[j].buf, "%i/%f+%f", &o.go.movestogo[j], &time, &increment);
+                        sscanf(tc[j].buf, "%i/%lf+%lf", &o.go.movestogo[j], &time, &increment);
                     else
-                        sscanf(tc[j].buf, "%f+%f", &time, &increment);
+                        sscanf(tc[j].buf, "%lf+%lf", &time, &increment);
 
                     o.go.time[j] = time * 1000;
                     o.go.increment[j] = increment * 1000;

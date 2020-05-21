@@ -13,6 +13,7 @@
  * not, see <http://www.gnu.org/licenses/>.
 */
 #include <assert.h>
+#include <inttypes.h>
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -206,7 +207,7 @@ void str_cat_s_aux(str_t *dest, const str_t *s1, ...)
     assert(str_ok(dest));
 }
 
-static char *do_fmt_u(unsigned n, char *s)
+static char *do_fmt_u(uintmax_t n, char *s)
 {
     *s-- = '\0';
 
@@ -218,6 +219,9 @@ static char *do_fmt_u(unsigned n, char *s)
 }
 
 void str_cat_fmt(str_t *dest, const char *fmt, ...)
+// Supported formats
+// - Integers: %i (int), %I (intmax_t), %u (unsigned), %U (uintmax_t)
+// - Strings: %s (const char *), %S (const str_t *)
 {
     assert(str_ok(dest) && fmt);
 
@@ -245,20 +249,22 @@ void str_cat_fmt(str_t *dest, const char *fmt, ...)
         fmt = pct + 2;  // move past the '%?' to prepare next loop iteration
         assert(strlen(fmt) == bytesLeft);
 
-        assert(sizeof(int) <= 8);
-        char buf[24];  // enough to fit a int with sign prefix '-' and '\0' terminator
+        assert(sizeof(intmax_t) <= 8);
+        char buf[24];  // enough to fit a intmax_t with sign prefix '-' and '\0' terminator
 
         if (pct[1] == 's')
             str_cat(dest, va_arg(args, const char *));  // C-string
         else if (pct[1] == 'S')
             str_cat_s(dest, va_arg(args, const str_t *));  // string
-        else if (pct[1] == 'i') {
-            const int i = va_arg(args, int);
-            char *c = do_fmt_u(abs(i), &buf[23]);
-            if (i < 0) *--c = '-';
-            str_cat(dest, c);
-        } else if (pct[1] == 'u')
-            str_cat(dest, do_fmt_u(va_arg(args, unsigned), &buf[23]));
+        else if (pct[1] == 'i' || pct[1] == 'I') {  // int or intmax_t
+            const intmax_t i = pct[1] == 'i' ? va_arg(args, int) : va_arg(args, intmax_t);
+            char *s = do_fmt_u(imaxabs(i), &buf[sizeof(buf) - 1]);
+            if (i < 0) *--s = '-';
+            str_cat(dest, s);
+        } else if (pct[1] == 'u')  // unsigned int
+            str_cat(dest, do_fmt_u(va_arg(args, unsigned), &buf[sizeof(buf) - 1]));
+        else if (pct[1] == 'U')  // uintmax_t
+            str_cat(dest, do_fmt_u(va_arg(args, uintmax_t), &buf[sizeof(buf) - 1]));
         else
             assert(false);  // add your format specifier handler here
     }
