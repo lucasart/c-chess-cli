@@ -50,7 +50,7 @@ static void *thread_start(void *arg)
     while ((next = openings_next(&openings, &fen)) <= options.games) {
         // Play 1 game
         Game game = game_new(fen.buf, &options.go);
-        const int wld = game_play(&game, engines, options.repeat && !(next % 2));
+        const int wld = game_play(&game, engines, next % 2 == 0);
 
         // Write to stdout a one line summary
         str_t reason = str_new();

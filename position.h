@@ -52,6 +52,6 @@ int pos_piece_on(const Position *pos, int square);
 bool pos_move_is_castling(const Position *pos, move_t m);
 str_t pos_move_to_lan(const Position *pos, move_t m, bool chess960);
 str_t pos_move_to_san(const Position *pos, move_t m);
-move_t pos_lan_to_move(const Position *pos, const char *str, bool chess960);
+move_t pos_lan_to_move(const Position *pos, const char *lan, bool chess960);
 
 void pos_print(const Position *pos);
