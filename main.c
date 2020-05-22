@@ -86,11 +86,16 @@ static void *thread_start(void *arg)
 int main(int argc, const char **argv)
 {
     options = options_new(argc, argv);
+
+    if (!options.cmd[0].len || !options.cmd[1].len) {
+        puts("2 engines must be provided.");
+        return 0;
+    }
+
     openings = openings_new(options.openings.buf, options.random, options.repeat);
     pgnout = options.pgnout.len ? fopen(options.pgnout.buf, "w") : NULL;
 
     pthread_t threads[options.concurrency];
-
     workers_new(options.concurrency);
 
     for (int i = 0; i < options.concurrency; i++)
