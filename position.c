@@ -23,7 +23,7 @@ static const char *PieceLabel[NB_COLOR] = {"NBRQKP.", "nbrqkp."};
 static uint64_t ZobristKey[NB_COLOR][NB_PIECE][NB_SQUARE];
 static uint64_t ZobristCastling[NB_SQUARE], ZobristEnPassant[NB_SQUARE + 1], ZobristTurn;
 
-static __attribute__((constructor)) void zobrist_init()
+static __attribute__((constructor)) void zobrist_init(void)
 {
     uint64_t state = 0;
 
@@ -269,7 +269,7 @@ void pos_set(Position *pos, const char *fen)
         } else {
             assert(strchr("nbrqkpNBRQKP", *c));
             const bool color = islower((unsigned)*c);
-            set_square(pos, color, strchr(PieceLabel[color], *c) - PieceLabel[color],
+            set_square(pos, color, (int)(strchr(PieceLabel[color], *c) - PieceLabel[color]),
                 square_from(rank, file++));
         }
     }

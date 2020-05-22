@@ -255,7 +255,8 @@ void gen_run_test()
 {
     typedef struct {
         const char fen[128];
-        int depth, leaves;
+        uint64_t leaves;
+        int depth;
     } Test;
 
     Test tests[] = {
@@ -282,11 +283,11 @@ void gen_run_test()
         pos_print(&pos);
         printf("depth %i:\n", tests[i].depth);
 
-        const int leaves = gen_leaves(&pos, tests[i].depth, 0, true);
+        const uint64_t leaves = gen_leaves(&pos, tests[i].depth, 0, true);
 
         if (leaves != tests[i].leaves) {
-            printf("FAILED: fen '%s', depth %i, expected %i, found %i\n", tests[i].fen,
-                tests[i].depth, tests[i].leaves, leaves);
+            printf("FAILED: fen '%s', depth %i, expected %" PRIu64 ", found %" PRIu64 "\n",
+                tests[i].fen, tests[i].depth, tests[i].leaves, leaves);
             break;
         } else
             puts("OK");

@@ -5,6 +5,7 @@ static = no
 
 # Compilation flags
 CF = -std=gnu99 -mpopcnt -O3 -flto -Wfatal-errors -Wall -Wextra -Wshadow -Wstrict-prototypes
+# Additional warnings (clang only): -Wshorten-64-to-32
 LF = -lpthread
 
 ifeq ($(debug),no)

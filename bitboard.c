@@ -94,9 +94,9 @@ static bitboard_t slider_attacks(int square, bitboard_t occ, const int dir[4][2]
     return result;
 }
 
-static int slider_index(bitboard_t occ, bitboard_t mask, bitboard_t magic, unsigned shift)
+static unsigned slider_index(bitboard_t occ, bitboard_t mask, bitboard_t magic, unsigned shift)
 {
-    return ((occ & mask) * magic) >> shift;
+    return (unsigned)(((occ & mask) * magic) >> shift);
 }
 
 static void init_slider_attacks(int square, bitboard_t mask[NB_SQUARE],
@@ -120,7 +120,7 @@ static void init_slider_attacks(int square, bitboard_t mask[NB_SQUARE],
     } while (occ);
 }
 
-static __attribute__((constructor)) void bb_init()
+static __attribute__((constructor)) void bb_init(void)
 {
     static const int PawnDir[2][2] = {{1,-1}, {1,1}};
     static const int KnightDir[8][2] = {{-2,-1}, {-2,1}, {-1,-2}, {-1,2}, {1,-2}, {1,2}, {2,-1}, {2,1}};
