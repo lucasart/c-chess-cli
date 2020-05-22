@@ -41,7 +41,8 @@ static void *thread_start(void *arg)
     str_delete(&logName);
 
     for (int i = 0; i < 2; i++)
-        engines[i] = engine_create(options.cmd[i].buf, log, options.uciOptions[i].buf);
+        engines[i] = engine_new(options.cmd[i].buf, options.name[i].buf, log,
+            options.uciOptions[i].buf);
 
     int next;
     str_t fen = str_new();

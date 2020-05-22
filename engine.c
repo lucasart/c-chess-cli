@@ -57,30 +57,30 @@ static void engine_spawn(Engine *e, const char *cmd)
         die("fork() failed in engine_spawn()\n");
 }
 
-Engine engine_create(const char *cmd, FILE *log, const char *uciOptions)
+Engine engine_new(const char *cmd, const char *name, FILE *log, const char *uciOptions)
 {
+    assert(cmd && name && uciOptions);  // log can be NULL
+
     Engine e;
     e.log = log;
-    e.name = str_dup(cmd); // default value
+    e.name = str_dup(*name ? name : cmd); // default value
 
     engine_spawn(&e, cmd);  // spawn child process and plug pipes
 
     engine_writeln(&e, "uci");
-
     str_t line = str_new(), token = str_new();
 
     do {
         engine_readln(&e, &line);
-
         const char *tail = line.buf;
 
-        if ((tail = str_tok(tail, &token, " ")) && !strcmp(token.buf, "id")
+        // Set e.name, by parsing "id name %s", only if no name was provided (*name == '\0')
+        if (!*name && (tail = str_tok(tail, &token, " ")) && !strcmp(token.buf, "id")
                 && (tail = str_tok(tail, &token, " ")) && !strcmp(token.buf, "name") && tail)
             str_cpy(&e.name, tail + 1);
     } while (strcmp(line.buf, "uciok"));
 
-    // Parses uciOptions (eg. "Hash=16,Threads=8"), assumed to be in the correct format
-
+    // Parses uciOptions (eg. "Hash=16,Threads=8"), and set engine options accordingly
     while ((uciOptions = str_tok(uciOptions, &token, ","))) {
         const char *c = strchr(token.buf, '=');
         assert(c);

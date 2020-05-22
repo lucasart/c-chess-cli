@@ -30,7 +30,8 @@ typedef struct {
     bool debug;  // log all I/O with engines
 
     // engine options
-    str_t cmd[2];  // command per engine
+    str_t cmd[2];  // command to execute
+    str_t name[2];  // name (to override auto-detect)
     str_t uciOptions[2];  // UCI options per engine (eg. "Hash=16,Threads=8")
 
     GameOptions go;

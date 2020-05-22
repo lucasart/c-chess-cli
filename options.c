@@ -33,6 +33,7 @@ Options options_new(int argc, const char **argv)
 
     for (int i = 0; i < 2; i++) {
         o.cmd[i] = str_new();
+        o.name[i] = str_new();
         o.uciOptions[i] = str_new();
     }
 
@@ -45,8 +46,8 @@ Options options_new(int argc, const char **argv)
             if (expectValue)
                 die("value expected after '%s'. found tag '%s' instead.\n", argv[i - 1], argv[i]);
 
-            if (strstr("-concurrency -games -openings -pgnout -cmd -options -nodes -depth -draw "
-                    "-resign -movetime -tc", argv[i]))
+            if (strstr("-concurrency -games -openings -pgnout -cmd -name -options -nodes -depth "
+                    "-draw -resign -movetime -tc", argv[i]))
                 // process tags followed by value
                 expectValue = true;
             else {
@@ -77,6 +78,8 @@ Options options_new(int argc, const char **argv)
                 str_cpy(&o.pgnout, argv[i]);
             else if (!strcmp(argv[i - 1], "-cmd"))
                 split_engine_option(argv[i], o.cmd);
+            else if (!strcmp(argv[i - 1], "-name"))
+                split_engine_option(argv[i], o.name);
             else if (!strcmp(argv[i - 1], "-options"))
                 split_engine_option(argv[i], o.uciOptions);
             else if (!strcmp(argv[i - 1], "-nodes")) {
@@ -134,6 +137,7 @@ Options options_new(int argc, const char **argv)
 void options_delete(Options *o)
 {
     str_delete(&o->openings, &o->pgnout);
-    str_delete(&o->uciOptions[0], &o->uciOptions[1]);
-    str_delete(&o->cmd[0], &o->cmd[1]);
+
+    for (int i = 0; i < 2; i++)
+        str_delete(&o->uciOptions[i], &o->cmd[i], &o->name[i]);
 }

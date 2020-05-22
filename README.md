@@ -58,7 +58,9 @@ Syntax:
 - `-option :value2`: can you guess? good.
 
 List:
-- cmd `engine1:[engine2]`: sets first engine to `engine1`, and second engine to `engine2`.
+- cmd: command to run each engine.
+- name: name override for each engine. By default the name is read from `id name` following the UCI
+  protocol.
 - movetime: Time limit per move in seconds (default none).
 - nodes: Node limit per move (default none).
 - options: List of UCI options per engine (default none).
