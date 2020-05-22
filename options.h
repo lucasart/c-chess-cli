@@ -38,4 +38,4 @@ typedef struct {
 } Options;
 
 Options options_new(int argc, const char **argv);
-void options_delete();
+void options_delete(Options *o);

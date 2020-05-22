@@ -24,6 +24,6 @@ typedef struct {
 extern Worker *Workers;
 
 void workers_new(int count);
-void workers_delete();
+void workers_delete(void);
 
 void workers_add_result(Worker *worker, int result, int wld[3]);

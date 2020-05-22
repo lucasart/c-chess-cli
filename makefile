@@ -4,7 +4,7 @@ debug = no
 static = no
 
 # Compilation flags
-CF = -std=gnu99 -mpopcnt -O3 -flto -Wfatal-errors -Wall -Wextra -Wshadow
+CF = -std=gnu99 -mpopcnt -O3 -flto -Wfatal-errors -Wall -Wextra -Wshadow -Wstrict-prototypes
 LF = -lpthread
 
 ifeq ($(debug),no)

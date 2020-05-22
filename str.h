@@ -26,7 +26,7 @@ typedef struct {
 bool str_ok(const str_t *s);
 
 // returns a valid string with value ""
-str_t str_new();
+str_t str_new(void);
 
 // returns a valid string, copying its content from C-string 'src'
 str_t str_dup(const char *src);
