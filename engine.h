@@ -13,6 +13,7 @@
  * not, see <http://www.gnu.org/licenses/>.
 */
 #pragma once
+#include <inttypes.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <sys/types.h>
