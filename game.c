@@ -41,30 +41,30 @@ void uci_position_command(const Game *g, str_t *cmd)
     }
 }
 
-int game_result(const Game *g, move_t *begin, move_t **end)
-// See if the current position is game over by chess rules
+int game_apply_chess_rules(const Game *g, move_t *begin, move_t **end)
+// Applies chess rules to generate legal moves, and determine the state of the game
 {
     const Position *pos = &g->pos[g->ply];
 
     *end = gen_all_moves(pos, begin);
 
     if (*end == begin)
-        return pos->checkers ? RESULT_CHECKMATE : RESULT_STALEMATE;
+        return pos->checkers ? STATE_CHECKMATE : STATE_STALEMATE;
     else if (pos->rule50 >= 100) {
         assert(pos->rule50 == 100);
-        return RESULT_FIFTY_MOVES;
+        return STATE_FIFTY_MOVES;
     } else if (pos_insufficient_material(pos))
-        return RESULT_INSUFFICIENT_MATERIAL;
+        return STATE_INSUFFICIENT_MATERIAL;
     else {
         // Scan for 3 repetitions
         int repetitions = 1;
 
         for (int i = 4; i <= pos->rule50 && i <= g->ply; i += 2)
             if (g->pos[g->ply - i].key == pos->key && ++repetitions >= 3)
-                return RESULT_THREEFOLD;
+                return STATE_THREEFOLD;
     }
 
-    return RESULT_NONE;
+    return STATE_NONE;
 }
 
 bool illegal_move(move_t move, const move_t *begin, const move_t *end)
@@ -88,7 +88,7 @@ Game game_new(const char *fen, const GameOptions *go)
     g.pos = malloc(g.maxPly * sizeof(Position));
     pos_set(&g.pos[0], fen);
 
-    g.result = RESULT_NONE;
+    g.state = STATE_NONE;
 
     memcpy(&g.go, go, sizeof(*go));
 
@@ -127,7 +127,11 @@ void uci_go_command(Game *g, int ei, const int64_t timeLeft[2], str_t *cmd)
             g->go.movestogo[ei] - ((g->ply / 2) % g->go.movestogo[ei]));
 }
 
-void game_play(Game *g, const Engine engines[2], bool reverse)
+int game_play(Game *g, const Engine engines[2], bool reverse)
+// Play a game:
+// - engines[reverse] plays the first move (which does not mean white, that depends on the FEN)
+// - sets g->state value: see enum STATE_* codes
+// - returns {-1,0,1} score from engines[0] pov.
 {
     for (int color = WHITE; color <= BLACK; color++)
         str_cpy_s(&g->names[color], &engines[color ^ g->pos[0].turn ^ reverse].name);
@@ -144,6 +148,7 @@ void game_play(Game *g, const Engine engines[2], bool reverse)
     move_t played = 0;
     int drawPlyCount = 0;
     int resignCount[NB_COLOR] = {0};
+    int ei;  // engines[ei] has the move
     int64_t timeLeft[2] = {g->go.time[0], g->go.time[1]};
 
     for (g->ply = 0; ; g->ply++) {
@@ -155,12 +160,12 @@ void game_play(Game *g, const Engine engines[2], bool reverse)
         if (played)
             pos_move(&g->pos[g->ply], &g->pos[g->ply - 1], played);
 
+        ei = (g->ply % 2) ^ reverse;  // engine[ei] has the move
+
         move_t moves[MAX_MOVES], *end;
 
-        if ((g->result = game_result(g, moves, &end)))
+        if ((g->state = game_apply_chess_rules(g, moves, &end)))
             break;
-
-        const int ei = (g->ply % 2) ^ reverse;  // engine[ei] has the move
 
         uci_position_command(g, &posCmd);
         engine_writeln(&engines[ei], posCmd.buf);
@@ -188,26 +193,26 @@ void game_play(Game *g, const Engine engines[2], bool reverse)
         const bool ok = engine_bestmove(&engines[ei], &score, &timeLeft[ei], &best);
 
         if (!ok) {  // engine_bestmove() time out before parsing a bestmove
-            g->result = RESULT_TIME_LOSS;
+            g->state = STATE_TIME_LOSS;
             break;
         }
 
         played = pos_lan_to_move(&g->pos[g->ply], best.buf, g->go.chess960);
 
         if (illegal_move(played, moves, end)) {
-            g->result = RESULT_ILLEGAL_MOVE;
+            g->state = STATE_ILLEGAL_MOVE;
             break;
         }
 
         if ((g->go.time[ei] || g->go.movetime[ei]) && timeLeft[ei] < 0) {
-            g->result = RESULT_TIME_LOSS;
+            g->state = STATE_TIME_LOSS;
             break;
         }
 
         // Apply draw adjudication rule
         if (g->go.drawCount && abs(score) <= g->go.drawScore) {
             if (++drawPlyCount >= 2 * g->go.drawCount) {
-                g->result = RESULT_DRAW_ADJUDICATION;
+                g->state = STATE_DRAW_ADJUDICATION;
                 break;
             }
         } else
@@ -216,7 +221,7 @@ void game_play(Game *g, const Engine engines[2], bool reverse)
         // Apply resign rule
         if (g->go.resignCount && score <= -g->go.resignScore) {
             if (++resignCount[ei] >= g->go.resignCount) {
-                g->result = RESULT_RESIGN;
+                g->state = STATE_RESIGN;
                 break;
             }
         } else
@@ -224,42 +229,47 @@ void game_play(Game *g, const Engine engines[2], bool reverse)
     }
 
     str_delete(&goCmd, &posCmd, &best);
-    assert(g->result);
+    assert(g->state != STATE_NONE);
+
+    if (g->state < STATE_SEPARATOR)
+        return ei == 0 ? RESULT_LOSS : RESULT_WIN;
+    else
+        return RESULT_DRAW;
 }
 
-str_t game_decode_result(const Game *g, str_t *reason)
+str_t game_decode_state(const Game *g, str_t *reason)
 {
     str_t result = str_new();
     str_cpy(reason, "");  // default: termination by chess rules
 
-    if (g->result == RESULT_NONE) {
+    if (g->state == STATE_NONE) {
         str_cpy(&result, "*");
         str_cpy(reason, "unterminated");
-    } else if (g->result == RESULT_CHECKMATE) {
+    } else if (g->state == STATE_CHECKMATE) {
         str_cpy(&result, g->pos[g->ply].turn == WHITE ? "0-1" : "1-0");
         str_cpy(reason, "checkmate");
-    } else if (g->result == RESULT_STALEMATE) {
+    } else if (g->state == STATE_STALEMATE) {
         str_cpy(&result, "1/2-1/2");
         str_cpy(reason, "stalemate");
-    } else if (g->result == RESULT_THREEFOLD) {
+    } else if (g->state == STATE_THREEFOLD) {
         str_cpy(&result, "1/2-1/2");
         str_cpy(reason, "3 repetitions");
-    } else if (g->result == RESULT_FIFTY_MOVES) {
+    } else if (g->state == STATE_FIFTY_MOVES) {
         str_cpy(&result, "1/2-1/2");
         str_cpy(reason, "50 move rule");
-    } else if (g->result ==RESULT_INSUFFICIENT_MATERIAL) {
+    } else if (g->state ==STATE_INSUFFICIENT_MATERIAL) {
         str_cpy(&result, "1/2-1/2");
         str_cpy(reason, "insufficient material");
-    } else if (g->result == RESULT_ILLEGAL_MOVE) {
+    } else if (g->state == STATE_ILLEGAL_MOVE) {
         str_cpy(&result, g->pos[g->ply].turn == WHITE ? "0-1" : "1-0");
         str_cpy(reason, "illegal move");
-    } else if (g->result == RESULT_DRAW_ADJUDICATION) {
+    } else if (g->state == STATE_DRAW_ADJUDICATION) {
         str_cpy(&result, "1/2-1/2");
         str_cpy(reason, "draw by adjudication");
-    } else if (g->result == RESULT_RESIGN) {
+    } else if (g->state == STATE_RESIGN) {
         str_cpy(&result, g->pos[g->ply].turn == WHITE ? "0-1" : "1-0");
         str_cat_fmt(reason, "%s resigns", g->pos[g->ply].turn == WHITE ? "white" : "black");
-    } else if (g->result == RESULT_TIME_LOSS) {
+    } else if (g->state == STATE_TIME_LOSS) {
         str_cpy(&result, g->pos[g->ply].turn == WHITE ? "0-1" : "1-0");
         str_cat_fmt(reason, "%s lost on time", g->pos[g->ply].turn == WHITE ? "white" : "black");
     } else
@@ -277,7 +287,7 @@ str_t game_pgn(const Game *g)
 
     // Result in PGN format "1-0", "0-1", "1/2-1/2" (from white pov)
     str_t reason = str_new();
-    str_t result = game_decode_result(g, &reason);
+    str_t result = game_decode_state(g, &reason);
     str_cat_fmt(&pgn, "[Result \"%S\"]\n", &result);
     str_cat_fmt(&pgn, "[Termination \"%S\"]\n", &reason);
 
@@ -300,7 +310,7 @@ str_t game_pgn(const Game *g)
 
         // Append check markers to SAN
         if (g->pos[ply].checkers) {
-            if (ply == g->ply && g->result == RESULT_CHECKMATE)
+            if (ply == g->ply && g->state == STATE_CHECKMATE)
                 str_putc(&san, '#');  // checkmate
             else
                 str_putc(&san, '+');  // normal check

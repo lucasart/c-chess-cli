@@ -17,16 +17,28 @@
 #include "engine.h"
 
 enum {
-    RESULT_NONE,
-    RESULT_CHECKMATE,  // lost by being checkmated
-    RESULT_STALEMATE,  // draw by stalemate
-    RESULT_THREEFOLD,  // draw by 3 position repetition
-    RESULT_FIFTY_MOVES,  // draw by 50 moves rule
-    RESULT_INSUFFICIENT_MATERIAL,  // draw due to insufficient material to deliver checkmate
-    RESULT_ILLEGAL_MOVE,  // lost by playing an illegal move
-    RESULT_DRAW_ADJUDICATION,  // draw by adjudication
-    RESULT_RESIGN,  // resigned on behalf of the engine
-    RESULT_TIME_LOSS
+    STATE_NONE,
+
+    // All possible ways to lose
+    STATE_CHECKMATE,  // lost by being checkmated
+    STATE_TIME_LOSS,  // lost on time
+    STATE_ILLEGAL_MOVE,  // lost by playing an illegal move
+    STATE_RESIGN,  // resigned on behalf of the engine
+
+    STATE_SEPARATOR,  // invalid result, just a market to separate losses from draws
+
+    // All possible ways to draw
+    STATE_STALEMATE,  // draw by stalemate
+    STATE_THREEFOLD,  // draw by 3 position repetition
+    STATE_FIFTY_MOVES,  // draw by 50 moves rule
+    STATE_INSUFFICIENT_MATERIAL,  // draw due to insufficient material to deliver checkmate
+    STATE_DRAW_ADJUDICATION  // draw by adjudication
+};
+
+enum {
+    RESULT_WIN,
+    RESULT_LOSS,
+    RESULT_DRAW
 };
 
 typedef struct {
@@ -45,14 +57,13 @@ typedef struct {
     str_t names[NB_COLOR];  // names of players, by color
     Position *pos;  // list of positions (including moves) since game start
     int ply, maxPly;
-    int result;
+    int state;
     GameOptions go;
-
 } Game;
 
 Game game_new(const char *fen, const GameOptions *go);
 void game_delete(Game *g);
 
-void game_play(Game *g, const Engine engines[2], bool reverse);
-str_t game_decode_result(const Game *g, str_t *reason);
+int game_play(Game *g, const Engine engines[2], bool reverse);
+str_t game_decode_state(const Game *g, str_t *reason);
 str_t game_pgn(const Game *g);

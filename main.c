@@ -24,8 +24,6 @@ Options options;
 Openings openings;
 FILE *pgnout;
 
-Worker *Workers = NULL;
-
 void *thread_start(void *arg)
 {
     Worker *worker = arg;
@@ -45,11 +43,16 @@ void *thread_start(void *arg)
     while ((next = openings_next(&openings, &fen)) <= options.games) {
         // Play 1 game
         Game game = game_new(fen.buf, &options.go);
-        game_play(&game, engines, options.repeat ? next % 2 == 0 : false);
+        const int wld = game_play(&game, engines, options.repeat && !(next % 2));
+
+        worker->wld[wld]++;
+        printf("[%d] score of %s vs. %s: %d-%d-%d\n", worker->id, engines[0].name.buf,
+            engines[1].name.buf, worker->wld[RESULT_WIN], worker->wld[RESULT_LOSS],
+            worker->wld[RESULT_DRAW]);
 
         // Write to stdout a one line summary
         str_t reason = str_new();
-        str_t result = game_decode_result(&game, &reason);
+        str_t result = game_decode_state(&game, &reason);
         printf("[%i] %s vs. %s: %s (%s)\n", worker->id, game.names[WHITE].buf,
             game.names[BLACK].buf, result.buf, reason.buf);
         str_delete(&result, &reason);
@@ -82,17 +85,21 @@ int main(int argc, const char **argv)
     pgnout = options.pgnout.len ? fopen(options.pgnout.buf, "w") : NULL;
 
     pthread_t threads[options.concurrency];
-    Workers = realloc(Workers, sizeof(Worker) * options.concurrency);
 
-    for (int i = 0; i < options.concurrency; i++) {
-        Workers[i].id = i;
+    workers_new(options.concurrency);
+
+    for (int i = 0; i < options.concurrency; i++)
         pthread_create(&threads[i], NULL, thread_start, &Workers[i]);
-    }
 
     for (int i = 0; i < options.concurrency; i++)
         pthread_join(threads[i], NULL);
 
-    free(Workers);
+    int wld[3];
+    workers_total(wld);
+    printf("score of %s vs. %s: %d-%d-%d\n", options.cmd[0].buf, options.cmd[1].buf,
+        wld[RESULT_WIN], wld[RESULT_LOSS], wld[RESULT_DRAW]);
+
+    workers_delete(Workers);
 
     if (pgnout)
         fclose(pgnout);

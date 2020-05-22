@@ -12,17 +12,33 @@
  * You should have received a copy of the GNU General Public License along with this program. If
  * not, see <http://www.gnu.org/licenses/>.
 */
-#pragma once
+#include <stdlib.h>
+#include "workers.h"
 
-// Per thread data
-typedef struct {
-    int id;  // starts at 0
-    int wld[3];  // counts wins, losses, and draws
-} Worker;
+Worker *Workers;
+static int WorkersCount;
 
-extern Worker *Workers;
+void workers_new(int count)
+{
+    WorkersCount = count;
+    Workers = calloc(count, sizeof(Worker));
 
-void workers_new(int count);
-void workers_delete();
+    for (int i = 0; i < WorkersCount; i++)
+        Workers[i].id = i;
+}
 
-void workers_total(int wld[3]);
+void workers_delete()
+{
+    free(Workers);
+    Workers = NULL;
+    WorkersCount = 0;
+}
+
+void workers_total(int wld[3])
+{
+    wld[0] = wld[1] = wld[2] = 0;
+
+    for (int i = 0; i < WorkersCount; i++)
+        for (int j = 0; j < 3; j++)
+            wld[j] += Workers[i].wld[j];
+}
