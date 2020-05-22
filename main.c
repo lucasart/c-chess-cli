@@ -24,12 +24,6 @@ Options options;
 Openings openings;
 FILE *pgnout;
 
-static double score_pct(int wld[3])
-{
-    return 100 * (wld[RESULT_WIN] + 0.5 * wld[RESULT_DRAW]) / (wld[RESULT_WIN] + wld[RESULT_LOSS]
-        + wld[RESULT_DRAW]);
-}
-
 static void *thread_start(void *arg)
 {
     Worker *worker = arg;
@@ -55,7 +49,7 @@ static void *thread_start(void *arg)
         // Write to stdout a one line summary
         str_t reason = str_new();
         str_t result = game_decode_state(&game, &reason);
-        printf("[%i] %s vs. %s: %s (%s)\n", worker->id, game.names[WHITE].buf,
+        printf("[%i] %s vs %s: %s (%s)\n", worker->id, game.names[WHITE].buf,
             game.names[BLACK].buf, result.buf, reason.buf);
         str_delete(&result, &reason);
 
@@ -69,9 +63,11 @@ static void *thread_start(void *arg)
         int wldCount[3];
         workers_add_result(worker, wld, wldCount);
 
-        printf("[%d] score of %s vs. %s: %d-%d-%d [%.2f%%]\n", worker->id, engines[0].name.buf,
+        const int n = wldCount[RESULT_WIN] + wldCount[RESULT_LOSS] + wldCount[RESULT_DRAW];
+
+        printf("Score of %s vs %s: %d - %d - %d  [%.3f] %d\n", engines[0].name.buf,
             engines[1].name.buf, wldCount[RESULT_WIN], wldCount[RESULT_LOSS], wldCount[RESULT_DRAW],
-            score_pct(wldCount));
+            (wldCount[RESULT_WIN] + 0.5 * wldCount[RESULT_DRAW]) / n, n);
 
         game_delete(&game);
     }
