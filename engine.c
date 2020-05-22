@@ -30,6 +30,7 @@ static void engine_spawn(Engine *e, const char *cmd)
     if (pipe(outof) < 0 || pipe(into) < 0)
         die("pipe() failed in engine_spawn()\n");
 
+    e->in = e->out = NULL;  // silence bogus compiler warning
     e->pid = fork();
 
     if (e->pid == 0) {
