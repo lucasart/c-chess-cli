@@ -13,11 +13,12 @@
  * not, see <http://www.gnu.org/licenses/>.
 */
 #pragma once
+#include <pthread.h>
 
 // Per thread data
 typedef struct {
     int id;  // starts at 0
-    int wld[3];  // counts wins, losses, and draws
+    int wldCount[3];  // counts wins, losses, and draws
 } Worker;
 
 extern Worker *Workers;
@@ -25,4 +26,4 @@ extern Worker *Workers;
 void workers_new(int count);
 void workers_delete();
 
-void workers_total(int wld[3]);
+void workers_add_result(Worker *worker, int result, int wld[3]);

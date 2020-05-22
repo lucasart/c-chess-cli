@@ -17,6 +17,7 @@
 
 Worker *Workers;
 static int WorkersCount;
+static pthread_mutex_t mtxWorkers = PTHREAD_MUTEX_INITIALIZER;
 
 void workers_new(int count)
 {
@@ -34,11 +35,19 @@ void workers_delete()
     WorkersCount = 0;
 }
 
-void workers_total(int wld[3])
+void workers_add_result(Worker *worker, int wld, int wldCount[3])
 {
-    wld[0] = wld[1] = wld[2] = 0;
+    pthread_mutex_lock(&mtxWorkers);
+
+    // Add wld result to specificied worker
+    worker->wldCount[wld]++;
+
+    // Refresh totals (across workers)
+    wldCount[0] = wldCount[1] = wldCount[2] = 0;
 
     for (int i = 0; i < WorkersCount; i++)
         for (int j = 0; j < 3; j++)
-            wld[j] += Workers[i].wld[j];
+            wldCount[j] += Workers[i].wldCount[j];
+
+    pthread_mutex_unlock(&mtxWorkers);
 }
