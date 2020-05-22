@@ -104,7 +104,7 @@ void engine_delete(Engine *e)
     str_delete(&e->name);
 
     if (kill(e->pid, SIGTERM) < 0)
-        die("engine_delete() failed to kill '%s'\n", e->name);
+        die("engine_delete() failed to kill '%s'\n", e->name.buf);
 }
 
 void engine_readln(const Engine *e, str_t *line)
@@ -113,7 +113,7 @@ void engine_readln(const Engine *e, str_t *line)
         if (e->log && fprintf(e->log, "%s -> %s\n", e->name.buf, line->buf) <= 0)
             die("engine_writeln() failed writing to log\n");
     } else
-        die("engine_readln() failed reading from '%s'\n", e->name);
+        die("engine_readln() failed reading from '%s'\n", e->name.buf);
 }
 
 void engine_writeln(const Engine *e, char *buf)
@@ -122,7 +122,7 @@ void engine_writeln(const Engine *e, char *buf)
         if (e->log && (fprintf(e->log, "%s <- %s\n", e->name.buf, buf) <= 0 || fflush(e->log) != 0))
             die("engine_writeln() failed writing to log\n");
     } else
-        die("engine_writeln() failed writing to '%s'\n", e->name);
+        die("engine_writeln() failed writing to '%s'\n", e->name.buf);
 }
 
 void engine_sync(const Engine *e)
