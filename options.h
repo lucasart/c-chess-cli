@@ -23,6 +23,8 @@ typedef struct {
     int games;  // number of games
     str_t openings;  // openings (EPD file)
     str_t pgnout;  // pgn output file
+    double elo0, elo1, alpha, beta;  // SPRT parameters
+    bool sprt;  // use Sequential Probability Ratio Test
 
     // flags
     bool random;  // start from a random opening

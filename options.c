@@ -47,7 +47,7 @@ Options options_new(int argc, const char **argv)
                 die("value expected after '%s'. found tag '%s' instead.\n", argv[i - 1], argv[i]);
 
             if (strstr("-concurrency -games -openings -pgnout -cmd -name -options -nodes -depth "
-                    "-draw -resign -movetime -tc", argv[i]))
+                    "-draw -resign -movetime -tc -sprt", argv[i]))
                 // process tags followed by value
                 expectValue = true;
             else {
@@ -121,6 +121,10 @@ Options options_new(int argc, const char **argv)
                 }
 
                 str_delete(&tc[0], &tc[1]);
+            } else if (!strcmp(argv[i - 1], "-sprt")) {
+                o.sprt = true;
+                o.alpha = o.beta = 0.05;  // default values
+                sscanf(argv[i], "%lf,%lf,%lf,%lf", &o.elo0, &o.elo1, &o.alpha, &o.beta);
             } else
                 assert(false);
 
