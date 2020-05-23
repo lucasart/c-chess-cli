@@ -25,42 +25,45 @@ make [CC=comp] [OUT=file] [debug=yes/no] [static=yes/no]
 
 ### Options
 
-Syntax: `-option value`.
+Syntax: `-<option> <value>`.
 
-List:
-- concurrency c: Number of threads used to play games concurrently.
-- draw n,s: Draw when |score| <= s (in cp) for n consecutive moves, for both sides.
-- games n: Number of games
-- openings file: Takes `file` in EPD format for opening positions.
-- pgnout file: Output file where games are written, in PGN format.
-- resign n,s: Resign when score <= -s (in cp) for n consecutive moves, for the losing side.
-- tc x/y+z: set time control to x moves in y sec (repeating) + z sec increment per move. x/y
-  corresponds to a standard tournament time control, y+z corresponds to a standard increment time
-  control, and y corresponds to a sudden death time control.
+List of `<option> <value>`:
+- `concurrency C`: number of games played concurrently.
+- `draw N,S`: draw when |score| <= `S` (in cp) for `N` consecutive moves, for both sides.
+- `games N`: number of games to play.
+- `openings FILE`: input file, in EPD format, where opening positions are read.
+- `pgnout FILE`: output file, in PGN format, where games are written.
+- `resign N,S`: resign when score <= -`S` (in cp) for `N` consecutive moves, for the losing side.
+- `tc X/Y+Z`: set time control to `X` moves in `Y` sec (repeating) + `Z` sec increment per move. For
+  example, `Y/Y` corresponds to a tournament time control, `Y+Z` corresponds to an increment time
+  control, and just `Y` corresponds to a sudden death time control.
 
 ### Flags
 
-Syntax: `-flag`.
+Syntax: `-<flag>`.
 
 List:
-- chess960: Use Chess960/FRC castling rules.
-- debug: Write all I/O communication with engines to file(s). This produces `c-chess-cli.id.log`,
+- `chess960`: use Chess960/FRC castling rules.
+- `debug`: write all I/O communication with engines to file(s). This produces `c-chess-cli.id.log`,
 where `id` is the thread id (range `0..concurrency-1`).
-- random: Start from a random opening in the EPD file. Proceed sequentially afterwards.
-- repeat: Repeat each opening twice, with each engine playing both sides.
+- `random`: start from a random opening in the EPD file. Proceed sequentially afterwards.
+- `repeat`: repeat each opening twice, with each engine playing both sides.
 
 ### Engine options
 
 Syntax:
-- `-option value1`: gives value1 to both engines.
-- `-option value1:value2`: gives value1 to the first engine, and value2 to the second engine.
-- `-option value1:`: gives value1 to the first engine, and nothing to the second.
-- `-option :value2`: can you guess? good.
+- `-<option> <value1>` gives `<value1>` to both engines.
+- `-<option> <value1>:<value2>` gives `<value1>` to the first engine, and `<value2>` to the second.
+- `-<option> <value1>:` gives `<value1>` to the first engine, and nothing to the second.
+- `-<option> :<value2>` can you guess? good.
 
 List:
 - cmd: command to run each engine.
 - name: name override for each engine. By default the name is read from `id name` following the UCI
-  protocol.
-- movetime: Time limit per move in seconds (default none).
-- nodes: Node limit per move (default none).
-- options: List of UCI options per engine (default none).
+  protocol (and if that fails cmd value will be used as name).
+- movetime: time limit per move in seconds.
+- nodes: node limit per move.
+- options: UCI options per engine. In this context, `<value1>` and `<value2>`, must be comma
+  separated, like so: `-options Hash=2,Threads=1:Book=true,Hash=4`. Special characters, like space,
+  should be escaped using the shell. For example `-options Time\ Buffer=50`, or `-options "Time Buffer=50"`,
+  or whatever is the correct syntax for your shell.
