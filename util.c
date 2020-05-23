@@ -54,7 +54,7 @@ void die(const char *fmt, ...)
     vfprintf(stderr, fmt, ap);
     va_end(ap);
 
-    exit(1);
+    exit(EXIT_FAILURE);
 }
 
 int64_t system_msec()

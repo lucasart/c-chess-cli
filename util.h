@@ -13,8 +13,11 @@
  * not, see <http://www.gnu.org/licenses/>.
 */
 #pragma once
+#include <errno.h>
 #include <inttypes.h>
 #include <stddef.h>
+#include <stdlib.h>
+#include <string.h>
 
 uint64_t prng(uint64_t *state);
 uint64_t hash(const void *buffer, size_t length, uint64_t seed);
@@ -22,3 +25,11 @@ uint64_t hash(const void *buffer, size_t length, uint64_t seed);
 int64_t system_msec(void);
 
 void die(const char *fmt, ...);
+
+#define CHECK(val, errval) do { \
+    typeof(val) __val = (val); \
+    if (__val == (errval)) { \
+        fprintf(stderr, "error in %s: (%d). %s\n", __FILE__, __LINE__, strerror(errno)); \
+        exit(EXIT_FAILURE); \
+    } \
+} while (0)

@@ -27,35 +27,34 @@ static void engine_spawn(Engine *e, const char *cmd)
     // 'into' and 'outof' are pipes, each with 2 ends: read=0, write=1
     int outof[2], into[2];
 
-    if (pipe(outof) < 0 || pipe(into) < 0)
-        die("pipe() failed in engine_spawn()\n");
-
     e->in = e->out = NULL;  // silence bogus compiler warning
-    e->pid = fork();
+
+    CHECK(pipe(outof) < 0, -1);
+    CHECK(pipe(into) < 0, -1);
+    CHECK(e->pid = fork(), -1);
 
     if (e->pid == 0) {
         // in the child process
         close(into[1]);
         close(outof[0]);
 
-        if (dup2(into[0], STDIN_FILENO) < 0 || dup2(outof[1], STDOUT_FILENO) < 0)
-            die("dup2() failed in engine_spawn()\n");
+        CHECK(dup2(into[0], STDIN_FILENO), -1);
+        CHECK(dup2(outof[1], STDOUT_FILENO), -1);
 
         close(into[0]);
         close(outof[1]);
 
-        if (execlp(cmd, cmd, NULL) == -1)
-            die("could not execute engine '%s'\n", cmd);
-    } else if (e->pid > 0) {
+        CHECK(execlp(cmd, cmd, NULL), -1);
+    } else {
+        assert(e->pid > 0);
+
         // in the parent process
         close(into[0]);
         close(outof[1]);
 
-        if (!(e->in = fdopen(outof[0], "r")) || !(e->out = fdopen(into[1], "w")))
-            die("fdopen() failed in engine_spawn()\n");
-    } else
-        // fork failed
-        die("fork() failed in engine_spawn()\n");
+        CHECK(e->in = fdopen(outof[0], "r"), NULL);
+        CHECK(e->out = fdopen(into[1], "w"), NULL);
+    }
 }
 
 Engine engine_new(const char *cmd, const char *name, FILE *log, const char *uciOptions)
@@ -99,30 +98,28 @@ Engine engine_new(const char *cmd, const char *name, FILE *log, const char *uciO
 
 void engine_delete(Engine *e)
 {
-    fclose(e->in);
-    fclose(e->out);
     str_delete(&e->name);
-
-    if (kill(e->pid, SIGTERM) < 0)
-        die("engine_delete() failed to kill '%s'\n", e->name.buf);
+    CHECK(fclose(e->in), EOF);
+    CHECK(fclose(e->out), EOF);
+    CHECK(kill(e->pid, SIGTERM), -1);
 }
 
 void engine_readln(const Engine *e, str_t *line)
 {
-    if (str_getline(line, e->in)) {
-        if (e->log && fprintf(e->log, "%s -> %s\n", e->name.buf, line->buf) <= 0)
-            die("engine_writeln() failed writing to log\n");
-    } else
-        die("engine_readln() failed reading from '%s'\n", e->name.buf);
+    CHECK(str_getline(line, e->in), 0);
+
+    if (e->log && fprintf(e->log, "%s -> %s\n", e->name.buf, line->buf) <= 0)
+        die("engine_writeln() failed writing to log\n");
 }
 
 void engine_writeln(const Engine *e, char *buf)
 {
-    if (fputs(buf, e->out) >= 0 && fputs("\n", e->out) >= 0 && fflush(e->out) == 0) {
-        if (e->log && (fprintf(e->log, "%s <- %s\n", e->name.buf, buf) <= 0 || fflush(e->log) != 0))
-            die("engine_writeln() failed writing to log\n");
-    } else
-        die("engine_writeln() failed writing to '%s'\n", e->name.buf);
+    CHECK(fputs(buf, e->out), EOF);
+    CHECK(fputc('\n', e->out), EOF);
+    CHECK(fflush(e->out), EOF);
+
+    if (e->log && (fprintf(e->log, "%s <- %s\n", e->name.buf, buf) < 0 || fflush(e->log) != 0))
+        die("engine_writeln() failed writing to log\n");
 }
 
 void engine_sync(const Engine *e)
@@ -163,7 +160,7 @@ bool engine_bestmove(const Engine *e, int *score, int64_t *timeLeft, str_t *best
                 else if (!strcmp(token.buf, "mate") && (tail = str_tok(tail, &token, " ")))
                     *score = atoi(token.buf) < 0 ? INT_MIN : INT_MAX;
                 else
-                    die("illegal syntax after 'score' in 'info' line\n");
+                    die("illegal syntax after 'score' in '%s'\n", line.buf);
             }
         } else if (!strcmp(token.buf, "bestmove") && str_tok(tail, &token, " ")) {
             str_cpy_s(best, &token);

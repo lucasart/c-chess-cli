@@ -5,12 +5,11 @@ static void read_infinite(FILE *in, str_t *line)
 // Read from an infinite file (wrap around EOF)
 {
     if (!str_getline(line, in)) {
-        // Failed ? wrap around EOF
+        // Failed once: maybe EOF ?
         rewind(in);
 
-        // Still fail ? die
-        if (!str_getline(line, in))
-            die("read_infinite(): cannot read a single line\n");
+        // Try again after rewind, now failure is fatal
+        CHECK(str_getline(line, in), 0);
     }
 }
 
@@ -18,21 +17,21 @@ Openings openings_new(const char *fileName, bool random, int repeat)
 {
     Openings o;
 
-    if (*fileName) {
-        if (!(o.file = fopen(fileName, "r")))
-            die("openings_create() failed to open '%s'\n", fileName);
-    } else
+    if (*fileName)
+        CHECK(o.file = fopen(fileName, "r"), NULL);
+    else
         o.file = NULL;
 
     if (o.file && random) {
-        // Start from random position in the file
-        fseek(o.file, 0, SEEK_END);
-        uint64_t seed = system_msec();
-        const uint64_t size = ftell(o.file);
+        // Establish file size
+        long size;
+        CHECK(fseek(o.file, 0, SEEK_END), -1);
+        CHECK(size = ftell(o.file), -1);
 
         if (!size)
             die("openings_create(): file size = 0");
 
+        uint64_t seed = system_msec();
         fseek(o.file, prng(&seed) % size, SEEK_SET);
 
         // Consume current line, likely broken, as we're somewhere in the middle of it
@@ -52,7 +51,7 @@ Openings openings_new(const char *fileName, bool random, int repeat)
 void openings_delete(Openings *o)
 {
     if (o->file)
-        fclose(o->file);
+        CHECK(fclose(o->file), EOF);
 
     pthread_mutex_destroy(&o->mtx);
     str_delete(&o->lastFen);
