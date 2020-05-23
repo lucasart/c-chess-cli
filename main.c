@@ -18,6 +18,8 @@
 #include "game.h"
 #include "openings.h"
 #include "options.h"
+#include "sprt.h"
+#include "util.h"
 #include "workers.h"
 
 Options options;
@@ -46,13 +48,6 @@ static void *thread_start(void *arg)
         Game game = game_new(fen.buf, &options.go);
         const int wld = game_play(&game, engines, next % 2 == 0);
 
-        // Write to stdout a one line summary
-        str_t reason = str_new();
-        str_t result = game_decode_state(&game, &reason);
-        printf("[%i] %s vs %s: %s (%s)\n", worker->id, game.names[WHITE].buf,
-            game.names[BLACK].buf, result.buf, reason.buf);
-        str_delete(&result, &reason);
-
         // Write to PGN file
         if (pgnout) {
             str_t pgn = game_pgn(&game);
@@ -60,6 +55,14 @@ static void *thread_start(void *arg)
             str_delete(&pgn);
         }
 
+        // Write to stdout a one line summary of the game
+        str_t reason = str_new();
+        str_t result = game_decode_state(&game, &reason);
+        printf("[%i] %s vs %s: %s (%s)\n", worker->id, game.names[WHITE].buf,
+            game.names[BLACK].buf, result.buf, reason.buf);
+        str_delete(&result, &reason);
+
+        // Update on global score (across workers)
         int wldCount[3];
         workers_add_result(worker, wld, wldCount);
 
@@ -68,6 +71,22 @@ static void *thread_start(void *arg)
         printf("Score of %s vs %s: %d - %d - %d  [%.3f] %d\n", engines[0].name.buf,
             engines[1].name.buf, wldCount[RESULT_WIN], wldCount[RESULT_LOSS], wldCount[RESULT_DRAW],
             (wldCount[RESULT_WIN] + 0.5 * wldCount[RESULT_DRAW]) / n, n);
+
+        if (options.sprt) {
+            double llrLbound, llrUbound;
+            sprt_bounds(options.alpha, options.beta, &llrLbound, &llrUbound);
+
+            const double llr = sprt_llr(wldCount, options.elo0, options.elo1);
+
+            if (llr > llrUbound)
+                die("SPRT: LLR = %.3f [%.3f,%.3f]. H1 accepted.\n", llr, llrLbound, llrUbound);
+
+            if (llr < llrLbound)
+                die("SPRT: LLR = %.3f [%.3f,%.3f]. H0 accepted.\n", llr, llrLbound, llrUbound);
+
+            if (next % 2 == 0)
+                printf("SPRT: LLR = %.3f [%.3f,%.3f]\n", llr, llrLbound, llrUbound);
+        }
 
         game_delete(&game);
     }

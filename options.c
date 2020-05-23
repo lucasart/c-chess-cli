@@ -30,6 +30,7 @@ Options options_new(int argc, const char **argv)
     o.games = 1;
     o.openings = str_new();
     o.pgnout = str_new();
+    o.alpha = o.beta = 0.05;
 
     for (int i = 0; i < 2; i++) {
         o.cmd[i] = str_new();
@@ -123,7 +124,6 @@ Options options_new(int argc, const char **argv)
                 str_delete(&tc[0], &tc[1]);
             } else if (!strcmp(argv[i - 1], "-sprt")) {
                 o.sprt = true;
-                o.alpha = o.beta = 0.05;  // default values
                 sscanf(argv[i], "%lf,%lf,%lf,%lf", &o.elo0, &o.elo1, &o.alpha, &o.beta);
             } else
                 assert(false);
