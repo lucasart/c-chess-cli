@@ -248,6 +248,12 @@ static void finish(Position *pos)
 #endif
 }
 
+static bool pos_move_is_capture(const Position *pos, move_t m)
+// Detect normal captures only (not en passant)
+{
+    return bb_test(pos->byColor[opposite(pos->turn)], move_to(m));
+}
+
 // Set position from FEN string
 void pos_set(Position *pos, const char *fen)
 {
@@ -523,12 +529,6 @@ int pos_piece_on(const Position *pos, int square)
             break;
 
     return piece;
-}
-
-bool pos_move_is_capture(const Position *pos, move_t m)
-// Detect normal captures only (not en passant)
-{
-    return bb_test(pos->byColor[opposite(pos->turn)], move_to(m));
 }
 
 bool pos_move_is_castling(const Position *pos, move_t m)

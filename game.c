@@ -17,7 +17,7 @@
 #include "gen.h"
 #include "str.h"
 
-void uci_position_command(const Game *g, str_t *cmd)
+static void uci_position_command(const Game *g, str_t *cmd)
 // Builds a string of the form "position fen ... [moves ...]". Implements rule50 pruning: start from
 // the last position that reset the rule50 counter, to reduce the move list to the minimum, without
 // losing information.
@@ -41,7 +41,33 @@ void uci_position_command(const Game *g, str_t *cmd)
     }
 }
 
-int game_apply_chess_rules(const Game *g, move_t *begin, move_t **end)
+static void uci_go_command(Game *g, int ei, const int64_t timeLeft[2], str_t *cmd)
+{
+    str_cpy(cmd, "go");
+
+    if (g->go.nodes[ei])
+        str_cat_fmt(cmd, " nodes %U", g->go.nodes[ei]);
+
+    if (g->go.depth[ei])
+        str_cat_fmt(cmd, " depth %i", g->go.depth[ei]);
+
+    if (g->go.movetime[ei])
+        str_cat_fmt(cmd, " movetime %I", g->go.movetime[ei]);
+
+    if (g->go.time[ei]) {
+        const int color = g->pos[g->ply].turn;
+
+        str_cat_fmt(cmd, " wtime %I winc %I btime %I binc %I",
+            timeLeft[ei ^ color], g->go.increment[ei ^ color],
+            timeLeft[ei ^ color ^ BLACK], g->go.increment[ei ^ color ^ BLACK]);
+    }
+
+    if (g->go.movestogo[ei])
+        str_cat_fmt(cmd, " movestogo %i",
+            g->go.movestogo[ei] - ((g->ply / 2) % g->go.movestogo[ei]));
+}
+
+static int game_apply_chess_rules(const Game *g, move_t *begin, move_t **end)
 // Applies chess rules to generate legal moves, and determine the state of the game
 {
     const Position *pos = &g->pos[g->ply];
@@ -67,7 +93,7 @@ int game_apply_chess_rules(const Game *g, move_t *begin, move_t **end)
     return STATE_NONE;
 }
 
-bool illegal_move(move_t move, const move_t *begin, const move_t *end)
+static bool illegal_move(move_t move, const move_t *begin, const move_t *end)
 {
     for (const move_t *m = begin; m != end; m++)
         if (*m == move)
@@ -99,32 +125,6 @@ void game_delete(Game *g)
 {
     free(g->pos), g->pos = NULL;
     str_delete(&g->names[WHITE], &g->names[BLACK]);
-}
-
-void uci_go_command(Game *g, int ei, const int64_t timeLeft[2], str_t *cmd)
-{
-    str_cpy(cmd, "go");
-
-    if (g->go.nodes[ei])
-        str_cat_fmt(cmd, " nodes %U", g->go.nodes[ei]);
-
-    if (g->go.depth[ei])
-        str_cat_fmt(cmd, " depth %i", g->go.depth[ei]);
-
-    if (g->go.movetime[ei])
-        str_cat_fmt(cmd, " movetime %I", g->go.movetime[ei]);
-
-    if (g->go.time[ei]) {
-        const int color = g->pos[g->ply].turn;
-
-        str_cat_fmt(cmd, " wtime %I winc %I btime %I binc %I",
-            timeLeft[ei ^ color], g->go.increment[ei ^ color],
-            timeLeft[ei ^ color ^ BLACK], g->go.increment[ei ^ color ^ BLACK]);
-    }
-
-    if (g->go.movestogo[ei])
-        str_cat_fmt(cmd, " movestogo %i",
-            g->go.movestogo[ei] - ((g->ply / 2) % g->go.movestogo[ei]));
 }
 
 int game_play(Game *g, const Engine engines[2], bool reverse)
