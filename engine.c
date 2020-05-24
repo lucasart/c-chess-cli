@@ -30,22 +30,22 @@ static void engine_spawn(Engine *e, const char *cmd)
 
     e->in = e->out = NULL;  // silence bogus compiler warning
 
-    CHECK(pipe(outof) < 0, -1);
-    CHECK(pipe(into) < 0, -1);
-    CHECK(e->pid = fork(), -1);
+    DIE_IF(pipe(outof) < 0, -1);
+    DIE_IF(pipe(into) < 0, -1);
+    DIE_IF(e->pid = fork(), -1);
 
     if (e->pid == 0) {
         // in the child process
         close(into[1]);
         close(outof[0]);
 
-        CHECK(dup2(into[0], STDIN_FILENO), -1);
-        CHECK(dup2(outof[1], STDOUT_FILENO), -1);
+        DIE_IF(dup2(into[0], STDIN_FILENO), -1);
+        DIE_IF(dup2(outof[1], STDOUT_FILENO), -1);
 
         close(into[0]);
         close(outof[1]);
 
-        CHECK(execlp(cmd, cmd, NULL), -1);
+        DIE_IF(execlp(cmd, cmd, NULL), -1);
     } else {
         assert(e->pid > 0);
 
@@ -53,8 +53,8 @@ static void engine_spawn(Engine *e, const char *cmd)
         close(into[0]);
         close(outof[1]);
 
-        CHECK(e->in = fdopen(outof[0], "r"), NULL);
-        CHECK(e->out = fdopen(into[1], "w"), NULL);
+        DIE_IF(e->in = fdopen(outof[0], "r"), NULL);
+        DIE_IF(e->out = fdopen(into[1], "w"), NULL);
     }
 }
 
@@ -103,14 +103,14 @@ Engine engine_new(const char *cmd, const char *name, FILE *log, Deadline *deadli
 void engine_delete(Engine *e)
 {
     str_delete(&e->name);
-    CHECK(fclose(e->in), EOF);
-    CHECK(fclose(e->out), EOF);
-    CHECK(kill(e->pid, SIGTERM), -1);
+    DIE_IF(fclose(e->in), EOF);
+    DIE_IF(fclose(e->out), EOF);
+    DIE_IF(kill(e->pid, SIGTERM), -1);
 }
 
 void engine_readln(const Engine *e, str_t *line)
 {
-    CHECK(str_getline(line, e->in), 0);
+    DIE_IF(str_getline(line, e->in), 0);
 
     if (e->log && fprintf(e->log, "%s -> %s\n", e->name.buf, line->buf) <= 0)
         die("engine_writeln() failed writing to log\n");
@@ -118,9 +118,9 @@ void engine_readln(const Engine *e, str_t *line)
 
 void engine_writeln(const Engine *e, char *buf)
 {
-    CHECK(fputs(buf, e->out), EOF);
-    CHECK(fputc('\n', e->out), EOF);
-    CHECK(fflush(e->out), EOF);
+    DIE_IF(fputs(buf, e->out), EOF);
+    DIE_IF(fputc('\n', e->out), EOF);
+    DIE_IF(fflush(e->out), EOF);
 
     if (e->log && (fprintf(e->log, "%s <- %s\n", e->name.buf, buf) < 0 || fflush(e->log) != 0))
         die("engine_writeln() failed writing to log\n");

@@ -60,12 +60,12 @@ void die(const char *fmt, ...)
 int64_t system_msec()
 {
     struct timespec t;
-    CHECK(clock_gettime(CLOCK_MONOTONIC, &t), -1);
+    DIE_IF(clock_gettime(CLOCK_MONOTONIC, &t), -1);
     return t.tv_sec * 1000LL + t.tv_nsec / 1000000;
 }
 
 void system_sleep(int64_t msec)
 {
     struct timespec t = {.tv_sec = msec / 1000, .tv_nsec = (msec % 1000) * 1000000LL};
-    CHECK(nanosleep(&t, NULL), -1);
+    DIE_IF(nanosleep(&t, NULL), -1);
 }

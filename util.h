@@ -27,7 +27,7 @@ void system_sleep(int64_t msec);
 
 void die(const char *fmt, ...);
 
-#define CHECK(val, errval) do { \
+#define DIE_IF(val, errval) do { \
     typeof(val) __val = (val); \
     if (__val == (errval)) { \
         fprintf(stderr, "error in %s: (%d). %s\n", __FILE__, __LINE__, strerror(errno)); \
