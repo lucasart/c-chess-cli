@@ -199,7 +199,7 @@ void deadline_set(Deadline *deadline, const Engine *engine, int64_t timeLimit)
     deadline->timeLimit = timeLimit;
 
     if (engine && engine->log)
-        fprintf(engine->log, "deadline: %s must respond by %" PRId64 "\n", engine->name.buf,
+        fprintf(engine->log, "deadline set: %s must respond by %" PRId64 "\n", engine->name.buf,
             timeLimit);
 
     pthread_mutex_unlock(&deadline->mtx);
@@ -207,6 +207,12 @@ void deadline_set(Deadline *deadline, const Engine *engine, int64_t timeLimit)
 
 void deadline_clear(Deadline *deadline)
 {
+    assert(deadline);
+
+    if (deadline->engine && deadline->engine->log)
+        fprintf(deadline->engine->log, "deadline cleared: %s has no more deadline (was %" PRId64
+            " previously).\n", deadline->engine->name.buf, deadline->timeLimit);
+
     deadline_set(deadline, NULL, 0);
 }
 
@@ -223,10 +229,15 @@ const Engine *deadline_overdue(Deadline *deadline)
 
     if (engine && time > timeLimit) {
         if (engine->log)
-            fprintf(engine->log, "deadline: %s failed to respond by %" PRId64 ". now is %" PRId64
-                ". overdue by %" PRId64 "ms\n", engine->name.buf, timeLimit, time, time - timeLimit);
+            fprintf(engine->log, "deadline failed: %s responded at %" PRId64 ", which is %" PRId64
+                "ms after the deadline.\n", engine->name.buf, time, time - timeLimit);
 
         return engine;
-    } else
+    } else {
+        if (engine && engine->log)
+            fprintf(engine->log, "deadline passed: %s responded at %" PRId64 ", which is %" PRId64
+                "ms before the deadline.\n", engine->name.buf, time, timeLimit - time);
+
         return NULL;
+    }
 }
