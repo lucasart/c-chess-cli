@@ -142,7 +142,7 @@ int game_play(Game *g, const Engine engines[2], Deadline *deadline, bool reverse
             engine_writeln(&engines[i], "setoption name UCI_Chess960 value true");
 
         engine_writeln(&engines[i], "ucinewgame");
-        engine_sync(&engines[i]);
+        engine_sync(&engines[i], deadline);
     }
 
     str_t posCmd = str_new(), goCmd = str_new(), best = str_new();
@@ -170,7 +170,7 @@ int game_play(Game *g, const Engine engines[2], Deadline *deadline, bool reverse
 
         uci_position_command(g, &posCmd);
         engine_writeln(&engines[ei], posCmd.buf);
-        engine_sync(&engines[ei]);
+        engine_sync(&engines[ei], deadline);
 
         // Prepare timeLeft[ei]
         if (g->go.movetime[ei])
@@ -190,16 +190,8 @@ int game_play(Game *g, const Engine engines[2], Deadline *deadline, bool reverse
         uci_go_command(g, ei, timeLeft, &goCmd);
         engine_writeln(&engines[ei], goCmd.buf);
 
-        // Set a deadline, for master thread to come to the rescue, in case we get blocked forever
-        // by a hanging engine. Add 1 second buffer, so that small time overshoots can be handled
-        // here as a recovrable error.
-        deadline_set(deadline, &engines[ei], system_msec() + timeLeft[ei] + 1000);
-
         int score;
-        const bool ok = engine_bestmove(&engines[ei], &score, &timeLeft[ei], &best);
-
-        // Release the deadline: no more blocking I/O
-        deadline_clear(deadline);
+        const bool ok = engine_bestmove(&engines[ei], &score, &timeLeft[ei], deadline, &best);
 
         if (!ok) {  // engine_bestmove() time out before parsing a bestmove
             g->state = STATE_TIME_LOSS;

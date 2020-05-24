@@ -26,11 +26,29 @@ typedef struct {
     str_t name;
 } Engine;
 
-Engine engine_new(const char *cmd, const char *name, FILE *log, const char *uciOptions);
+// Deadlines overdues are unrecovrable errors. Given a choice, we prefer to handle them gracefully
+// as time losses in the worker threads. Since deadlines are enforced by the master thread, there is
+// no other choice than to terminate. Any attempt by the master thread to communicate with a buggy
+// engine, could result in hanguing forever on blocking I/O.
+enum {DEADLINE_TOLERANCE = 1000};
+
+typedef struct {
+    pthread_mutex_t mtx;
+    const Engine *engine;
+    int64_t timeLimit;
+} Deadline;
+
+const Engine *deadline_overdue(Deadline *deadline);
+Engine engine_new(const char *cmd, const char *name, FILE *log, Deadline *deadline,
+    const char *uciOptions);
 void engine_delete(Engine *e);
 
 void engine_readln(const Engine *e, str_t *line);
 void engine_writeln(const Engine *e, char *buf);
 
-void engine_sync(const Engine *e);
-bool engine_bestmove(const Engine *e, int *score, int64_t *timeLeft, str_t *best);
+void engine_sync(const Engine *e, Deadline *deadline);
+bool engine_bestmove(const Engine *e, int *score, int64_t *timeLeft, Deadline *deadline,
+    str_t *best);
+
+void deadline_set(Deadline *deadline, const Engine *engine, int64_t timeLimit);
+void deadline_clear(Deadline *deadline);

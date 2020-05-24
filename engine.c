@@ -14,6 +14,7 @@
 */
 #include <assert.h>
 #include <limits.h>
+#include <pthread.h>
 #include <signal.h>
 #include <stdlib.h>
 #include <string.h>
@@ -57,17 +58,19 @@ static void engine_spawn(Engine *e, const char *cmd)
     }
 }
 
-Engine engine_new(const char *cmd, const char *name, FILE *log, const char *uciOptions)
+Engine engine_new(const char *cmd, const char *name, FILE *log, Deadline *deadline,
+    const char *uciOptions)
 {
     assert(cmd && name && uciOptions);  // log can be NULL
 
     Engine e;
     e.log = log;
     e.name = str_dup(*name ? name : cmd); // default value
-
     engine_spawn(&e, cmd);  // spawn child process and plug pipes
 
+    deadline_set(deadline, &e, system_msec() + 1000);
     engine_writeln(&e, "uci");
+
     str_t line = str_new(), token = str_new();
 
     do {
@@ -93,6 +96,7 @@ Engine engine_new(const char *cmd, const char *name, FILE *log, const char *uciO
     }
 
     str_delete(&line, &token);
+    deadline_clear(deadline);
     return e;
 }
 
@@ -122,30 +126,33 @@ void engine_writeln(const Engine *e, char *buf)
         die("engine_writeln() failed writing to log\n");
 }
 
-void engine_sync(const Engine *e)
+void engine_sync(const Engine *e, Deadline *deadline)
 {
+    deadline_set(deadline, e, system_msec() + 1000);
     engine_writeln(e, "isready");
-
     str_t line = str_new();
 
     do {
         engine_readln(e, &line);
     } while (strcmp(line.buf, "readyok"));
 
+    deadline_clear(deadline);
     str_delete(&line);
 }
 
-bool engine_bestmove(const Engine *e, int *score, int64_t *timeLeft, str_t *best)
+bool engine_bestmove(const Engine *e, int *score, int64_t *timeLeft, Deadline *deadline,
+    str_t *best)
 {
     int result = false;
     *score = 0;
     str_t line = str_new(), token = str_new();
 
-    const int64_t start = system_msec(), deadline = start + *timeLeft;
+    const int64_t start = system_msec(), timeLimit = start + *timeLeft;
+    deadline_set(deadline, e, timeLimit + 1000);
 
     while (*timeLeft >= 0 && !result) {
         engine_readln(e, &line);
-        *timeLeft = deadline - system_msec();
+        *timeLeft = timeLimit - system_msec();
 
         const char *tail = str_tok(line.buf, &token, " ");
 
@@ -168,7 +175,8 @@ bool engine_bestmove(const Engine *e, int *score, int64_t *timeLeft, str_t *best
         }
     }
 
-    // Time out. We can't leave the engine in limbo for the next ucinewgame. Stop the search asap.
+    // Time out. Send "stop" and give the opportunity to the engine to respond with bestmove (still
+    // under deadline protection).
     if (!result) {
         engine_writeln(e, "stop");
 
@@ -177,6 +185,48 @@ bool engine_bestmove(const Engine *e, int *score, int64_t *timeLeft, str_t *best
         } while (strncmp(line.buf, "bestmove ", strlen("bestmove ")));
     }
 
+    deadline_clear(deadline);
     str_delete(&line, &token);
     return result;
+}
+
+void deadline_set(Deadline *deadline, const Engine *engine, int64_t timeLimit)
+{
+    assert(deadline);
+
+    pthread_mutex_lock(&deadline->mtx);
+    deadline->engine = engine;
+    deadline->timeLimit = timeLimit;
+
+    if (engine && engine->log)
+        fprintf(engine->log, "deadline: %s must respond by %" PRId64 "\n", engine->name.buf,
+            timeLimit);
+
+    pthread_mutex_unlock(&deadline->mtx);
+}
+
+void deadline_clear(Deadline *deadline)
+{
+    deadline_set(deadline, NULL, 0);
+}
+
+const Engine *deadline_overdue(Deadline *deadline)
+{
+    assert(deadline);
+
+    pthread_mutex_lock(&deadline->mtx);
+    const int64_t timeLimit = deadline->timeLimit;
+    const Engine *engine = deadline->engine;
+    pthread_mutex_unlock(&deadline->mtx);
+
+    const int64_t time = system_msec();
+
+    if (engine && time > timeLimit) {
+        if (engine->log)
+            fprintf(engine->log, "deadline: %s failed to respond by %" PRId64 ". now is %" PRId64
+                ". overdue by %" PRId64 "ms\n", engine->name.buf, timeLimit, time, time - timeLimit);
+
+        return engine;
+    } else
+        return NULL;
 }

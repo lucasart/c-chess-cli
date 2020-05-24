@@ -44,7 +44,7 @@ static void *thread_start(void *arg)
 
     // Prepare engines[]
     for (int i = 0; i < 2; i++)
-        engines[i] = engine_new(options.cmd[i].buf, options.name[i].buf, log,
+        engines[i] = engine_new(options.cmd[i].buf, options.name[i].buf, log, &worker->deadline,
             options.uciOptions[i].buf);
 
     int next;
@@ -135,7 +135,7 @@ int main(int argc, const char **argv)
     }
 
     do {
-        system_sleep(1000);
+        system_sleep(100);
 
         for (int i = 0; i < options.concurrency; i++) {
             const Engine *deadEngine = deadline_overdue(&Workers[i].deadline);

@@ -14,7 +14,7 @@
 */
 #pragma once
 #include <pthread.h>
-#include "deadline.h"
+#include "engine.h"
 
 // Per thread data
 typedef struct {
