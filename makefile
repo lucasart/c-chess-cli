@@ -4,9 +4,9 @@ debug = no
 static = no
 
 # Compilation flags
-CF = -std=gnu99 -mpopcnt -O3 -flto -Wfatal-errors -Wall -Wextra -Wstrict-prototypes
+CF = -std=gnu11 -mpopcnt -O3 -flto -Wfatal-errors -Wall -Wextra -Wstrict-prototypes
 # Additional (clang only): -Wshorten-64-to-32 -Wclass-varargs -Wmissing-prototypes
-LF = -lpthread
+LF = -lpthread -lm
 
 ifeq ($(debug),no)
 	CF += -DNDEBUG

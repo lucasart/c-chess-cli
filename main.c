@@ -106,7 +106,7 @@ static void *thread_start(void *arg)
     if (log)
         DIE_IF(fclose(log), EOF);
 
-    workers_busy_add(-1);
+    WorkersBusy--;
     return NULL;
 }
 
@@ -130,7 +130,7 @@ int main(int argc, const char **argv)
     workers_new(options.concurrency);
 
     for (int i = 0; i < options.concurrency; i++) {
-        workers_busy_add(1);
+        WorkersBusy++;
         pthread_create(&threads[i], NULL, thread_start, &Workers[i]);
     }
 
@@ -143,7 +143,7 @@ int main(int argc, const char **argv)
             if (deadEngine)
                 die("[%d] engine %s unresponsive\n", i, deadEngine->name.buf);
         }
-    } while (workers_busy_count() > 0);
+    } while (WorkersBusy > 0);
 
     for (int i = 0; i < options.concurrency; i++)
         pthread_join(threads[i], NULL);

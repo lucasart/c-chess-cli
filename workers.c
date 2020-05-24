@@ -20,8 +20,7 @@ Worker *Workers;
 static int WorkersCount = 0;
 static pthread_mutex_t mtxWorkers = PTHREAD_MUTEX_INITIALIZER;
 
-static int WorkersBusy = 0;
-static pthread_mutex_t mtxBusy = PTHREAD_MUTEX_INITIALIZER;
+_Atomic(int) WorkersBusy = 0;
 
 void workers_new(int count)
 {
@@ -59,20 +58,4 @@ void workers_add_result(Worker *worker, int wld, int wldCount[3])
             wldCount[j] += Workers[i].wldCount[j];
 
     pthread_mutex_unlock(&mtxWorkers);
-}
-
-void workers_busy_add(int n)
-{
-    pthread_mutex_lock(&mtxBusy);
-    WorkersBusy += n;
-    pthread_mutex_unlock(&mtxBusy);
-}
-
-int workers_busy_count()
-{
-    pthread_mutex_lock(&mtxBusy);
-    const int busy = WorkersBusy;
-    pthread_mutex_unlock(&mtxBusy);
-
-    return busy;
 }
