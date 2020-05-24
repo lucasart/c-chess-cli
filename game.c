@@ -254,25 +254,25 @@ str_t game_decode_state(const Game *g, str_t *reason)
         str_cpy(reason, "stalemate");
     } else if (g->state == STATE_THREEFOLD) {
         str_cpy(&result, "1/2-1/2");
-        str_cpy(reason, "3 repetitions");
+        str_cpy(reason, "3-fold repetition");
     } else if (g->state == STATE_FIFTY_MOVES) {
         str_cpy(&result, "1/2-1/2");
-        str_cpy(reason, "50 move rule");
+        str_cpy(reason, "50 moves rule");
     } else if (g->state ==STATE_INSUFFICIENT_MATERIAL) {
         str_cpy(&result, "1/2-1/2");
         str_cpy(reason, "insufficient material");
     } else if (g->state == STATE_ILLEGAL_MOVE) {
         str_cpy(&result, g->pos[g->ply].turn == WHITE ? "0-1" : "1-0");
-        str_cpy(reason, "illegal move");
+        str_cpy(reason, "rules infraction");
     } else if (g->state == STATE_DRAW_ADJUDICATION) {
         str_cpy(&result, "1/2-1/2");
-        str_cpy(reason, "draw by adjudication");
+        str_cpy(reason, "adjudication");
     } else if (g->state == STATE_RESIGN) {
         str_cpy(&result, g->pos[g->ply].turn == WHITE ? "0-1" : "1-0");
-        str_cat_fmt(reason, "%s resigns", g->pos[g->ply].turn == WHITE ? "white" : "black");
+        str_cpy(reason, "adjudication");
     } else if (g->state == STATE_TIME_LOSS) {
         str_cpy(&result, g->pos[g->ply].turn == WHITE ? "0-1" : "1-0");
-        str_cat_fmt(reason, "%s lost on time", g->pos[g->ply].turn == WHITE ? "white" : "black");
+        str_cpy(reason, "time forfeit");
     } else
         assert(false);
 
