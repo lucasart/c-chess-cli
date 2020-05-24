@@ -53,7 +53,7 @@ static void *thread_start(void *arg)
     while ((next = openings_next(&openings, &fen)) <= options.games) {
         // Play 1 game
         Game game = game_new(fen.buf, &options.go);
-        const int wld = game_play(&game, engines, next % 2 == 0);
+        const int wld = game_play(&game, engines, &worker->deadline, next % 2 == 0);
 
         // Write to PGN file
         if (pgnout) {
@@ -106,6 +106,7 @@ static void *thread_start(void *arg)
     if (log)
         CHECK(fclose(log), EOF);
 
+    workers_busy_add(-1);
     return NULL;
 }
 
@@ -128,8 +129,21 @@ int main(int argc, const char **argv)
     pthread_t threads[options.concurrency];
     workers_new(options.concurrency);
 
-    for (int i = 0; i < options.concurrency; i++)
+    for (int i = 0; i < options.concurrency; i++) {
+        workers_busy_add(1);
         pthread_create(&threads[i], NULL, thread_start, &Workers[i]);
+    }
+
+    do {
+        system_sleep(1000);
+
+        for (int i = 0; i < options.concurrency; i++) {
+            const Engine *deadEngine = deadline_overdue(&Workers[i].deadline);
+
+            if (deadEngine)
+                die("[%d] engine %s unresponsive\n", i, deadEngine->name.buf);
+        }
+    } while (workers_busy_count() > 0);
 
     for (int i = 0; i < options.concurrency; i++)
         pthread_join(threads[i], NULL);

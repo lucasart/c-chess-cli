@@ -16,6 +16,7 @@
 #include "game.h"
 #include "gen.h"
 #include "str.h"
+#include "util.h"
 
 static void uci_position_command(const Game *g, str_t *cmd)
 // Builds a string of the form "position fen ... [moves ...]". Implements rule50 pruning: start from
@@ -127,7 +128,7 @@ void game_delete(Game *g)
     str_delete(&g->names[WHITE], &g->names[BLACK]);
 }
 
-int game_play(Game *g, const Engine engines[2], bool reverse)
+int game_play(Game *g, const Engine engines[2], Deadline *deadline, bool reverse)
 // Play a game:
 // - engines[reverse] plays the first move (which does not mean white, that depends on the FEN)
 // - sets g->state value: see enum STATE_* codes
@@ -189,8 +190,16 @@ int game_play(Game *g, const Engine engines[2], bool reverse)
         uci_go_command(g, ei, timeLeft, &goCmd);
         engine_writeln(&engines[ei], goCmd.buf);
 
+        // Set a deadline, for master thread to come to the rescue, in case we get blocked forever
+        // by a hanging engine. Add 1 second buffer, so that small time overshoots can be handled
+        // here as a recovrable error.
+        deadline_set(deadline, &engines[ei], system_msec() + timeLeft[ei] + 1000);
+
         int score;
         const bool ok = engine_bestmove(&engines[ei], &score, &timeLeft[ei], &best);
+
+        // Release the deadline: no more blocking I/O
+        deadline_clear(deadline);
 
         if (!ok) {  // engine_bestmove() time out before parsing a bestmove
             g->state = STATE_TIME_LOSS;

@@ -13,22 +13,15 @@
  * not, see <http://www.gnu.org/licenses/>.
 */
 #pragma once
-#include <pthread.h>
-#include "deadline.h"
+#include "engine.h"
 
-// Per thread data
 typedef struct {
-    Deadline deadline;
-    int id;  // starts at 0
-    int wldCount[3];  // counts wins, losses, and draws
-} Worker;
+    pthread_mutex_t mtx;
+    const Engine *engine;
+    int64_t timeLimit;
+} Deadline;
 
-extern Worker *Workers;
+void deadline_set(Deadline *deadline, const Engine *engine, int64_t timeLimit);
+void deadline_clear(Deadline *deadline);
 
-void workers_new(int count);
-void workers_delete(void);
-
-void workers_add_result(Worker *worker, int result, int wld[3]);
-
-void workers_busy_add(int n);
-int workers_busy_count(void);
+const Engine *deadline_overdue(Deadline *deadline);

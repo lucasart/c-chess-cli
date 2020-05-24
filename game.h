@@ -15,6 +15,7 @@
 #pragma once
 #include "position.h"
 #include "engine.h"
+#include "workers.h"
 
 enum {
     STATE_NONE,
@@ -64,6 +65,6 @@ typedef struct {
 Game game_new(const char *fen, const GameOptions *go);
 void game_delete(Game *g);
 
-int game_play(Game *g, const Engine engines[2], bool reverse);
+int game_play(Game *g, const Engine engines[2], Deadline *deadline, bool reverse);
 str_t game_decode_state(const Game *g, str_t *reason);
 str_t game_pgn(const Game *g);
