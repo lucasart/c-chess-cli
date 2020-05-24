@@ -255,8 +255,8 @@ void gen_run_test()
 {
     typedef struct {
         const char fen[128];
-        uint64_t leaves;
         int depth;
+        uint64_t leaves;
     } Test;
 
     Test tests[] = {

@@ -34,13 +34,13 @@ List of `<option> <value>`:
 - `openings file`: input file, in EPD format, where opening positions are read.
 - `pgnout file`: output file, in PGN format, where games are written.
 - `resign n,s`: resign when score <= -`s` (in cp) for `n` consecutive moves, for the losing side.
-- `sprt elo1,elo1,alpha,beta`: performs a [Sequantial Probability Ratio Test](https://en.wikipedia.org/wiki/Sequential_probability_ratio_test)
+- `sprt elo0,elo1,alpha,beta`: performs a [Sequantial Probability Ratio Test](https://en.wikipedia.org/wiki/Sequential_probability_ratio_test)
   for `H1: elo=elo1` vs `H0: elo=elo0`, where alpha is the type I error probability (false positive),
   and beta is type II error probability (false negative). It uses the GSPRT approximation of the LLR
   derived by Michel Van den Bergh [here](http://hardy.uhasselt.be/Toga/GSPRT_approximation.pdf).
   Note that alpha and beta are optional, and their default value is 0.05.
 - `tc X/Y+Z`: set time control to `X` moves in `Y` sec (repeating) + `Z` sec increment per move. For
-  example, `Y/Y` corresponds to a tournament time control, `Y+Z` corresponds to an increment time
+  example, `X/Y` corresponds to a tournament time control, `Y+Z` corresponds to an increment time
   control, and just `Y` corresponds to a sudden death time control.
 
 ### Flags
