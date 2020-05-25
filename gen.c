@@ -229,7 +229,7 @@ static uint64_t gen_leaves(const Position *pos, int depth, int ply, bool chess96
         result += subTree;
 
         if (!ply) {
-            RAII str_t lan = pos_move_to_lan(pos, *m, chess960);
+            scope(str_del) str_t lan = pos_move_to_lan(pos, *m, chess960);
             printf("%s\t%" PRIu64 "\n", lan.buf, subTree);
         }
     }

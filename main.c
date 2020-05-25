@@ -34,7 +34,7 @@ static void *thread_start(void *arg)
     // Prepare log file
     FILE *log = NULL;
 
-    RAII str_t logName = str_new();
+    scope(str_del) str_t logName = str_new();
     str_cat_fmt(&logName, "c-chess-cli.%i.log", worker->id);
 
     if (options.debug)
@@ -46,7 +46,7 @@ static void *thread_start(void *arg)
             options.uciOptions[i].buf);
 
     int next;
-    RAII str_t fen = str_new();
+    scope(str_del) str_t fen = str_new();
 
     while ((next = openings_next(&openings, &fen)) <= options.games) {
         // Play 1 game
@@ -55,12 +55,12 @@ static void *thread_start(void *arg)
 
         // Write to PGN file
         if (pgnout) {
-            RAII str_t pgn = game_pgn(&game);
+            scope(str_del) str_t pgn = game_pgn(&game);
             DIE_IF(fputs(pgn.buf, pgnout), EOF);
         }
 
         // Write to stdout a one line summary of the game
-        RAII str_t reason = str_new(), result = game_decode_state(&game, &reason);
+        scope(str_del) str_t reason = str_new(), result = game_decode_state(&game, &reason);
         printf("[%i] %s vs %s: %s (%s)\n", worker->id, game.names[WHITE].buf,
             game.names[BLACK].buf, result.buf, reason.buf);
 

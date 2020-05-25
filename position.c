@@ -258,7 +258,7 @@ static bool pos_move_is_capture(const Position *pos, move_t m)
 void pos_set(Position *pos, const char *fen)
 {
     clear(pos);
-    RAII str_t token = str_new();
+    scope(str_del) str_t token = str_new();
 
     // Piece placement
     fen = str_tok(fen, &token, " ");
@@ -383,7 +383,7 @@ str_t pos_get(const Position *pos)
     }
 
     // En passant and 50 move
-    RAII str_t ep = square_to_string(pos->epSquare);
+    scope(str_del) str_t ep = square_to_string(pos->epSquare);
     str_cat_fmt(&fen, " %S %i %i", &ep, pos->rule50, pos->fullMove);
 
     return fen;
@@ -548,7 +548,7 @@ str_t pos_move_to_lan(const Position *pos, move_t m, bool chess960)
     if (!chess960 && pos_move_is_castling(pos, m))
         to = to > from ? from + 2 : from - 2;  // e1h1 -> e1g1, e1a1 -> e1c1
 
-    RAII str_t fromStr = square_to_string(from), toStr = square_to_string(to);
+    scope(str_del) str_t fromStr = square_to_string(from), toStr = square_to_string(to);
     str_cat_s(&lan, &fromStr, &toStr);
 
     if (prom < NB_PIECE)
@@ -602,7 +602,7 @@ str_t pos_move_to_san(const Position *pos, move_t m)
             if (pos_move_is_capture(pos, m))
                 str_putc(&san, 'x');
 
-            RAII str_t toStr = square_to_string(to);
+            scope(str_del) str_t toStr = square_to_string(to);
             str_cat_s(&san, &toStr);
         }
     } else {
@@ -664,7 +664,7 @@ str_t pos_move_to_san(const Position *pos, move_t m)
         if (pos_move_is_capture(pos, m))
             str_putc(&san, 'x');
 
-        RAII str_t toStr = square_to_string(to);
+        scope(str_del) str_t toStr = square_to_string(to);
         str_cat_s(&san, &toStr);
     }
 
@@ -687,9 +687,9 @@ void pos_print(const Position *pos)
         puts(line);
     }
 
-    RAII str_t fen = pos_get(pos);
+    scope(str_del) str_t fen = pos_get(pos);
     puts(fen.buf);
 
-    RAII str_t lan = pos_move_to_lan(pos, pos->lastMove, true);
+    scope(str_del) str_t lan = pos_move_to_lan(pos, pos->lastMove, true);
     printf("Last move: %s\n", lan.buf);
 }

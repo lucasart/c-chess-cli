@@ -33,7 +33,7 @@ str_t str_new(void);
 str_t str_dup(const char *src);
 
 void str_del(str_t *s);
-#define RAII __attribute__ ((cleanup(str_del)))
+#define scope(func) __attribute__ ((cleanup(func)))
 
 #define str_delete(xs...) \
 ({ \

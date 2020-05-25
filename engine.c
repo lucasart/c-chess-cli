@@ -71,7 +71,7 @@ Engine engine_new(const char *cmd, const char *name, FILE *log, Deadline *deadli
     deadline_set(deadline, &e, system_msec() + 1000);
     engine_writeln(&e, "uci");
 
-    RAII str_t line = str_new(), token = str_new();
+    scope(str_del) str_t line = str_new(), token = str_new();
 
     do {
         engine_readln(&e, &line);
@@ -129,7 +129,7 @@ void engine_sync(const Engine *e, Deadline *deadline)
 {
     deadline_set(deadline, e, system_msec() + 1000);
     engine_writeln(e, "isready");
-    RAII str_t line = str_new();
+    scope(str_del) str_t line = str_new();
 
     do {
         engine_readln(e, &line);
@@ -143,7 +143,7 @@ bool engine_bestmove(const Engine *e, int *score, int64_t *timeLeft, Deadline *d
 {
     int result = false;
     *score = 0;
-    RAII str_t line = str_new(), token = str_new();
+    scope(str_del) str_t line = str_new(), token = str_new();
 
     const int64_t start = system_msec(), timeLimit = start + *timeLeft;
     deadline_set(deadline, e, timeLimit + 1000);

@@ -27,14 +27,14 @@ static void uci_position_command(const Game *g, str_t *cmd)
     const int ply0 = max(g->ply - g->pos[g->ply].rule50, 0);
 
     str_cpy(cmd, "position fen ");
-    RAII str_t fen = pos_get(&g->pos[ply0]);
+    scope(str_del) str_t fen = pos_get(&g->pos[ply0]);
     str_cat_s(cmd, &fen);
 
     if (ply0 < g->ply) {
         str_cat(cmd, " moves");
 
         for (int ply = ply0 + 1; ply <= g->ply; ply++) {
-            RAII str_t lan = pos_move_to_lan(&g->pos[ply - 1], g->pos[ply].lastMove, g->go.chess960);
+            scope(str_del) str_t lan = pos_move_to_lan(&g->pos[ply - 1], g->pos[ply].lastMove, g->go.chess960);
             str_cat(cmd, " ", lan.buf);
         }
     }
@@ -143,7 +143,7 @@ int game_play(Game *g, const Engine engines[2], Deadline *deadline, bool reverse
         engine_sync(&engines[i], deadline);
     }
 
-    RAII str_t posCmd = str_new(), goCmd = str_new(), best = str_new();
+    scope(str_del) str_t posCmd = str_new(), goCmd = str_new(), best = str_new();
     move_t played = 0;
     int drawPlyCount = 0;
     int resignCount[NB_COLOR] = {0};
@@ -284,11 +284,11 @@ str_t game_pgn(const Game *g)
     str_cat_fmt(&pgn, "[Black \"%S\"]\n", &g->names[BLACK]);
 
     // Result in PGN format "1-0", "0-1", "1/2-1/2" (from white pov)
-    RAII str_t reason = str_new(), result = game_decode_state(g, &reason);
+    scope(str_del) str_t reason = str_new(), result = game_decode_state(g, &reason);
     str_cat_fmt(&pgn, "[Result \"%S\"]\n", &result);
     str_cat_fmt(&pgn, "[Termination \"%S\"]\n", &reason);
 
-    RAII str_t fen = pos_get(&g->pos[0]);
+    scope(str_del) str_t fen = pos_get(&g->pos[0]);
     str_cat_fmt(&pgn, "[FEN \"%S\"]\n", &fen);
 
     if (g->go.chess960)
@@ -303,7 +303,7 @@ str_t game_pgn(const Game *g)
                 g->pos[ply - 1].fullMove);
 
         // Prepare SAN base
-        RAII str_t san = pos_move_to_san(&g->pos[ply - 1], g->pos[ply].lastMove);
+        scope(str_del) str_t san = pos_move_to_san(&g->pos[ply - 1], g->pos[ply].lastMove);
 
         // Append check markers to SAN
         if (g->pos[ply].checkers) {
