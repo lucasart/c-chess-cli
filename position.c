@@ -258,7 +258,7 @@ static bool pos_move_is_capture(const Position *pos, move_t m)
 void pos_set(Position *pos, const char *fen)
 {
     clear(pos);
-    str_t token = str_new();
+    RAII str_t token = str_new();
 
     // Piece placement
     fen = str_tok(fen, &token, " ");
@@ -327,7 +327,6 @@ void pos_set(Position *pos, const char *fen)
     // Full move counter (in moves, starts at 1): optional, default 1
     pos->fullMove = str_tok(fen, &token, " ") ? atoi(token.buf) : 1;
 
-    str_delete(&token);
     finish(pos);
 }
 
@@ -384,9 +383,8 @@ str_t pos_get(const Position *pos)
     }
 
     // En passant and 50 move
-    str_t ep = square_to_string(pos->epSquare);
+    RAII str_t ep = square_to_string(pos->epSquare);
     str_cat_fmt(&fen, " %S %i %i", &ep, pos->rule50, pos->fullMove);
-    str_delete(&ep);
 
     return fen;
 }
@@ -550,9 +548,8 @@ str_t pos_move_to_lan(const Position *pos, move_t m, bool chess960)
     if (!chess960 && pos_move_is_castling(pos, m))
         to = to > from ? from + 2 : from - 2;  // e1h1 -> e1g1, e1a1 -> e1c1
 
-    str_t fromStr = square_to_string(from), toStr = square_to_string(to);
+    RAII str_t fromStr = square_to_string(from), toStr = square_to_string(to);
     str_cat_s(&lan, &fromStr, &toStr);
-    str_delete(&fromStr, &toStr);
 
     if (prom < NB_PIECE)
         str_putc(&lan, PieceLabel[BLACK][prom]);
@@ -605,9 +602,8 @@ str_t pos_move_to_san(const Position *pos, move_t m)
             if (pos_move_is_capture(pos, m))
                 str_putc(&san, 'x');
 
-            str_t toStr = square_to_string(to);
+            RAII str_t toStr = square_to_string(to);
             str_cat_s(&san, &toStr);
-            str_delete(&toStr);
         }
     } else {
         str_putc(&san, PieceLabel[WHITE][piece]);
@@ -668,9 +664,8 @@ str_t pos_move_to_san(const Position *pos, move_t m)
         if (pos_move_is_capture(pos, m))
             str_putc(&san, 'x');
 
-        str_t toStr = square_to_string(to);
+        RAII str_t toStr = square_to_string(to);
         str_cat_s(&san, &toStr);
-        str_delete(&toStr);
     }
 
     return san;
@@ -692,11 +687,9 @@ void pos_print(const Position *pos)
         puts(line);
     }
 
-    str_t fen = pos_get(pos);
+    RAII str_t fen = pos_get(pos);
     puts(fen.buf);
-    str_delete(&fen);
 
-    str_t lan = pos_move_to_lan(pos, pos->lastMove, true);
+    RAII str_t lan = pos_move_to_lan(pos, pos->lastMove, true);
     printf("Last move: %s\n", lan.buf);
-    str_delete(&lan);
 }

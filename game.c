@@ -27,17 +27,15 @@ static void uci_position_command(const Game *g, str_t *cmd)
     const int ply0 = max(g->ply - g->pos[g->ply].rule50, 0);
 
     str_cpy(cmd, "position fen ");
-    str_t fen = pos_get(&g->pos[ply0]);
+    RAII str_t fen = pos_get(&g->pos[ply0]);
     str_cat_s(cmd, &fen);
-    str_delete(&fen);
 
     if (ply0 < g->ply) {
         str_cat(cmd, " moves");
 
         for (int ply = ply0 + 1; ply <= g->ply; ply++) {
-            str_t lan = pos_move_to_lan(&g->pos[ply - 1], g->pos[ply].lastMove, g->go.chess960);
+            RAII str_t lan = pos_move_to_lan(&g->pos[ply - 1], g->pos[ply].lastMove, g->go.chess960);
             str_cat(cmd, " ", lan.buf);
-            str_delete(&lan);
         }
     }
 }
@@ -145,7 +143,7 @@ int game_play(Game *g, const Engine engines[2], Deadline *deadline, bool reverse
         engine_sync(&engines[i], deadline);
     }
 
-    str_t posCmd = str_new(), goCmd = str_new(), best = str_new();
+    RAII str_t posCmd = str_new(), goCmd = str_new(), best = str_new();
     move_t played = 0;
     int drawPlyCount = 0;
     int resignCount[NB_COLOR] = {0};
@@ -229,7 +227,6 @@ int game_play(Game *g, const Engine engines[2], Deadline *deadline, bool reverse
             resignCount[ei] = 0;
     }
 
-    str_delete(&goCmd, &posCmd, &best);
     assert(g->state != STATE_NONE);
 
     if (g->state < STATE_SEPARATOR)
@@ -287,12 +284,11 @@ str_t game_pgn(const Game *g)
     str_cat_fmt(&pgn, "[Black \"%S\"]\n", &g->names[BLACK]);
 
     // Result in PGN format "1-0", "0-1", "1/2-1/2" (from white pov)
-    str_t reason = str_new();
-    str_t result = game_decode_state(g, &reason);
+    RAII str_t reason = str_new(), result = game_decode_state(g, &reason);
     str_cat_fmt(&pgn, "[Result \"%S\"]\n", &result);
     str_cat_fmt(&pgn, "[Termination \"%S\"]\n", &reason);
 
-    str_t fen = pos_get(&g->pos[0]);
+    RAII str_t fen = pos_get(&g->pos[0]);
     str_cat_fmt(&pgn, "[FEN \"%S\"]\n", &fen);
 
     if (g->go.chess960)
@@ -307,7 +303,7 @@ str_t game_pgn(const Game *g)
                 g->pos[ply - 1].fullMove);
 
         // Prepare SAN base
-        str_t san = pos_move_to_san(&g->pos[ply - 1], g->pos[ply].lastMove);
+        RAII str_t san = pos_move_to_san(&g->pos[ply - 1], g->pos[ply].lastMove);
 
         // Append check markers to SAN
         if (g->pos[ply].checkers) {
@@ -318,10 +314,8 @@ str_t game_pgn(const Game *g)
         }
 
         str_cat(&pgn, san.buf, ply % 10 == 0 ? "\n" : " ");
-        str_delete(&san);
     }
 
     str_cat(&pgn, result.buf, "\n\n");
-    str_delete(&result, &reason, &fen);
     return pgn;
 }

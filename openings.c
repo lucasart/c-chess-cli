@@ -35,9 +35,8 @@ Openings openings_new(const char *fileName, bool random, int repeat)
         fseek(o.file, prng(&seed) % size, SEEK_SET);
 
         // Consume current line, likely broken, as we're somewhere in the middle of it
-        str_t line = str_new();
+        RAII str_t line = str_new();
         read_infinite(o.file, &line);
-        str_delete(&line);
     }
 
     pthread_mutex_init(&o.mtx, NULL);
@@ -54,7 +53,7 @@ void openings_delete(Openings *o)
         DIE_IF(fclose(o->file), EOF);
 
     pthread_mutex_destroy(&o->mtx);
-    str_delete(&o->lastFen);
+    str_del(&o->lastFen);
 }
 
 int openings_next(Openings *o, str_t *fen)
@@ -75,11 +74,10 @@ int openings_next(Openings *o, str_t *fen)
         str_cpy_s(fen, &o->lastFen);
     else {
         // Read 'fen' from file, and save in 'o->lastFen'
-        str_t line = str_new();
+        RAII str_t line = str_new();
         read_infinite(o->file, &line);
         str_tok(line.buf, fen, ";");
         str_cpy_s(&o->lastFen, fen);
-        str_delete(&line);
     }
 
     const int next = ++o->next;

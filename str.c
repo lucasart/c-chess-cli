@@ -99,6 +99,12 @@ void str_delete_aux(str_t *s1, ...)
     va_end(args);
 }
 
+void str_del(str_t *s)
+{
+    free(s->buf);
+    *s = (str_t){0};
+}
+
 static void do_str_cpy(str_t *dest, const char *restrict src, size_t n)
 {
     str_resize(dest, n);

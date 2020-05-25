@@ -71,7 +71,7 @@ Engine engine_new(const char *cmd, const char *name, FILE *log, Deadline *deadli
     deadline_set(deadline, &e, system_msec() + 1000);
     engine_writeln(&e, "uci");
 
-    str_t line = str_new(), token = str_new();
+    RAII str_t line = str_new(), token = str_new();
 
     do {
         engine_readln(&e, &line);
@@ -95,14 +95,13 @@ Engine engine_new(const char *cmd, const char *name, FILE *log, Deadline *deadli
         engine_writeln(&e, line.buf);
     }
 
-    str_delete(&line, &token);
     deadline_clear(deadline);
     return e;
 }
 
 void engine_delete(Engine *e)
 {
-    str_delete(&e->name);
+    str_del(&e->name);
     DIE_IF(fclose(e->in), EOF);
     DIE_IF(fclose(e->out), EOF);
     DIE_IF(kill(e->pid, SIGTERM), -1);
@@ -130,14 +129,13 @@ void engine_sync(const Engine *e, Deadline *deadline)
 {
     deadline_set(deadline, e, system_msec() + 1000);
     engine_writeln(e, "isready");
-    str_t line = str_new();
+    RAII str_t line = str_new();
 
     do {
         engine_readln(e, &line);
     } while (strcmp(line.buf, "readyok"));
 
     deadline_clear(deadline);
-    str_delete(&line);
 }
 
 bool engine_bestmove(const Engine *e, int *score, int64_t *timeLeft, Deadline *deadline,
@@ -145,7 +143,7 @@ bool engine_bestmove(const Engine *e, int *score, int64_t *timeLeft, Deadline *d
 {
     int result = false;
     *score = 0;
-    str_t line = str_new(), token = str_new();
+    RAII str_t line = str_new(), token = str_new();
 
     const int64_t start = system_msec(), timeLimit = start + *timeLeft;
     deadline_set(deadline, e, timeLimit + 1000);
@@ -186,7 +184,6 @@ bool engine_bestmove(const Engine *e, int *score, int64_t *timeLeft, Deadline *d
     }
 
     deadline_clear(deadline);
-    str_delete(&line, &token);
     return result;
 }
 

@@ -34,13 +34,11 @@ static void *thread_start(void *arg)
     // Prepare log file
     FILE *log = NULL;
 
-    str_t logName = str_new();
+    RAII str_t logName = str_new();
     str_cat_fmt(&logName, "c-chess-cli.%i.log", worker->id);
 
     if (options.debug)
         DIE_IF(log = fopen(logName.buf, "w"), NULL);
-
-    str_delete(&logName);
 
     // Prepare engines[]
     for (int i = 0; i < 2; i++)
@@ -48,7 +46,7 @@ static void *thread_start(void *arg)
             options.uciOptions[i].buf);
 
     int next;
-    str_t fen = str_new();
+    RAII str_t fen = str_new();
 
     while ((next = openings_next(&openings, &fen)) <= options.games) {
         // Play 1 game
@@ -57,17 +55,14 @@ static void *thread_start(void *arg)
 
         // Write to PGN file
         if (pgnout) {
-            str_t pgn = game_pgn(&game);
+            RAII str_t pgn = game_pgn(&game);
             DIE_IF(fputs(pgn.buf, pgnout), EOF);
-            str_delete(&pgn);
         }
 
         // Write to stdout a one line summary of the game
-        str_t reason = str_new();
-        str_t result = game_decode_state(&game, &reason);
+        RAII str_t reason = str_new(), result = game_decode_state(&game, &reason);
         printf("[%i] %s vs %s: %s (%s)\n", worker->id, game.names[WHITE].buf,
             game.names[BLACK].buf, result.buf, reason.buf);
-        str_delete(&result, &reason);
 
         // Update on global score (across workers)
         int wldCount[3];
@@ -97,8 +92,6 @@ static void *thread_start(void *arg)
 
         game_delete(&game);
     }
-
-    str_delete(&fen);
 
     for (int i = 0; i < 2; i++)
         engine_delete(&engines[i]);
