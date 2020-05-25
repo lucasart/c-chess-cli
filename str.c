@@ -82,23 +82,6 @@ str_t str_dup(const char *src)
     return s;
 }
 
-void str_delete_aux(str_t *s1, ...)
-{
-    va_list args;
-    va_start(args, s1);
-    str_t *next = s1;
-
-    while (next) {
-        assert(str_ok(next));
-        free(next->buf);
-        *next = (str_t){0};
-
-        next = va_arg(args, str_t *);
-    }
-
-    va_end(args);
-}
-
 void str_del(str_t *s)
 {
     free(s->buf);

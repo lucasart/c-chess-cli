@@ -14,6 +14,7 @@
 */
 #pragma once
 #include <stdbool.h>
+#include <stdlib.h>
 #include <stdio.h>
 
 typedef struct {
@@ -31,11 +32,17 @@ str_t str_new(void);
 // returns a valid string, copying its content from C-string 'src'
 str_t str_dup(const char *src);
 
-// str_delete(&s1, ..., &sn): frees a list of n >= 1 valid strings, and marks them as invalid
-#define str_delete(...) str_delete_aux(__VA_ARGS__, (void *)0)
-void str_delete_aux(str_t *s1, ...);
 void str_del(str_t *s);
 #define RAII __attribute__ ((cleanup(str_del)))
+
+#define str_delete(xs...) \
+({ \
+    str_t *_s[] = {xs}; \
+    for (size_t _i = 0; _i < sizeof(_s) / sizeof(*_s); _i++) { \
+        free(_s[_i]->buf); \
+        *_s[_i] = (str_t){0}; \
+    } \
+})
 
 // copies 'src' into valid string 'dest'
 void str_cpy(str_t *dest, const char *restrict src);  // C-string version
