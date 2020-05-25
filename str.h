@@ -52,17 +52,17 @@ void str_cpy_s(str_t *dest, const str_t *src);  // string version (faster and sa
 void str_ncpy(str_t *dest, const char *restrict src, size_t n);
 
 // str_putc(&dest, c1, ..., cn): appends n >= 1 characters c1...cn, to a valid string 'dest'
-#define str_putc(...) str_putc_aux(__VA_ARGS__, (void *)0)
-void str_putc_aux(str_t *dest, int c1, ...);
+#define str_putc(...) _str_putc(__VA_ARGS__, (void *)0)
+void _str_putc(str_t *dest, int c1, ...);
 
 // appends at most n characters of C-string 'src' into valid string 'dest'
 void str_ncat(str_t *dest, const char *src, size_t n);
 
 // str_cat(&dest, &s1, ..., &sn) appends n >= 1 strings to a valid string dest
-#define str_cat(...) str_cat_aux(__VA_ARGS__, (void *)0)
-#define str_cat_s(...) str_cat_s_aux(__VA_ARGS__, (void *)0)
-void str_cat_aux(str_t *dest, const char *s1, ...);  // C-string version
-void str_cat_s_aux(str_t *dest, const str_t *s1, ...);  // string version (faster and safer)
+#define str_cat(...) _str_cat(__VA_ARGS__, (void *)0)
+#define str_cat_s(...) _str_cat_s(__VA_ARGS__, (void *)0)
+void _str_cat(str_t *dest, const char *s1, ...);  // C-string version
+void _str_cat_s(str_t *dest, const str_t *s1, ...);  // string version (faster and safer)
 
 // same as sprintf(), but appends, instead of replace, to valid string s1
 void str_cat_fmt(str_t *dest, const char *fmt, ...);

@@ -15,6 +15,7 @@
 #pragma once
 #include <errno.h>
 #include <inttypes.h>
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
@@ -27,10 +28,10 @@ void system_sleep(int64_t msec);
 
 void die(const char *fmt, ...);
 
-#define DIE_IF(val, errval) do { \
-    typeof(val) __val = (val); \
-    if (__val == (errval)) { \
+#define DIE_IF(v) ({ \
+    bool  _v = (v); \
+    if (_v) { \
         fprintf(stderr, "error in %s: (%d). %s\n", __FILE__, __LINE__, strerror(errno)); \
         exit(EXIT_FAILURE); \
     } \
-} while (0)
+})

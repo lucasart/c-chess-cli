@@ -30,22 +30,22 @@ static void engine_spawn(Engine *e, const char *cmd)
 
     e->in = e->out = NULL;  // silence bogus compiler warning
 
-    DIE_IF(pipe(outof) < 0, -1);
-    DIE_IF(pipe(into) < 0, -1);
-    DIE_IF(e->pid = fork(), -1);
+    DIE_IF(pipe(outof) < 0);
+    DIE_IF(pipe(into) < 0);
+    DIE_IF((e->pid = fork()) < 0);
 
     if (e->pid == 0) {
         // in the child process
         close(into[1]);
         close(outof[0]);
 
-        DIE_IF(dup2(into[0], STDIN_FILENO), -1);
-        DIE_IF(dup2(outof[1], STDOUT_FILENO), -1);
+        DIE_IF(dup2(into[0], STDIN_FILENO) < 0);
+        DIE_IF(dup2(outof[1], STDOUT_FILENO) < 0);
 
         close(into[0]);
         close(outof[1]);
 
-        DIE_IF(execlp(cmd, cmd, NULL), -1);
+        DIE_IF(execlp(cmd, cmd, NULL) < 0);
     } else {
         assert(e->pid > 0);
 
@@ -53,8 +53,8 @@ static void engine_spawn(Engine *e, const char *cmd)
         close(into[0]);
         close(outof[1]);
 
-        DIE_IF(e->in = fdopen(outof[0], "r"), NULL);
-        DIE_IF(e->out = fdopen(into[1], "w"), NULL);
+        DIE_IF(!(e->in = fdopen(outof[0], "r")));
+        DIE_IF(!(e->out = fdopen(into[1], "w")));
     }
 }
 
@@ -102,27 +102,29 @@ Engine engine_new(const char *cmd, const char *name, FILE *log, Deadline *deadli
 void engine_delete(Engine *e)
 {
     str_del(&e->name);
-    DIE_IF(fclose(e->in), EOF);
-    DIE_IF(fclose(e->out), EOF);
-    DIE_IF(kill(e->pid, SIGTERM), -1);
+    DIE_IF(fclose(e->in) == EOF);
+    DIE_IF(fclose(e->out) == EOF);
+    DIE_IF(kill(e->pid, SIGTERM) < 0);
 }
 
 void engine_readln(const Engine *e, str_t *line)
 {
-    DIE_IF(str_getline(line, e->in), 0);
+    DIE_IF(!str_getline(line, e->in));
 
-    if (e->log && fprintf(e->log, "%s -> %s\n", e->name.buf, line->buf) <= 0)
-        die("engine_writeln() failed writing to log\n");
+    if (e->log)
+        DIE_IF(fprintf(e->log, "%s -> %s\n", e->name.buf, line->buf) < 0);
 }
 
 void engine_writeln(const Engine *e, char *buf)
 {
-    DIE_IF(fputs(buf, e->out), EOF);
-    DIE_IF(fputc('\n', e->out), EOF);
-    DIE_IF(fflush(e->out), EOF);
+    DIE_IF(fputs(buf, e->out) < 0);
+    DIE_IF(fputc('\n', e->out) < 0);
+    DIE_IF(fflush(e->out) == EOF);
 
-    if (e->log && (fprintf(e->log, "%s <- %s\n", e->name.buf, buf) < 0 || fflush(e->log) != 0))
-        die("engine_writeln() failed writing to log\n");
+    if (e->log) {
+        DIE_IF(fprintf(e->log, "%s <- %s\n", e->name.buf, buf) < 0);
+        DIE_IF(fflush(e->log) < 0);
+    }
 }
 
 void engine_sync(const Engine *e, Deadline *deadline)
@@ -196,8 +198,8 @@ void deadline_set(Deadline *deadline, const Engine *engine, int64_t timeLimit)
     deadline->timeLimit = timeLimit;
 
     if (engine && engine->log)
-        fprintf(engine->log, "deadline set: %s must respond by %" PRId64 "\n", engine->name.buf,
-            timeLimit);
+        DIE_IF(fprintf(engine->log, "deadline set: %s must respond by %" PRId64 "\n",
+            engine->name.buf, timeLimit) < 0);
 
     pthread_mutex_unlock(&deadline->mtx);
 }
@@ -207,8 +209,8 @@ void deadline_clear(Deadline *deadline)
     assert(deadline);
 
     if (deadline->engine && deadline->engine->log)
-        fprintf(deadline->engine->log, "deadline cleared: %s has no more deadline (was %" PRId64
-            " previously).\n", deadline->engine->name.buf, deadline->timeLimit);
+        DIE_IF(fprintf(deadline->engine->log, "deadline cleared: %s has no more deadline (was %"
+            PRId64 " previously).\n", deadline->engine->name.buf, deadline->timeLimit) < 0);
 
     deadline_set(deadline, NULL, 0);
 }
@@ -226,14 +228,14 @@ const Engine *deadline_overdue(Deadline *deadline)
 
     if (engine && time > timeLimit) {
         if (engine->log)
-            fprintf(engine->log, "deadline failed: %s responded at %" PRId64 ", which is %" PRId64
-                "ms after the deadline.\n", engine->name.buf, time, time - timeLimit);
+            DIE_IF(fprintf(engine->log, "deadline failed: %s responded at %" PRId64 ", which is %"
+                PRId64 "ms after the deadline.\n", engine->name.buf, time, time - timeLimit) < 0);
 
         return engine;
     } else {
         if (engine && engine->log)
-            fprintf(engine->log, "deadline passed: %s responded at %" PRId64 ", which is %" PRId64
-                "ms before the deadline.\n", engine->name.buf, time, timeLimit - time);
+            DIE_IF(fprintf(engine->log, "deadline passed: %s responded at %" PRId64 ", which is %"
+                PRId64 "ms before the deadline.\n", engine->name.buf, time, timeLimit - time) < 0);
 
         return NULL;
     }

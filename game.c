@@ -238,7 +238,6 @@ int game_play(Game *g, const Engine engines[2], Deadline *deadline, bool reverse
 str_t game_decode_state(const Game *g, str_t *reason)
 {
     str_t result = str_new();
-    str_cpy(reason, "");  // default: termination by chess rules
 
     if (g->state == STATE_NONE) {
         str_cpy(&result, "*");

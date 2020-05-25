@@ -121,7 +121,7 @@ void str_ncpy(str_t *dest, const char *restrict src, size_t n)
     assert(str_ok(dest));
 }
 
-void str_putc_aux(str_t *dest, int c1, ...)
+void _str_putc(str_t *dest, int c1, ...)
 {
     assert(str_ok(dest));
     va_list args;
@@ -158,7 +158,7 @@ void str_ncat(str_t *dest, const char *src, size_t n)
     assert(str_ok(dest));
 }
 
-void str_cat_aux(str_t *dest, const char *s1, ...)
+void _str_cat(str_t *dest, const char *s1, ...)
 {
     assert(str_ok(dest));
     va_list args;
@@ -177,7 +177,7 @@ void str_cat_aux(str_t *dest, const char *s1, ...)
     assert(str_ok(dest));
 }
 
-void str_cat_s_aux(str_t *dest, const str_t *s1, ...)
+void _str_cat_s(str_t *dest, const str_t *s1, ...)
 {
     assert(str_ok(dest));
     va_list args;

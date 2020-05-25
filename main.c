@@ -38,7 +38,7 @@ static void *thread_start(void *arg)
     str_cat_fmt(&logName, "c-chess-cli.%i.log", worker->id);
 
     if (options.debug)
-        DIE_IF(log = fopen(logName.buf, "w"), NULL);
+        DIE_IF(!(log = fopen(logName.buf, "w")));
 
     // Prepare engines[]
     for (int i = 0; i < 2; i++)
@@ -56,7 +56,7 @@ static void *thread_start(void *arg)
         // Write to PGN file
         if (pgnout) {
             scope(str_del) str_t pgn = game_pgn(&game);
-            DIE_IF(fputs(pgn.buf, pgnout), EOF);
+            DIE_IF(fputs(pgn.buf, pgnout) < 0);
         }
 
         // Write to stdout a one line summary of the game
@@ -97,7 +97,7 @@ static void *thread_start(void *arg)
         engine_delete(&engines[i]);
 
     if (log)
-        DIE_IF(fclose(log), EOF);
+        DIE_IF(fclose(log) < 0);
 
     WorkersBusy--;
     return NULL;
@@ -117,7 +117,7 @@ int main(int argc, const char **argv)
     pgnout = NULL;
 
     if (options.pgnout.len)
-        DIE_IF(pgnout = fopen(options.pgnout.buf, "w"), NULL);
+        DIE_IF(!(pgnout = fopen(options.pgnout.buf, "w")));
 
     pthread_t threads[options.concurrency];
     workers_new(options.concurrency);
@@ -144,7 +144,7 @@ int main(int argc, const char **argv)
     workers_delete();
 
     if (pgnout)
-        DIE_IF(fclose(pgnout), EOF);
+        DIE_IF(fclose(pgnout) < 0);
 
     openings_delete(&openings);
     options_delete(&options);
