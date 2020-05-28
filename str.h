@@ -35,9 +35,9 @@ str_t str_dup(const char *src);
 void str_del(str_t *s);
 #define scope(func) __attribute__ ((cleanup(func)))
 
-#define str_delete(xs...) \
+#define str_delete(...) \
 ({ \
-    str_t *_s[] = {xs}; \
+    str_t *_s[] = {__VA_ARGS__}; \
     for (size_t _i = 0; _i < sizeof(_s) / sizeof(*_s); _i++) { \
         free(_s[_i]->buf); \
         *_s[_i] = (str_t){0}; \
