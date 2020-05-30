@@ -34,7 +34,8 @@ static void uci_position_command(const Game *g, str_t *cmd)
         str_cat(cmd, " moves");
 
         for (int ply = ply0 + 1; ply <= g->ply; ply++) {
-            scope(str_del) str_t lan = pos_move_to_lan(&g->pos[ply - 1], g->pos[ply].lastMove, g->go.chess960);
+            scope(str_del) str_t lan = pos_move_to_lan(&g->pos[ply - 1], g->pos[ply].lastMove,
+                g->go.chess960);
             str_cat(cmd, " ", lan.buf);
         }
     }
