@@ -14,7 +14,6 @@
 */
 #include <stdio.h>
 #include "bitboard.h"
-#include "util.h"
 
 bitboard_t Rank[NB_RANK], File[NB_FILE];
 bitboard_t PawnAttacks[NB_COLOR][NB_SQUARE], KnightAttacks[NB_SQUARE], KingAttacks[NB_SQUARE];
@@ -177,23 +176,6 @@ static __attribute__((constructor)) void bb_init(void)
         init_slider_attacks(square, BishopMask, BishopMagic, BishopShift, BishopAttacks, BishopDir);
         init_slider_attacks(square, RookMask, RookMagic, RookShift, RookAttacks, RookDir);
     }
-
-    // Validate all the precalculated bitboards in debug mode
-    assert(hash(Rank, sizeof Rank, 0) == 0x95f670a067ad6175);
-    assert(hash(File, sizeof File, 0) == 0xf6e52aa37a4f5d09);
-    assert(hash(Ray, sizeof Ray, 0) == 0x281f130e48e511a4);
-    assert(hash(Segment, sizeof Segment, 0) == 0xeb806a23aa99e988);
-    assert(hash(KnightAttacks, sizeof KnightAttacks, 0) == 0x10ab5841ae3a3c4e);
-    assert(hash(KingAttacks, sizeof KingAttacks, 0) == 0xd209492892720e5b);
-    assert(hash(PawnAttacks, sizeof PawnAttacks, 0) == 0x5570cebd9a3bbb1a);
-    assert(hash(BishopMask, sizeof BishopMask, 0) == 0xbacf967ebeb62107);
-    assert(hash(RookMask, sizeof RookMask, 0) == 0x962a289b1187a92d);
-    assert(hash(BishopMagic, sizeof BishopMagic, 0) == 0xef24e1eb237246d1);
-    assert(hash(RookMagic, sizeof RookMagic, 0) == 0x6d2a92d46ef0ecbc);
-    assert(hash(BishopShift, sizeof BishopShift, 0) == 0x5fdd92372c411eea);
-    assert(hash(RookShift, sizeof RookShift, 0) == 0xadceb33df45fc2cb);
-    assert(hash(BishopDB, sizeof BishopDB, 0) == 0x3ef1f0d07c261d52);
-    assert(hash(RookDB, sizeof RookDB, 0) == 0xf3fa2f3754f1c608);
 }
 
 int opposite(int color)
