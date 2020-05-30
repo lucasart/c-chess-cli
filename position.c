@@ -166,81 +166,6 @@ static void finish(Position *pos)
         assert(pos->checkers && bb_count(pos->checkers) <= 2);
     } else
         pos->checkers = 0;
-
-#ifndef NDEBUG
-    // Verify that byColor[] and byPiece[] do not collide, and are consistent
-    bitboard_t all = 0;
-
-    for (int piece = KNIGHT; piece <= PAWN; piece++) {
-        assert(!(pos->byPiece[piece] & all));
-        all |= pos->byPiece[piece];
-    }
-
-    assert(!(pos->byColor[WHITE] & pos->byColor[BLACK]));
-    assert(all == (pos->byColor[WHITE] | pos->byColor[BLACK]));
-
-    // Verify piece counts
-    for (int color = WHITE; color <= BLACK; color++) {
-        assert(bb_count(pos_pieces_cpp(pos, color, KNIGHT, PAWN)) <= 10);
-        assert(bb_count(pos_pieces_cpp(pos, color, BISHOP, PAWN)) <= 10);
-        assert(bb_count(pos_pieces_cpp(pos, color, ROOK, PAWN)) <= 10);
-        assert(bb_count(pos_pieces_cpp(pos, color, QUEEN, PAWN)) <= 9);
-        assert(bb_count(pos_pieces_cp(pos, color, PAWN)) <= 8);
-        assert(bb_count(pos_pieces_cp(pos, color, KING)) == 1);
-        assert(bb_count(pos->byColor[color]) <= 16);
-    }
-
-    // Verify pawn ranks
-    assert(!(pos->byPiece[PAWN] & (Rank[RANK_1] | Rank[RANK_8])));
-
-    // Verify castle rooks
-    if (pos->castleRooks) {
-        assert(!(pos->castleRooks & ~((Rank[RANK_1] & pos_pieces_cp(pos, WHITE, ROOK))
-            | (Rank[RANK_8] & pos_pieces_cp(pos, BLACK, ROOK)))));
-
-        for (int color = WHITE; color <= BLACK; color++) {
-            const bitboard_t b = pos->castleRooks & pos->byColor[color];
-
-            if (bb_count(b) == 2)
-                assert(Segment[bb_lsb(b)][bb_msb(b)] & pos_pieces_cp(pos, color, KING));
-            else if (bb_count(b) == 1)
-                assert(!(pos_pieces_cp(pos, color, KING) & (File[FILE_A] | File[FILE_H])));
-            else
-                assert(!b);
-        }
-    }
-
-    // Verify ep square
-    if (pos->epSquare != NB_SQUARE) {
-        const int rank = rank_of(pos->epSquare);
-        const int color = rank == RANK_3 ? WHITE : BLACK;
-
-        assert(color != pos->turn);
-        assert(!bb_test(pos_pieces(pos), pos->epSquare));
-        assert(rank == RANK_3 || rank == RANK_6);
-        assert(bb_test(pos_pieces_cp(pos, color, PAWN), pos->epSquare + push_inc(color)));
-        assert(!bb_test(pos_pieces(pos), pos->epSquare - push_inc(color)));
-    }
-
-    // Verify key
-    bitboard_t key = 0;
-
-    for (int color = WHITE; color <= BLACK; color++)
-        for (int piece = KNIGHT; piece <= PAWN; piece++) {
-            bitboard_t b = pos_pieces_cp(pos, color, piece);
-
-            while (b)
-                key ^= ZobristKey[color][piece][bb_pop_lsb(&b)];
-        }
-
-    key ^= ZobristEnPassant[pos->epSquare] ^ (pos->turn == BLACK ? ZobristTurn : 0)
-        ^ zobrist_castling(pos->castleRooks);
-    assert(pos->key == key);
-
-    // Verify turn and rule50
-    assert(pos->turn == WHITE || pos->turn == BLACK);
-    assert(pos->rule50 <= 100);
-#endif
 }
 
 static bool pos_move_is_capture(const Position *pos, move_t m)
@@ -257,18 +182,18 @@ void pos_set(Position *pos, const char *fen)
 
     // Piece placement
     fen = str_tok(fen, &token, " ");
-    assert(token.len >= 10);
+    DIE_IF(token.len < 10);
     int file = FILE_A, rank = RANK_8;
 
     for (const char *c = token.buf; *c; c++) {
         if ('1' <= *c && *c <= '8') {
             file += *c -'0';
-            assert(file <= NB_FILE);
+            DIE_IF(file > NB_FILE);
         } else if (*c == '/') {
             rank--;
             file = FILE_A;
         } else {
-            assert(strchr("nbrqkpNBRQKP", *c));
+            DIE_IF(!strchr("nbrqkpNBRQKP", *c));
             const bool color = islower((unsigned char)*c);
             set_square(pos, color, (int)(strchr(PieceLabel[color], *c) - PieceLabel[color]),
                 square_from(rank, file++));
@@ -277,19 +202,19 @@ void pos_set(Position *pos, const char *fen)
 
     // Turn of play
     fen = str_tok(fen, &token, " ");
-    assert(token.len == 1);
+    DIE_IF(token.len != 1);
 
     if (token.buf[0] == 'w')
         pos->turn = WHITE;
     else {
-        assert(token.buf[0] == 'b');
+        DIE_IF(token.buf[0] != 'b');
         pos->turn = BLACK;
         pos->key ^= ZobristTurn;
     }
 
     // Castling rights: optional, default '-'
     if ((fen = str_tok(fen, &token, " "))) {
-        assert(token.len <= 4);
+        DIE_IF(token.len > 4);
 
         for (const char *c = token.buf; *c; c++) {
             rank = isupper((unsigned char)*c) ? RANK_1 : RANK_8;
@@ -302,7 +227,7 @@ void pos_set(Position *pos, const char *fen)
             else if ('A' <= uc && uc <= 'H')
                 bb_set(&pos->castleRooks, square_from(rank, uc - 'A'));
             else
-                assert(*c == '-' && !pos->castleRooks && c[1] == '\0');
+                DIE_IF(*c != '-' || pos->castleRooks || c[1] != '\0');
         }
     }
 
@@ -312,15 +237,59 @@ void pos_set(Position *pos, const char *fen)
     if (!(fen = str_tok(fen, &token, " ")))
         str_cpy(&token, "-");
 
-    assert(token.len <= 2);
+    DIE_IF(token.len > 2);
     pos->epSquare = (uint8_t)string_to_square(token.buf);
     pos->key ^= ZobristEnPassant[pos->epSquare];
 
     // 50 move counter (in plies, starts at 0): optional, default 0
     pos->rule50 = (fen = str_tok(fen, &token, " ")) ? (uint8_t)atoi(token.buf) : 0;
+    DIE_IF(pos->rule50 >= 100);
 
     // Full move counter (in moves, starts at 1): optional, default 1
     pos->fullMove = str_tok(fen, &token, " ") ? (uint16_t)atoi(token.buf) : 1;
+
+    // Verify piece counts
+    for (int color = WHITE; color <= BLACK; color++) {
+        DIE_IF(bb_count(pos_pieces_cpp(pos, color, KNIGHT, PAWN)) > 10);
+        DIE_IF(bb_count(pos_pieces_cpp(pos, color, BISHOP, PAWN)) > 10);
+        DIE_IF(bb_count(pos_pieces_cpp(pos, color, ROOK, PAWN)) > 10);
+        DIE_IF(bb_count(pos_pieces_cpp(pos, color, QUEEN, PAWN)) > 9);
+        DIE_IF(bb_count(pos_pieces_cp(pos, color, PAWN)) > 8);
+        DIE_IF(bb_count(pos_pieces_cp(pos, color, KING)) != 1);
+        DIE_IF(bb_count(pos->byColor[color]) > 16);
+    }
+
+    // Verify pawn ranks
+    DIE_IF(pos->byPiece[PAWN] & (Rank[RANK_1] | Rank[RANK_8]));
+
+    // Verify castle rooks
+    if (pos->castleRooks) {
+        DIE_IF(pos->castleRooks & ~((Rank[RANK_1] & pos_pieces_cp(pos, WHITE, ROOK))
+            | (Rank[RANK_8] & pos_pieces_cp(pos, BLACK, ROOK))));
+
+        for (int color = WHITE; color <= BLACK; color++) {
+            const bitboard_t b = pos->castleRooks & pos->byColor[color];
+
+            if (bb_count(b) == 2)
+                DIE_IF(!(Segment[bb_lsb(b)][bb_msb(b)] & pos_pieces_cp(pos, color, KING)));
+            else if (bb_count(b) == 1)
+                DIE_IF(pos_pieces_cp(pos, color, KING) & (File[FILE_A] | File[FILE_H]));
+            else
+                DIE_IF(b);
+        }
+    }
+
+    // Verify ep square
+    if (pos->epSquare != NB_SQUARE) {
+        const int rank = rank_of(pos->epSquare);
+        const int color = rank == RANK_3 ? WHITE : BLACK;
+
+        DIE_IF(color == pos->turn);
+        DIE_IF(bb_test(pos_pieces(pos), pos->epSquare));
+        DIE_IF(rank != RANK_3 && rank != RANK_6);
+        DIE_IF(!bb_test(pos_pieces_cp(pos, color, PAWN), pos->epSquare + push_inc(color)));
+        DIE_IF(bb_test(pos_pieces(pos), pos->epSquare - push_inc(color)));
+    }
 
     finish(pos);
 }
