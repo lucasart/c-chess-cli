@@ -98,8 +98,8 @@ Options options_new(int argc, const char **argv)
             } else if (!strcmp(argv[i - 1], "-movetime")) {
                 str_t movetime[2] = {str_new(), str_new()};
                 split_engine_option(argv[i], movetime);
-                o.go.movetime[0] = atof(movetime[0].buf) * 1000;
-                o.go.movetime[1] = atof(movetime[1].buf) * 1000;
+                o.go.movetime[0] = (int64_t)(atof(movetime[0].buf) * 1000);
+                o.go.movetime[1] = (int64_t)(atof(movetime[1].buf) * 1000);
                 str_delete(&movetime[0], &movetime[1]);
             } else if (!strcmp(argv[i - 1], "-resign"))
                 sscanf(argv[i], "%i,%i", &o.go.resignCount, &o.go.resignScore);
@@ -117,8 +117,8 @@ Options options_new(int argc, const char **argv)
                     else
                         sscanf(tc[j].buf, "%lf+%lf", &time, &increment);
 
-                    o.go.time[j] = time * 1000;
-                    o.go.increment[j] = increment * 1000;
+                    o.go.time[j] = (int64_t)(time * 1000);
+                    o.go.increment[j] = (int64_t)(increment * 1000);
                 }
 
                 str_delete(&tc[0], &tc[1]);

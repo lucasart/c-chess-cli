@@ -143,7 +143,8 @@ static __attribute__((constructor)) void bb_init(void)
                 const int s2 = square_from(r2, f2);
                 bb_set(&mask, s2);
                 Segment[square][s2] = mask;
-                r2 += KingDir[d][0], f2 += KingDir[d][1];
+                r2 += KingDir[d][0];
+                f2 += KingDir[d][1];
             }
 
             bitboard_t sqs = mask;
@@ -221,7 +222,7 @@ move_t move_build(int from, int to, int prom)
     BOUNDS(from, NB_SQUARE);
     BOUNDS(to, NB_SQUARE);
     assert((unsigned)prom <= QUEEN || prom == NB_PIECE);
-    return from | (to << 6) | (prom << 12);
+    return (move_t)(from | (to << 6) | (prom << 12));
 }
 
 int move_from(move_t m)

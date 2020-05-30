@@ -18,6 +18,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdlib.h>
+#include <stdnoreturn.h>
 #include <string.h>
 
 uint64_t prng(uint64_t *state);
@@ -26,12 +27,12 @@ uint64_t hash(const void *buffer, size_t length, uint64_t seed);
 int64_t system_msec(void);
 void system_sleep(int64_t msec);
 
-void die(const char *fmt, ...);
+noreturn void die(const char *fmt, ...);
 
-#define DIE_IF(v) ({ \
+#define DIE_IF(v) do { \
     bool  _v = (v); \
     if (_v) { \
         fprintf(stderr, "error in %s: (%d). %s\n", __FILE__, __LINE__, strerror(errno)); \
         exit(EXIT_FAILURE); \
     } \
-})
+} while (0)

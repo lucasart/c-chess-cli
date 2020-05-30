@@ -21,9 +21,10 @@
 
 // Engine process
 typedef struct {
-    pid_t pid;
     FILE *in, *out, *log;
     str_t name;
+    pid_t pid;
+    char pad[4];
 } Engine;
 
 // Deadlines overdues are unrecovrable errors. Given a choice, we prefer to handle them gracefully

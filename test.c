@@ -20,9 +20,11 @@
 #include "util.h"
 
 // xorshift64star by Sebastiano Vigna: http://vigna.di.unimi.it/ftp/papers/xorshift.pdf
-uint64_t mix(uint64_t b)
+static uint64_t mix(uint64_t b)
 {
-    b ^= b >> 12, b ^= b << 25, b ^= b >> 27;
+    b ^= b >> 12;
+    b ^= b << 25;
+    b ^= b >> 27;
     return b * 2685821657736338717LL;
 }
 
@@ -43,14 +45,14 @@ static uint64_t hash_blocks(const void *buffer, size_t length, uint64_t *seed)
     return result;
 }
 
-#define TEST(val) ({ \
+#define TEST(val) do { \
     if (!(val)) { \
         printf("FAIL %s: %d\n", __FILE__, __LINE__); \
         return; \
     } \
-})
+} while (0)
 
-void test_bitboard(void)
+static void test_bitboard(void)
 {
     uint64_t hs, hv, rs;  // hash seed, hash value, and random seed
 
@@ -106,7 +108,7 @@ void test_bitboard(void)
     TEST(hv == 0x8ee00e49243de3f9);
 
     // Validate: bb_bishop_attacks() and bb_rook_attacks()
-    hs = hv = 0, rs = 0;
+    hs = hv = rs = 0;
     for (int i = 0; i < 2000; i++) {
         const int s = prng(&rs) % NB_SQUARE;
         const bitboard_t occ = prng(&rs) & prng(&rs);
@@ -116,7 +118,7 @@ void test_bitboard(void)
     TEST(hv == 0x56720d3c08204cb1);
 
     // Validate: bb_lsb(), bb_msb(), bb_pop_lsb(), bb_several(), bb_count()
-    hs = hv = 0, rs = 0;
+    hs = hv = rs = 0;
     for (int i = 0; i < 1000; i++) {
         bitboard_t b = prng(&rs) & prng(&rs);
 

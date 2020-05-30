@@ -274,7 +274,7 @@ void pos_set(Position *pos, const char *fen)
             file = FILE_A;
         } else {
             assert(strchr("nbrqkpNBRQKP", *c));
-            const bool color = islower((unsigned)*c);
+            const bool color = islower((unsigned char)*c);
             set_square(pos, color, (int)(strchr(PieceLabel[color], *c) - PieceLabel[color]),
                 square_from(rank, file++));
         }
@@ -297,17 +297,17 @@ void pos_set(Position *pos, const char *fen)
         assert(token.len <= 4);
 
         for (const char *c = token.buf; *c; c++) {
-            rank = isupper((unsigned)*c) ? RANK_1 : RANK_8;
-            char C = toupper(*c);
+            rank = isupper((unsigned char)*c) ? RANK_1 : RANK_8;
+            char uc = (char)toupper(*c);
 
-            if (C == 'K')
+            if (uc == 'K')
                 bb_set(&pos->castleRooks, bb_msb(Rank[rank] & pos->byPiece[ROOK]));
-            else if (C == 'Q')
+            else if (uc == 'Q')
                 bb_set(&pos->castleRooks, bb_lsb(Rank[rank] & pos->byPiece[ROOK]));
-            else if ('A' <= C && C <= 'H')
-                bb_set(&pos->castleRooks, square_from(rank, C - 'A'));
+            else if ('A' <= uc && uc <= 'H')
+                bb_set(&pos->castleRooks, square_from(rank, uc - 'A'));
             else
-                assert(C == '-' && !pos->castleRooks && c[1] == '\0');
+                assert(*c == '-' && !pos->castleRooks && c[1] == '\0');
         }
     }
 
@@ -318,14 +318,14 @@ void pos_set(Position *pos, const char *fen)
         str_cpy(&token, "-");
 
     assert(token.len <= 2);
-    pos->epSquare = string_to_square(token.buf);
+    pos->epSquare = (uint8_t)string_to_square(token.buf);
     pos->key ^= ZobristEnPassant[pos->epSquare];
 
     // 50 move counter (in plies, starts at 0): optional, default 0
-    pos->rule50 = (fen = str_tok(fen, &token, " ")) ? atoi(token.buf) : 0;
+    pos->rule50 = (fen = str_tok(fen, &token, " ")) ? (uint8_t)atoi(token.buf) : 0;
 
     // Full move counter (in moves, starts at 1): optional, default 1
-    pos->fullMove = str_tok(fen, &token, " ") ? atoi(token.buf) : 1;
+    pos->fullMove = str_tok(fen, &token, " ") ? (uint16_t)atoi(token.buf) : 1;
 
     finish(pos);
 }
@@ -434,7 +434,7 @@ void pos_move(Position *pos, const Position *before, move_t m)
             // Set ep square upon double push, only if catpturably by enemy pawns
             if (to == from + 2 * push
                     && (PawnAttacks[us][from + push] & pos_pieces_cp(pos, them, PAWN)))
-                pos->epSquare = from + push;
+                pos->epSquare = (uint8_t)(from + push);
 
             // handle ep-capture and promotion
             if (to == before->epSquare)
@@ -460,7 +460,7 @@ void pos_move(Position *pos, const Position *before, move_t m)
         }
     }
 
-    pos->turn = them;
+    pos->turn = (uint8_t)them;
     pos->key ^= ZobristTurn;
     pos->key ^= ZobristEnPassant[before->epSquare] ^ ZobristEnPassant[pos->epSquare];
     pos->key ^= zobrist_castling(before->castleRooks ^ pos->castleRooks);

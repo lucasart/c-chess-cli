@@ -47,7 +47,7 @@ uint64_t hash(const void *buffer, size_t length, uint64_t seed)
     return result;
 }
 
-void die(const char *fmt, ...)
+noreturn void die(const char *fmt, ...)
 {
     va_list ap;
     va_start(ap, fmt);

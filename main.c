@@ -22,9 +22,9 @@
 #include "util.h"
 #include "workers.h"
 
-Options options;
-Openings openings;
-FILE *pgnout;
+static Options options;
+static Openings openings;
+static FILE *pgnout;
 
 static void *thread_start(void *arg)
 {

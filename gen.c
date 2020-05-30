@@ -254,25 +254,26 @@ void gen_run_test()
 {
     typedef struct {
         const char fen[128];
-        int depth;
         size_t leaves;
+        int depth;
+        char pad[4];
     } Test;
 
     Test tests[] = {
         // Normal chess: https://www.chessprogramming.org/Perft_Results
-        (Test){"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0", 5, 4865609},
-        (Test){"r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0", 4, 4085603},
-        (Test){"8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - -  0", 5, 674624},
-        (Test){"r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0", 4, 422333},
-        (Test){"rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1", 4, 2103487},
-        (Test){"r4rk1/1pp1qppp/p1np1n2/2b1p1B1/2B1P1b1/P1NP1N2/1PP1QPPP/R4RK1 w - - 0", 4, 3894594},
+        (Test){"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0", 5, 4865609, {0}},
+        (Test){"r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0", 4, 4085603, {0}},
+        (Test){"8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - -  0", 5, 674624, {0}},
+        (Test){"r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0", 4, 422333, {0}},
+        (Test){"rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1", 4, 2103487, {0}},
+        (Test){"r4rk1/1pp1qppp/p1np1n2/2b1p1B1/2B1P1b1/P1NP1N2/1PP1QPPP/R4RK1 w - - 0", 4, 3894594, {0}},
 
         // Chess960: http://talkchess.com/forum3/viewtopic.php?f=7&t=55274#p608193
-        (Test){"r1k1r2q/p1ppp1pp/8/8/8/8/P1PPP1PP/R1K1R2Q w KQkq - 0", 5, 7096972},
-        (Test){"r1k2r1q/p1ppp1pp/8/8/8/8/P1PPP1PP/R1K2R1Q w KQkq - 0", 4, 541480},
-        (Test){"8/8/8/4B2b/6nN/8/5P2/2R1K2k w Q - 0", 5, 3223406},
-        (Test){"2r5/8/8/8/8/8/6PP/k2KR3 w K - 0", 5, 985298},
-        (Test){"4r3/3k4/8/8/8/8/6PP/qR1K1R2 w KQ - 0", 5, 8992652}
+        (Test){"r1k1r2q/p1ppp1pp/8/8/8/8/P1PPP1PP/R1K1R2Q w KQkq - 0", 5, 7096972, {0}},
+        (Test){"r1k2r1q/p1ppp1pp/8/8/8/8/P1PPP1PP/R1K2R1Q w KQkq - 0", 4, 541480, {0}},
+        (Test){"8/8/8/4B2b/6nN/8/5P2/2R1K2k w Q - 0", 5, 3223406, {0}},
+        (Test){"2r5/8/8/8/8/8/6PP/k2KR3 w K - 0", 5, 985298, {0}},
+        (Test){"4r3/3k4/8/8/8/8/6PP/qR1K1R2 w KQ - 0", 5, 8992652, {0}}
     };
 
     Position pos;

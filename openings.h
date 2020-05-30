@@ -10,6 +10,7 @@ typedef struct {
     str_t lastFen;
     int next;
     bool repeat;
+    char pad[3];
 } Openings;
 
 Openings openings_new(const char *fileName, bool random, int repeat);

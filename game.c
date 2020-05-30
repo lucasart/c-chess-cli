@@ -122,7 +122,8 @@ Game game_new(const char *fen, const GameOptions *go)
 
 void game_delete(Game *g)
 {
-    free(g->pos), g->pos = NULL;
+    free(g->pos);
+    g->pos = NULL;
     str_delete(&g->names[WHITE], &g->names[BLACK]);
 }
 
