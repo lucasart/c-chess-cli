@@ -62,22 +62,22 @@ void test_bitboard(void)
     hs = hv = 0;
     for (int r = 0; r < NB_RANK; r++)
         for (int f = 0; f < NB_FILE; f++)
-            hv ^= hash_block(&hs, square_from(r, f));
+            hv ^= hash_block(&hs, (uint64_t)square_from(r, f));
     TEST(hv == 0xdaed883de606a87a);
 
     // Validate: rank_of(), file_of()
     hs = hv = 0;
     for (int s = 0; s < NB_SQUARE; s++) {
-        hv ^= hash_block(&hs, rank_of(s));
-        hv ^= hash_block(&hs, file_of(s));
+        hv ^= hash_block(&hs, (uint64_t)rank_of(s));
+        hv ^= hash_block(&hs, (uint64_t)file_of(s));
     }
     TEST(hv == 0x3f259cdbf7e0e32d);
 
     // Validate: reltive_rank()
     hs = hv = 0;
-    for (int c = 0; c < NB_COLOR; c++) 
+    for (int c = 0; c < NB_COLOR; c++)
         for (int r = 0; r < NB_RANK; r++)
-            hv ^= hash_block(&hs, relative_rank(c, r));
+            hv ^= hash_block(&hs, (uint64_t)relative_rank(c, r));
     TEST(hv = 0x3069d65765d6619c);
 
     // Validate: move_build(), move_from(), move_to(), move_prom()
@@ -90,7 +90,7 @@ void test_bitboard(void)
 
                 const move_t m = move_build(from, to, prom);
                 TEST(move_from(m) == from && move_to(m) == to && move_prom(m) == prom);
-                hv ^= hash_block(&hs, m);
+                hv ^= hash_block(&hs, (uint64_t)m);
             }
     TEST(hv == 0xcc9192e4a5b7c4a2);
 
@@ -120,18 +120,18 @@ void test_bitboard(void)
     for (int i = 0; i < 1000; i++) {
         bitboard_t b = prng(&rs) & prng(&rs);
 
-        hv ^= hash_block(&hs, bb_several(b) & prng(&rs));  // need very sparse bitboard to test
-        hv ^= hash_block(&hs, bb_count(b));
+        hv ^= hash_block(&hs, bb_several(b & prng(&rs)));  // need very sparse bitboard to test
+        hv ^= hash_block(&hs, (uint64_t)bb_count(b));
 
         if (b) {
-            hv ^= hash_block(&hs, bb_lsb(b));
-            hv ^= hash_block(&hs, bb_msb(b));
+            hv ^= hash_block(&hs, (uint64_t)bb_lsb(b));
+            hv ^= hash_block(&hs, (uint64_t)bb_msb(b));
         }
 
         while (b)
-            hv ^= hash_block(&hs, bb_pop_lsb(&b));
+            hv ^= hash_block(&hs, (uint64_t)bb_pop_lsb(&b));
     }
-    TEST(hv == 0x481381ae119f7f7e);
+    TEST(hv == 0xffada1c1b6fe03c);
     //printf("%" PRIx64 "\n", hv);
 }
 

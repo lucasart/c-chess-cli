@@ -232,9 +232,9 @@ void str_cat_fmt(str_t *dest, const char *fmt, ...)
 
         if (pct > fmt)
             // '%' found: append the chunk of format string before '%' (if any)
-            str_ncat(dest, fmt, pct - fmt);
+            str_ncat(dest, fmt, (size_t)(pct - fmt));
 
-        bytesLeft -= (pct + 2) - fmt;
+        bytesLeft -= (size_t)((pct + 2) - fmt);
         fmt = pct + 2;  // move past the '%?' to prepare next loop iteration
         assert(strlen(fmt) == bytesLeft);
 
@@ -247,7 +247,7 @@ void str_cat_fmt(str_t *dest, const char *fmt, ...)
             str_cat_s(dest, va_arg(args, const str_t *));  // string
         else if (pct[1] == 'i' || pct[1] == 'I') {  // int or intmax_t
             const intmax_t i = pct[1] == 'i' ? va_arg(args, int) : va_arg(args, intmax_t);
-            char *s = do_fmt_u(imaxabs(i), &buf[sizeof(buf) - 1]);
+            char *s = do_fmt_u((uintmax_t)imaxabs(i), &buf[sizeof(buf) - 1]);
             if (i < 0) *--s = '-';
             str_cat(dest, s);
         } else if (pct[1] == 'u')  // unsigned int

@@ -206,7 +206,7 @@ static move_t *gen_check_escapes(const Position *pos, move_t *mList)
     return mList;
 }
 
-static uint64_t gen_leaves(const Position *pos, int depth, int ply, bool chess960)
+static size_t gen_leaves(const Position *pos, int depth, int ply, bool chess960)
 {
     if (depth <= 0) {
         assert(depth == 0);
@@ -216,16 +216,16 @@ static uint64_t gen_leaves(const Position *pos, int depth, int ply, bool chess96
     move_t mList[MAX_MOVES];
 
     move_t *end = gen_all_moves(pos, mList);
-    uint64_t result = 0;
+    size_t result = 0;
 
     // Bulk counting
     if (depth == 1 && ply > 0)
-        return end - mList;
+        return (size_t)(end - mList);
 
     for (move_t *m = mList; m != end; m++) {
         Position after;
         pos_move(&after, pos, *m);
-        const uint64_t subTree = gen_leaves(&after, depth - 1, ply + 1, chess960);
+        const size_t subTree = gen_leaves(&after, depth - 1, ply + 1, chess960);
         result += subTree;
 
         if (!ply) {
@@ -255,7 +255,7 @@ void gen_run_test()
     typedef struct {
         const char fen[128];
         int depth;
-        uint64_t leaves;
+        size_t leaves;
     } Test;
 
     Test tests[] = {
@@ -282,7 +282,7 @@ void gen_run_test()
         pos_print(&pos);
         printf("depth %i:\n", tests[i].depth);
 
-        const uint64_t leaves = gen_leaves(&pos, tests[i].depth, 0, true);
+        const size_t leaves = gen_leaves(&pos, tests[i].depth, 0, true);
 
         if (leaves != tests[i].leaves) {
             printf("FAILED: fen '%s', depth %i, expected %" PRIu64 ", found %" PRIu64 "\n",

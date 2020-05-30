@@ -110,7 +110,7 @@ Game game_new(const char *fen, const GameOptions *go)
 
     g.ply = 0;
     g.maxPly = 256;
-    g.pos = malloc(g.maxPly * sizeof(Position));
+    g.pos = malloc((size_t)g.maxPly * sizeof(Position));
     pos_set(&g.pos[0], fen);
 
     g.state = STATE_NONE;
@@ -153,7 +153,7 @@ int game_play(Game *g, const Engine engines[2], Deadline *deadline, bool reverse
     for (g->ply = 0; ; g->ply++) {
         if (g->ply >= g->maxPly) {
             g->maxPly *= 2;
-            g->pos = realloc(g->pos, g->maxPly * sizeof(Position));
+            g->pos = realloc(g->pos, (size_t)g->maxPly * sizeof(Position));
         }
 
         if (played)

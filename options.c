@@ -11,8 +11,8 @@ static void split_engine_option(const char *in, str_t out[2])
 
     if (c) {
         // break foo:bar -> (foo,bar)
-        str_ncpy(&out[0], in, c - in);
-        str_ncpy(&out[1], c + 1, strlen(in) - (c + 1 - in));
+        str_ncpy(&out[0], in, (size_t)(c - in));
+        str_ncpy(&out[1], c + 1, strlen(in) - (size_t)(c + 1 - in));
     } else {
         // duplicate foo -> (foo,foo)
         str_cpy(&out[0], in);
@@ -86,8 +86,8 @@ Options options_new(int argc, const char **argv)
             else if (!strcmp(argv[i - 1], "-nodes")) {
                 str_t nodes[2] = {str_new(), str_new()};
                 split_engine_option(argv[i], nodes);
-                o.go.nodes[0] = atoll(nodes[0].buf);
-                o.go.nodes[1] = atoll(nodes[1].buf);
+                o.go.nodes[0] = (uint64_t)atoll(nodes[0].buf);
+                o.go.nodes[1] = (uint64_t)atoll(nodes[1].buf);
                 str_delete(&nodes[0], &nodes[1]);
             } else if (!strcmp(argv[i - 1], "-depth")) {
                 str_t depth[2] = {str_new(), str_new()};

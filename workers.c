@@ -25,7 +25,7 @@ _Atomic(int) WorkersBusy = 0;
 void workers_new(int count)
 {
     WorkersCount = count;
-    Workers = calloc(count, sizeof(Worker));
+    Workers = calloc((size_t)count, sizeof(Worker));
 
     for (int i = 0; i < count; i++) {
         pthread_mutex_init(&Workers[i].deadline.mtx, NULL);

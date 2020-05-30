@@ -31,8 +31,8 @@ Openings openings_new(const char *fileName, bool random, int repeat)
         if (!size)
             die("openings_create(): file size = 0");
 
-        uint64_t seed = system_msec();
-        fseek(o.file, prng(&seed) % size, SEEK_SET);
+        uint64_t seed = (uint64_t)system_msec();
+        fseek(o.file, (long)prng(&seed) % size, SEEK_SET);
 
         // Consume current line, likely broken, as we're somewhere in the middle of it
         scope(str_del) str_t line = str_new();

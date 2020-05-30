@@ -105,7 +105,7 @@ static void init_slider_attacks(int square, bitboard_t mask[NB_SQUARE],
     bitboard_t edges = ((Rank[RANK_1] | Rank[RANK_8]) & ~Rank[rank_of(square)]) |
         ((File[RANK_1] | File[RANK_8]) & ~File[file_of(square)]);
     mask[square] = slider_attacks(square, 0, dir) & ~edges;
-    shift[square] = 64 - bb_count(mask[square]);
+    shift[square] = (unsigned)(64 - bb_count(mask[square]));
 
     if (square < H8)
         attacksPtr[square + 1] = attacksPtr[square] + (1 << bb_count(mask[square]));
@@ -130,7 +130,7 @@ static __attribute__((constructor)) void bb_init(void)
     // Initialise Rank[] and File[]
     for (int i = 0; i < 8; i++) {
         Rank[i] = 0xFFULL << (8 * i);
-        File[i] = 0x0101010101010101 << i;
+        File[i] = 0x0101010101010101ULL << i;
     }
 
     // Initialise Ray[][] and Segment[][]
@@ -238,7 +238,7 @@ int move_prom(move_t m)
 {
     const unsigned prom = m >> 12;
     assert(prom <= QUEEN || prom == NB_PIECE);
-    return prom;
+    return (int)prom;
 }
 
 bitboard_t bb_bishop_attacks(int square, bitboard_t occ)

@@ -17,7 +17,7 @@ else:
     sources += ['main.c', 'engine.c', 'game.c', 'gen.c', 'openings.c', 'options.c', 'position.c', 'sprt.c', 'str.c', 'workers.c']
 
 cflags = '-std=gnu11 {} -mpopcnt -Ofast -flto'.format('-DNDEBUG -s' if not args.debug else '-g')
-wflags = '-Wfatal-errors -Wall -Wextra -Wstrict-prototypes'
+wflags = '-Wfatal-errors -Wall -Wextra -Wstrict-prototypes -Wsign-conversion'
 lflags ='-lpthread -lm {}'.format('-static' if args.static else '')
 cmd = '{} {} {} {} -o {} {}'.format(args.compiler, cflags, wflags, (" ").join(sources),args.output, lflags)
 print(cmd)
