@@ -39,11 +39,6 @@ static __attribute__((constructor)) void zobrist_init(void)
 
     ZobristEnPassant[NB_SQUARE] = prng(&state);
     ZobristTurn = prng(&state);
-
-    assert(hash(ZobristKey, sizeof ZobristKey, 0) == 0x29f67831c4e3babd);
-    assert(hash(ZobristCastling, sizeof ZobristCastling, 0) == 0xe83e371a6f469321);
-    assert(hash(ZobristEnPassant, sizeof ZobristEnPassant, 0) == 0xe6832f7aa0522be2);
-    assert(ZobristTurn == 0xba969207a2d24a3e);
 }
 
 static uint64_t zobrist_castling(bitboard_t castleRooks)

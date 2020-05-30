@@ -45,7 +45,7 @@ Options options_new(int argc, const char **argv)
         if (argv[i][0] == '-') {
             // process tag
             if (expectValue)
-                die("value expected after '%s'. found tag '%s' instead.\n", argv[i - 1], argv[i]);
+                DIE("value expected after '%s'. found tag '%s' instead.\n", argv[i - 1], argv[i]);
 
             if (strstr("-concurrency -games -openings -pgnout -cmd -name -options -nodes -depth "
                     "-draw -resign -movetime -tc -sprt", argv[i]))
@@ -62,12 +62,12 @@ Options options_new(int argc, const char **argv)
                 else if (!strcmp(argv[i], "-debug"))
                     o.debug = true;
                 else
-                    die("invalid tag '%s'\n", argv[i]);
+                    DIE("invalid tag '%s'\n", argv[i]);
             }
         } else {
             // Process a value
             if (!expectValue)
-                die("tag expected after '%s'. found value '%s' instead.\n", argv[i - 1], argv[i]);
+                DIE("tag expected after '%s'. found value '%s' instead.\n", argv[i - 1], argv[i]);
 
             if (!strcmp(argv[i - 1], "-concurrency"))
                 o.concurrency = atoi(argv[i]);
@@ -133,7 +133,7 @@ Options options_new(int argc, const char **argv)
     }
 
     if (expectValue)
-        die("value expected after '%s'\n", argv[i - 1]);
+        DIE("value expected after '%s'\n", argv[i - 1]);
 
    return o;
 }

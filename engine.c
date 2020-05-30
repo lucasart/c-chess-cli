@@ -167,7 +167,7 @@ bool engine_bestmove(const Engine *e, int *score, int64_t *timeLeft, Deadline *d
                 else if (!strcmp(token.buf, "mate") && (tail = str_tok(tail, &token, " ")))
                     *score = atoi(token.buf) < 0 ? INT_MIN : INT_MAX;
                 else
-                    die("illegal syntax after 'score' in '%s'\n", line.buf);
+                    DIE("illegal syntax after 'score' in '%s'\n", line.buf);
             }
         } else if (!strcmp(token.buf, "bestmove") && str_tok(tail, &token, " ")) {
             str_cpy_s(best, &token);

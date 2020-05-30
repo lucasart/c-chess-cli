@@ -16,7 +16,7 @@
 #include <errno.h>
 #include <inttypes.h>
 #include <stdbool.h>
-#include <stddef.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <stdnoreturn.h>
 #include <string.h>
@@ -27,7 +27,10 @@ uint64_t hash(const void *buffer, size_t length, uint64_t seed);
 int64_t system_msec(void);
 void system_sleep(int64_t msec);
 
-noreturn void die(const char *fmt, ...);
+#define DIE(...) do { \
+    fprintf(stderr, __VA_ARGS__); \
+    exit(EXIT_FAILURE); \
+} while (0)
 
 #define DIE_IF(v) do { \
     bool  _v = (v); \

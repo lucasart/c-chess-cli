@@ -81,10 +81,10 @@ static void *thread_start(void *arg)
             const double llr = sprt_llr(wldCount, options.elo0, options.elo1);
 
             if (llr > llrUbound)
-                die("SPRT: LLR = %.3f [%.3f,%.3f]. H1 accepted.\n", llr, llrLbound, llrUbound);
+                DIE("SPRT: LLR = %.3f [%.3f,%.3f]. H1 accepted.\n", llr, llrLbound, llrUbound);
 
             if (llr < llrLbound)
-                die("SPRT: LLR = %.3f [%.3f,%.3f]. H0 accepted.\n", llr, llrLbound, llrUbound);
+                DIE("SPRT: LLR = %.3f [%.3f,%.3f]. H0 accepted.\n", llr, llrLbound, llrUbound);
 
             if (next % 2 == 0)
                 printf("SPRT: LLR = %.3f [%.3f,%.3f]\n", llr, llrLbound, llrUbound);
@@ -134,7 +134,7 @@ int main(int argc, const char **argv)
             const Engine *deadEngine = deadline_overdue(&Workers[i].deadline);
 
             if (deadEngine)
-                die("[%d] engine %s unresponsive\n", i, deadEngine->name.buf);
+                DIE("[%d] engine %s unresponsive\n", i, deadEngine->name.buf);
         }
     } while (WorkersBusy > 0);
 

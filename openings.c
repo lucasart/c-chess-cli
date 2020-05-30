@@ -29,7 +29,7 @@ Openings openings_new(const char *fileName, bool random, int repeat)
         DIE_IF((size = ftell(o.file)) < 0);
 
         if (!size)
-            die("openings_create(): file size = 0");
+            DIE("openings_create(): file size = 0");
 
         uint64_t seed = (uint64_t)system_msec();
         fseek(o.file, (long)prng(&seed) % size, SEEK_SET);
