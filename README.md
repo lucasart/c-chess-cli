@@ -4,14 +4,7 @@ c-chess-cli is a command line interface for UCI chess engines written in C, for 
 
 ## How to compile ?
 
-Using the makefile:
-```
-make [CC=comp] [OUT=file] [debug=yes/no] [static=yes/no]
-```
-- comp: `gcc`, `clang`, `musl-gcc`, or `musl-clang`.
-- file: executable output file name (default `c-chess-cli`).
-- debug=yes: debug compile (slower but with `assert()` and debug info).
-- static=yes: statically linked executable.
+Run `make.py` script. See `make.py --help` for more options.
 
 ## How to use ?
 

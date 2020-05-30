@@ -4,10 +4,10 @@ import argparse, os
 p = argparse.ArgumentParser(description='c-chess-cli build script')
 p.add_argument('-c', '--compiler', help='Compiler', choices=['gcc', 'clang', 'musl-gcc',
     'musl-clang'], default='gcc')
-p.add_argument('-o', '--output', help='Output', default='./c-chess-cli')
-p.add_argument('-d', '--debug', action='store_true')
-p.add_argument('-s', '--static', action='store_true')
-p.add_argument('-t', '--test', action='store_true', help="compile and run tests")
+p.add_argument('-o', '--output', help='Output file', default='c-chess-cli')
+p.add_argument('-d', '--debug', action='store_true', help='Debug compile')
+p.add_argument('-s', '--static', action='store_true', help='Static compile')
+p.add_argument('-t', '--test', action='store_true', help='compile and run tests')
 args = p.parse_args()
 
 # Select source files, depending on which program is being compiled
