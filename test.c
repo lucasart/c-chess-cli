@@ -204,9 +204,85 @@ static void test_position(void)
 
         ply++;
     }
+
     TEST(!strcmp(sanMoves.buf, "O-O O-O-O a3 c6 g4 Nxg4 Na4 f5 axb4 fxe4 dxc6 Kb8 Kh1 Bh6 Bxe6 Rh6 "
         "Qxe4 Rf8 Qxg6 "));
     TEST(hv = 0x32be0aae25ef25b2);
+}
+
+static size_t test_gen_leaves(const Position *pos, int depth, int ply, bool chess960)
+{
+    if (depth <= 0) {
+        assert(depth == 0);
+        return 1;
+    }
+
+    move_t mList[MAX_MOVES];
+
+    move_t *end = gen_all_moves(pos, mList);
+    size_t result = 0;
+
+    // Bulk counting
+    if (depth == 1 && ply > 0)
+        return (size_t)(end - mList);
+
+    for (move_t *m = mList; m != end; m++) {
+        Position after;
+        pos_move(&after, pos, *m);
+        const size_t subTree = test_gen_leaves(&after, depth - 1, ply + 1, chess960);
+        result += subTree;
+
+        /*if (!ply) {
+            scope(str_del) str_t lan = pos_move_to_lan(pos, *m, chess960);
+            printf("%s\t%" PRIu64 "\n", lan.buf, subTree);
+        }*/
+    }
+
+    return result;
+}
+
+void test_gen(void)
+{
+    typedef struct {
+        const char fen[128];
+        size_t leaves;
+        int depth;
+        char pad[4];
+    } Test;
+
+    Test tests[] = {
+        // Normal chess: https://www.chessprogramming.org/Perft_Results
+        (Test){"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0", 4865609, 5, {0}},
+        (Test){"r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0", 4085603, 4, {0}},
+        (Test){"8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - -  0", 674624, 5, {0}},
+        (Test){"r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0", 422333, 4, {0}},
+        (Test){"rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1", 2103487, 4, {0}},
+        (Test){"r4rk1/1pp1qppp/p1np1n2/2b1p1B1/2B1P1b1/P1NP1N2/1PP1QPPP/R4RK1 w - - 0", 3894594, 4, {0}},
+
+        // Chess960: http://talkchess.com/forum3/viewtopic.php?f=7&t=55274#p608193
+        (Test){"r1k1r2q/p1ppp1pp/8/8/8/8/P1PPP1PP/R1K1R2Q w KQkq - 0", 7096972, 5, {0}},
+        (Test){"r1k2r1q/p1ppp1pp/8/8/8/8/P1PPP1PP/R1K2R1Q w KQkq - 0", 541480, 4, {0}},
+        (Test){"8/8/8/4B2b/6nN/8/5P2/2R1K2k w Q - 0", 3223406, 5, {0}},
+        (Test){"2r5/8/8/8/8/8/6PP/k2KR3 w K - 0", 985298, 5, {0}},
+        (Test){"4r3/3k4/8/8/8/8/6PP/qR1K1R2 w KQ - 0", 8992652, 5, {0}}
+    };
+
+    for (size_t i = 0; i < sizeof(tests) / sizeof(Test); i++) {
+        Position pos;
+        pos_set(&pos, tests[i].fen);
+
+        const size_t leaves = test_gen_leaves(&pos, tests[i].depth, 0, true);
+
+        /*
+        pos_print(&pos);
+
+        if (leaves != tests[i].leaves)
+            printf("FAILED: fen '%s', depth %i, expected %" PRIu64 ", found %" PRIu64 "\n",
+                tests[i].fen, tests[i].depth, tests[i].leaves, leaves);
+        */
+
+        TEST(leaves == tests[i].leaves);
+    }
 }
 
 int main(void)
@@ -216,6 +292,9 @@ int main(void)
 
     test_position();
     puts("position ok");
+
+    test_gen();
+    puts("gen ok");
 
     return 0;
 }
