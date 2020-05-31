@@ -19,30 +19,28 @@
 #include "../position.h"
 #include "../util.h"
 
-// xorshift64star by Sebastiano Vigna: http://vigna.di.unimi.it/ftp/papers/xorshift.pdf
-static uint64_t mix(uint64_t b)
+static uint64_t hash_mix(uint64_t block)
 {
-    b ^= b >> 12;
-    b ^= b << 25;
-    b ^= b >> 27;
-    return b * 2685821657736338717LL;
+    block ^= block >> 23;
+    block *= 0x2127599bf4325c37ULL;
+    return block ^= block >> 47;
 }
 
-static uint64_t hash_block(uint64_t *seed, uint64_t block)
+void hash_block(uint64_t block, uint64_t *hash)
 {
-    return prng(seed) + mix(block);
+    *hash ^= hash_mix(block);
+    *hash *= 0x880355f21e6d1965ULL;
 }
 
-static uint64_t hash_blocks(const void *buffer, size_t length, uint64_t *seed)
+// Based on FastHash64, but I had to change the functionality to make it capable of incremental
+// updates. Assumes length is divisible by 8, and buffer is 8-byte aligned.
+void hash_blocks(const void *buffer, size_t length, uint64_t *hash)
 {
     assert((uintptr_t)buffer % 8 == 0 && length % 8 == 0);
     const uint64_t *blocks = (const uint64_t *)buffer;
-    uint64_t result = 0;
 
     for (size_t i = 0; i < length / 8; i++)
-        result ^= hash_block(seed, *blocks++);
-
-    return result;
+        hash_block(*blocks++, hash);
 }
 
 #define TEST(val) do { \
@@ -54,42 +52,40 @@ static uint64_t hash_blocks(const void *buffer, size_t length, uint64_t *seed)
 
 static void test_bitboard(void)
 {
-    uint64_t hs, hv, rs;  // hash seed, hash value, and random seed
-
     // Validate: opposite(), push_inc()
     TEST(opposite(WHITE) == BLACK && opposite(BLACK) == WHITE);
     TEST(push_inc(WHITE) == 8 && push_inc(BLACK) == -8);
 
     // Validate: square_from()
-    hs = hv = 0;
+    uint64_t hash = 0;
 
     for (int r = 0; r < NB_RANK; r++)
         for (int f = 0; f < NB_FILE; f++)
-            hv ^= hash_block(&hs, (uint64_t)square_from(r, f));
+            hash_block((uint64_t)square_from(r, f), &hash);
 
-    TEST(hv == 0xdaed883de606a87a);
+    TEST(hash == 0x772e417be2bb89c1);
 
     // Validate: rank_of(), file_of()
-    hs = hv = 0;
+    hash = 0;
 
     for (int s = 0; s < NB_SQUARE; s++) {
-        hv ^= hash_block(&hs, (uint64_t)rank_of(s));
-        hv ^= hash_block(&hs, (uint64_t)file_of(s));
+        hash_block((uint64_t)rank_of(s), &hash);
+        hash_block((uint64_t)file_of(s), &hash);
     }
 
-    TEST(hv == 0x3f259cdbf7e0e32d);
+    TEST(hash == 0xc28324f57afc7e70);
 
     // Validate: reltive_rank()
-    hs = hv = 0;
+    hash = 0;
 
     for (int c = 0; c < NB_COLOR; c++)
         for (int r = 0; r < NB_RANK; r++)
-            hv ^= hash_block(&hs, (uint64_t)relative_rank(c, r));
+            hash_block((uint64_t)relative_rank(c, r), &hash);
 
-    TEST(hv = 0x3069d65765d6619c);
+    TEST(hash == 0x816be3abc20c91e0);
 
     // Validate: move_build(), move_from(), move_to(), move_prom()
-    hs = hv = 0;
+    hash = 0;
 
     for (int from = 0; from < NB_SQUARE; from++)
         for (int to = 0; to < NB_SQUARE; to++)
@@ -99,55 +95,55 @@ static void test_bitboard(void)
 
                 const move_t m = move_build(from, to, prom);
                 TEST(move_from(m) == from && move_to(m) == to && move_prom(m) == prom);
-                hv ^= hash_block(&hs, (uint64_t)m);
+                hash_block((uint64_t)m, &hash);
             }
 
-    TEST(hv == 0xcc9192e4a5b7c4a2);
+    TEST(hash == 0xc80d6ebde95a5cd0);
 
     // Validate: Rank[], File[], Ray[], Segment[], PawnAttacks[], KnightAttacks[], KingAttacks[]
-    hs = hv = 0;
+    hash = 0;
 
-    hv ^= hash_blocks(Rank, sizeof Rank, &hs);
-    hv ^= hash_blocks(File, sizeof File, &hs);
-    hv ^= hash_blocks(Ray, sizeof Ray, &hs);
-    hv ^= hash_blocks(Segment, sizeof Segment, &hs);
-    hv ^= hash_blocks(PawnAttacks, sizeof PawnAttacks, &hs);
-    hv ^= hash_blocks(KnightAttacks, sizeof KnightAttacks, &hs);
-    hv ^= hash_blocks(KingAttacks, sizeof KingAttacks, &hs);
+    hash_blocks(Rank, sizeof Rank, &hash);
+    hash_blocks(File, sizeof File, &hash);
+    hash_blocks(Ray, sizeof Ray, &hash);
+    hash_blocks(Segment, sizeof Segment, &hash);
+    hash_blocks(PawnAttacks, sizeof PawnAttacks, &hash);
+    hash_blocks(KnightAttacks, sizeof KnightAttacks, &hash);
+    hash_blocks(KingAttacks, sizeof KingAttacks, &hash);
 
-    TEST(hv == 0x8ee00e49243de3f9);
+    TEST(hash == 0x86d8f993949b5c69);
 
     // Validate: bb_bishop_attacks() and bb_rook_attacks()
-    hs = hv = rs = 0;
+    uint64_t seed = hash = 0;
 
     for (int i = 0; i < 2000; i++) {
-        const int s = prng(&rs) % NB_SQUARE;
-        const bitboard_t occ = prng(&rs) & prng(&rs);
-        hv ^= hash_block(&hs, bb_bishop_attacks(s, occ));
-        hv ^= hash_block(&hs, bb_rook_attacks(s, occ));
+        const int s = prng(&seed) % NB_SQUARE;
+        const bitboard_t occ = prng(&seed) & prng(&seed);
+        hash_block(bb_bishop_attacks(s, occ), &hash);
+        hash_block(bb_rook_attacks(s, occ), &hash);
     }
 
-    TEST(hv == 0x56720d3c08204cb1);
+    TEST(hash == 0x3cf6b20ccc349d24);
 
     // Validate: bb_lsb(), bb_msb(), bb_pop_lsb(), bb_several(), bb_count()
-    hs = hv = rs = 0;
+    seed = hash = 0;
 
     for (int i = 0; i < 1000; i++) {
-        bitboard_t b = prng(&rs) & prng(&rs);
+        bitboard_t b = prng(&seed) & prng(&seed);
 
-        hv ^= hash_block(&hs, bb_several(b & prng(&rs)));  // need very sparse bitboard to test
-        hv ^= hash_block(&hs, (uint64_t)bb_count(b));
+        hash_block(bb_several(b & prng(&seed)), &hash);  // need very sparse bitboard to test
+        hash_block((uint64_t)bb_count(b), &hash);
 
         if (b) {
-            hv ^= hash_block(&hs, (uint64_t)bb_lsb(b));
-            hv ^= hash_block(&hs, (uint64_t)bb_msb(b));
+            hash_block((uint64_t)bb_lsb(b), &hash);
+            hash_block((uint64_t)bb_msb(b), &hash);
         }
 
         while (b)
-            hv ^= hash_block(&hs, (uint64_t)bb_pop_lsb(&b));
+            hash_block((uint64_t)bb_pop_lsb(&b), &hash);
     }
 
-    TEST(hv == 0xffada1c1b6fe03c);
+    TEST(hash == 0x1958414c63e413ec);
 }
 
 static void test_position(void)
@@ -168,19 +164,19 @@ static void test_position(void)
         NULL
     };
 
-    uint64_t hs = 0, hv = 0;
+    uint64_t hash = 0;
 
     for (size_t i = 0; fens[i]; i++) {
         Position pos;
         pos_set(&pos, fens[i]);
 
-        hv ^= hash_blocks(&pos, sizeof(pos), &hs);
+        hash_blocks(&pos, sizeof(pos), &hash);
 
         scope(str_del) str_t fen = pos_get(&pos);
         TEST(strncmp(fen.buf, fens[i], strlen(fens[i])) == 0);
     }
 
-    TEST(hv == 0x765fb9f62ca1e277);
+    TEST(hash == 0x62f5f994d63574ca);
 
     // Validate: pos_lan_to_move(), pos_move_to_lan(), pos_move(), pos_move_to_san(), and exercise
     // string code
@@ -192,12 +188,12 @@ static void test_position(void)
     const char *tail = moves;
     scope(str_del) str_t token = str_new(), sanMoves = str_new();
     int ply = 0;
-    hs = hv = 0;
+    hash = 0;
 
     while ((tail = str_tok(tail, &token, " "))) {
         move_t m = pos_lan_to_move(&pos[ply % 2], token.buf, false);
         pos_move(&pos[(ply + 1) % 2], &pos[ply % 2], m);
-        hv ^= hash_blocks(&pos[(ply + 1) % 2], sizeof(Position), &hs);
+        hash_blocks(&pos[(ply + 1) % 2], sizeof(Position), &hash);
 
         scope(str_del) str_t san = pos_move_to_san(&pos[ply % 2], m),
             lan = pos_move_to_lan(&pos[ply % 2], m, false);
@@ -207,7 +203,7 @@ static void test_position(void)
         ply++;
     }
 
-    TEST(hv = 0x32be0aae25ef25b2);
+    TEST(hash == 0x4ce2254fc1869ebe);
     TEST(!strcmp(sanMoves.buf, "O-O O-O-O a3 c6 g4 Nxg4 Na4 f5 axb4 fxe4 dxc6 Kb8 Kh1 Bh6 Bxh6 "
         "Rxh6 Qxe4 Rf8 Qxg6 "));
 }
