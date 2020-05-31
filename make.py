@@ -13,7 +13,7 @@ args = p.parse_args()
 # Select source files, depending on which program is being compiled
 sources = 'bitboard.c gen.c position.c str.c util.c'
 if args.test:
-    sources += ' test.c'
+    sources += ' test/test.c'
 else:
     sources += ' engine.c game.c main.c openings.c options.c sprt.c workers.c'
 

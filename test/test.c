@@ -14,10 +14,10 @@
 */
 // Stand alone program, running unit tests for c-chess-cli
 #include <stdio.h>
-#include "bitboard.h"
-#include "gen.h"
-#include "position.h"
-#include "util.h"
+#include "../bitboard.h"
+#include "../gen.h"
+#include "../position.h"
+#include "../util.h"
 
 // xorshift64star by Sebastiano Vigna: http://vigna.di.unimi.it/ftp/papers/xorshift.pdf
 static uint64_t mix(uint64_t b)
@@ -260,10 +260,10 @@ void test_gen(void)
 
         // Chess960: http://talkchess.com/forum3/viewtopic.php?f=7&t=55274#p608193
         (Test){"r1k1r2q/p1ppp1pp/8/8/8/8/P1PPP1PP/R1K1R2Q w KQkq - 0", 7096972, 5, {0}},
-        (Test){"r1k2r1q/p1ppp1pp/8/8/8/8/P1PPP1PP/R1K2R1Q w KQkq - 0", 541480, 4, {0}},
+        (Test){"r1k2r1q/p1ppp1pp/8/8/8/8/P1PPP1PP/R1K2R1Q w AFaf - 0", 541480, 4, {0}},
         (Test){"8/8/8/4B2b/6nN/8/5P2/2R1K2k w Q - 0", 3223406, 5, {0}},
         (Test){"2r5/8/8/8/8/8/6PP/k2KR3 w K - 0", 985298, 5, {0}},
-        (Test){"4r3/3k4/8/8/8/8/6PP/qR1K1R2 w KQ - 0", 8992652, 5, {0}}
+        (Test){"4r3/3k4/8/8/8/8/6PP/qR1K1R2 w BF - 0", 8992652, 5, {0}}
     };
 
     for (size_t i = 0; i < sizeof(tests) / sizeof(Test); i++) {
