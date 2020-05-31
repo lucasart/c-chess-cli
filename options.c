@@ -1,6 +1,5 @@
 #include <assert.h>
 #include <limits.h>
-#include <stdlib.h>
 #include <string.h>
 #include "options.h"
 #include "util.h"
@@ -23,8 +22,7 @@ static void split_engine_option(const char *in, str_t out[2])
 Options options_new(int argc, const char **argv)
 {
     // Set default values
-    Options o;
-    memset(&o, 0, sizeof(o));
+    Options o = (Options){0};
 
     o.concurrency = 1;
     o.games = 1;

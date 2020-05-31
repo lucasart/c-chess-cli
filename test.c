@@ -14,7 +14,6 @@
 */
 // Stand alone program, running unit tests for c-chess-cli
 #include <stdio.h>
-#include <stdlib.h>
 #include "bitboard.h"
 #include "gen.h"
 #include "position.h"
@@ -156,16 +155,16 @@ static void test_position(void)
     // Validate: pos_set(), pos_get()
     const char *fens[] = {
         "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
-        "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0",
-        "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - -",
+        "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq -",
+        "8/5R2/2k5/b1p2p2/2B5/p2K2P1/7P/8 w - - 10",
         "r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq",
         "rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1",
         "r4rk1/1pp1qppp/p1np1n2/2b1p1B1/2B1P1b1/P1NP1N2/1PP1QPPP/R4RK1 w",
-        "r1k1r2q/p1ppp1pp/8/8/8/8/P1PPP1PP/R1K1R2Q w KQkq - 0",
-        "r1k2r1q/p1ppp1pp/8/8/8/8/P1PPP1PP/R1K2R1Q w KQkq - 0",
-        "8/8/8/4B2b/6nN/8/5P2/2R1K2k w Q - 0",
-        "2r5/8/8/8/8/8/6PP/k2KR3 w K - 0",
-        "4r3/3k4/8/8/8/8/6PP/qR1K1R2 w KQ - 0",
+        "r1k1r2q/p1ppp1pp/8/8/8/8/P1PPP1PP/R1K1R2Q w KQkq - 13 5",
+        "r1k2r1q/p1ppp1pp/8/8/8/8/P1PPP1PP/R1K2R1Q w KQkq - 99 1000",
+        "8/8/8/4B2b/6nN/8/5P2/2R1K2k w Q - 0 3",
+        "2r5/8/8/8/8/8/6PP/k2KR3 w K - 1 0",
+        "4r3/3k4/8/8/8/8/6PP/qR1K1R2 w KQ -",
         NULL
     };
 
@@ -181,7 +180,7 @@ static void test_position(void)
         TEST(strncmp(fen.buf, fens[i], strlen(fens[i])) == 0);
     }
 
-    TEST(hv == 0x3ed45e78dc0cb301);
+    TEST(hv == 0x765fb9f62ca1e277);
 
     // Validate: pos_lan_to_move(), pos_move(), pos_move_to_san(), and exercise string code
     Position pos[2];
@@ -205,9 +204,9 @@ static void test_position(void)
         ply++;
     }
 
+    TEST(hv = 0x32be0aae25ef25b2);
     TEST(!strcmp(sanMoves.buf, "O-O O-O-O a3 c6 g4 Nxg4 Na4 f5 axb4 fxe4 dxc6 Kb8 Kh1 Bh6 Bxe6 Rh6 "
         "Qxe4 Rf8 Qxg6 "));
-    TEST(hv = 0x32be0aae25ef25b2);
 }
 
 static size_t test_gen_leaves(const Position *pos, int depth, int ply, bool chess960)

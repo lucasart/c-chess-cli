@@ -14,7 +14,6 @@
 */
 #include <ctype.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include "position.h"
 #include "util.h"
 
@@ -71,12 +70,6 @@ static int string_to_square(const char *str)
     return *str != '-'
         ? square_from(str[1] - '1', str[0] - 'a')
         : NB_SQUARE;
-}
-
-// Sets the position in its empty state (no pieces, white to play, rule50=0, etc.)
-static void clear(Position *pos)
-{
-    memset(pos, 0, sizeof *pos);
 }
 
 // Remove 'piece' of 'color' on 'square'. Such a piece must be there first.
@@ -177,7 +170,7 @@ static bool pos_move_is_capture(const Position *pos, move_t m)
 // Set position from FEN string
 void pos_set(Position *pos, const char *fen)
 {
-    clear(pos);
+    *pos = (Position){0};
     scope(str_del) str_t token = str_new();
 
     // Piece placement
