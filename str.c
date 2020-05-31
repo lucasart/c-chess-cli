@@ -55,6 +55,12 @@ bool str_ok(const str_t *s)
         && s->buf && s->buf[s->len] == '\0' && !memchr(s->buf, 0, s->len);
 }
 
+bool str_eq(const str_t *s1, const str_t *s2)
+{
+    assert(str_ok(s1) && str_ok(s2));
+    return s1->len == s2->len && !memcmp(s1->buf, s2->buf, s1->len);
+}
+
 str_t str_new()
 {
     str_t s;

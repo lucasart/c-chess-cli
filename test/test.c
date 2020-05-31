@@ -182,11 +182,12 @@ static void test_position(void)
 
     TEST(hv == 0x765fb9f62ca1e277);
 
-    // Validate: pos_lan_to_move(), pos_move(), pos_move_to_san(), and exercise string code
+    // Validate: pos_lan_to_move(), pos_move_to_lan(), pos_move(), pos_move_to_san(), and exercise
+    // string code
     Position pos[2];
     pos_set(&pos[0], fens[1]);
     const char *moves = "e1g1 e8c8 a2a3 c7c6 g2g4 f6g4 c3a4 f7f5 a3b4 f5e4 d5c6 c8b8 g1h1 g7h6 "
-        "d2e6 h8h6 f3e4 d8f8 e4g6";
+        "d2h6 h8h6 f3e4 d8f8 e4g6";
 
     const char *tail = moves;
     scope(str_del) str_t token = str_new(), sanMoves = str_new();
@@ -198,15 +199,17 @@ static void test_position(void)
         pos_move(&pos[(ply + 1) % 2], &pos[ply % 2], m);
         hv ^= hash_blocks(&pos[(ply + 1) % 2], sizeof(Position), &hs);
 
-        scope(str_del) str_t san = pos_move_to_san(&pos[ply % 2], m);
+        scope(str_del) str_t san = pos_move_to_san(&pos[ply % 2], m),
+            lan = pos_move_to_lan(&pos[ply % 2], m, false);
         str_cat_fmt(&sanMoves, "%S ", &san);
+        TEST(str_eq(&lan, &token));
 
         ply++;
     }
 
     TEST(hv = 0x32be0aae25ef25b2);
-    TEST(!strcmp(sanMoves.buf, "O-O O-O-O a3 c6 g4 Nxg4 Na4 f5 axb4 fxe4 dxc6 Kb8 Kh1 Bh6 Bxe6 Rh6 "
-        "Qxe4 Rf8 Qxg6 "));
+    TEST(!strcmp(sanMoves.buf, "O-O O-O-O a3 c6 g4 Nxg4 Na4 f5 axb4 fxe4 dxc6 Kb8 Kh1 Bh6 Bxh6 "
+        "Rxh6 Qxe4 Rf8 Qxg6 "));
 }
 
 static size_t test_gen_leaves(const Position *pos, int depth, int ply, bool chess960)

@@ -25,6 +25,7 @@ typedef struct {
 
 // checks if string 's' is valid
 bool str_ok(const str_t *s);
+bool str_eq(const str_t *s1, const str_t *s2);
 
 // returns a valid string with value ""
 str_t str_new(void);
