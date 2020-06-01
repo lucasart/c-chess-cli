@@ -21,6 +21,16 @@
 #include <stdnoreturn.h>
 #include <string.h>
 
+#define min(x, y) ({ \
+    typeof(x) _x = (x), _y = (y); \
+    _x < _y ? _x : _y; \
+})
+
+#define max(x, y) ({ \
+    typeof(x) _x = (x), _y = (y); \
+    _x > _y ? _x : _y; \
+})
+
 uint64_t prng(uint64_t *state);
 uint64_t hash(const void *buffer, size_t length, uint64_t seed);
 

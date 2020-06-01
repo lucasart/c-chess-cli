@@ -362,6 +362,7 @@ void pos_move(Position *pos, const Position *before, move_t m)
     // Capture piece on to square (if any)
     if (capture != NB_PIECE) {
         assert(capture != KING);
+        assert(!bb_test(pos->byColor[us], to) || (bb_test(pos->castleRooks, to) && piece == KING));
         pos->rule50 = 0;
 
         // Use pos_color_on() instead of them, because we could be playing a KxR castling here

@@ -18,9 +18,6 @@
 
 enum {MATE = 32000};
 
-#define min(x, y) ((x) < (y) ? (x) : (y))
-#define max(x, y) ((x) > (y) ? (x) : (y))
-
 typedef struct {
     bitboard_t byColor[NB_COLOR];  // eg. byColor[WHITE] = squares occupied by white's army
     bitboard_t byPiece[NB_PIECE];  // eg. byPiece[KNIGHT] = squares occupied by knights (any color)
