@@ -50,19 +50,18 @@ static uint64_t zobrist_castling(bitboard_t castleRooks)
     return k;
 }
 
-static str_t square_to_string(int square)
+static void square_to_string(int square, char str[3])
 {
     BOUNDS(square, NB_SQUARE + 1);
-    str_t str = str_new();
 
     if (square == NB_SQUARE)
-        str_push(&str, '-');
+        *str++ = '-';
     else {
-        str_push(&str, file_of(square) + 'a');
-        str_push(&str, rank_of(square) + '1');
+        *str++ = file_of(square) + 'a';
+        *str++ = rank_of(square) + '1';
     }
 
-    return str;
+    *str = '\0';
 }
 
 static int string_to_square(const char *str)
@@ -340,8 +339,9 @@ str_t pos_get(const Position *pos)
     }
 
     // En passant and 50 move
-    scope(str_del) str_t ep = square_to_string(pos->epSquare);
-    str_cat_fmt(&fen, " %S %i %i", &ep, pos->rule50, pos->fullMove);
+    char epStr[3];
+    square_to_string(pos->epSquare, epStr);
+    str_cat_fmt(&fen, " %s %i %i", epStr, pos->rule50, pos->fullMove);
 
     return fen;
 }
@@ -506,8 +506,10 @@ str_t pos_move_to_lan(const Position *pos, move_t m, bool chess960)
     if (!chess960 && pos_move_is_castling(pos, m))
         to = to > from ? from + 2 : from - 2;  // e1h1 -> e1g1, e1a1 -> e1c1
 
-    scope(str_del) str_t fromStr = square_to_string(from), toStr = square_to_string(to);
-    str_cat_s(str_cat_s(&lan, &fromStr), &toStr);
+    char fromStr[3], toStr[3];
+    square_to_string(from, fromStr);
+    square_to_string(to, toStr);
+    str_cat(str_cat(&lan, fromStr), toStr);
 
     if (prom < NB_PIECE)
         str_push(&lan, PieceLabel[BLACK][prom]);
@@ -560,8 +562,9 @@ str_t pos_move_to_san(const Position *pos, move_t m)
             if (pos_move_is_capture(pos, m))
                 str_push(&san, 'x');
 
-            scope(str_del) str_t toStr = square_to_string(to);
-            str_cat_s(&san, &toStr);
+            char toStr[3];
+            square_to_string(to, toStr);
+            str_cat(&san, toStr);
         }
     } else {
         str_push(&san, PieceLabel[WHITE][piece]);
@@ -622,8 +625,9 @@ str_t pos_move_to_san(const Position *pos, move_t m)
         if (pos_move_is_capture(pos, m))
             str_push(&san, 'x');
 
-        scope(str_del) str_t toStr = square_to_string(to);
-        str_cat_s(&san, &toStr);
+        char toStr[3];
+        square_to_string(to, toStr);
+        str_cat(&san, toStr);
     }
 
     return san;
