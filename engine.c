@@ -90,7 +90,7 @@ Engine engine_new(const char *cmd, const char *name, FILE *log, Deadline *deadli
 
         str_cpy(&line, "setoption name ");
         str_ncat(&line, token.buf, (size_t)(c - token.buf));
-        str_cat(&line, " value ", c + 1);
+        str_cat(str_cat(&line, " value "), c + 1);
 
         engine_writeln(&e, line.buf);
     }

@@ -36,7 +36,8 @@ static void uci_position_command(const Game *g, str_t *cmd)
         for (int ply = ply0 + 1; ply <= g->ply; ply++) {
             scope(str_del) str_t lan = pos_move_to_lan(&g->pos[ply - 1], g->pos[ply].lastMove,
                 g->go.chess960);
-            str_cat(cmd, " ", lan.buf);
+            str_push(cmd, ' ');
+            str_cat_s(cmd, &lan);
         }
     }
 }
@@ -125,7 +126,7 @@ void game_delete(Game *g)
 {
     free(g->pos);
     g->pos = NULL;
-    str_delete(&g->names[WHITE], &g->names[BLACK]);
+    str_del_n(&g->names[WHITE], &g->names[BLACK]);
 }
 
 int game_play(Game *g, const Engine engines[2], Deadline *deadline, bool reverse)
@@ -309,14 +310,16 @@ str_t game_pgn(const Game *g)
         // Append check markers to SAN
         if (g->pos[ply].checkers) {
             if (ply == g->ply && g->state == STATE_CHECKMATE)
-                str_putc(&san, '#');  // checkmate
+                str_push(&san, '#');  // checkmate
             else
-                str_putc(&san, '+');  // normal check
+                str_push(&san, '+');  // normal check
         }
 
-        str_cat(&pgn, san.buf, ply % 10 == 0 ? "\n" : " ");
+        str_cat_s(&pgn, &san);
+        str_cat(&pgn, ply % 10 == 0 ? "\n" : " ");
     }
 
-    str_cat(&pgn, result.buf, "\n\n");
+    str_cat_s(&pgn, &result);
+    str_cat(&pgn, "\n\n");
     return pgn;
 }

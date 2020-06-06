@@ -36,11 +36,10 @@ str_t str_dup(const char *src);
 void str_del(str_t *s);
 #define scope(func) __attribute__ ((cleanup(func)))
 
-#define str_delete(...) do { \
+#define str_del_n(...) do { \
     str_t *_s[] = {__VA_ARGS__}; \
     for (size_t _i = 0; _i < sizeof(_s) / sizeof(*_s); _i++) { \
-        free(_s[_i]->buf); \
-        *_s[_i] = (str_t){0}; \
+        str_del(_s[_i]); \
     } \
 } while (0)
 
@@ -51,18 +50,15 @@ void str_cpy_s(str_t *dest, const str_t *src);  // string version (faster and sa
 // copy at most n characters of C-string 'src' into valid string 'dest'
 void str_ncpy(str_t *dest, const char *restrict src, size_t n);
 
-// str_putc(&dest, c1, ..., cn): appends n >= 1 characters c1...cn, to a valid string 'dest'
-#define str_putc(...) _str_putc(__VA_ARGS__, (void *)0)
-void _str_putc(str_t *dest, int c1, ...);
+// str_push(&dest, c): append 'c' to a valid string 'dest'
+str_t *str_push(str_t *dest, char c);
 
 // appends at most n characters of C-string 'src' into valid string 'dest'
-void str_ncat(str_t *dest, const char *src, size_t n);
+str_t *str_ncat(str_t *dest, const char *src, size_t n);
 
-// str_cat(&dest, &s1, ..., &sn) appends n >= 1 strings to a valid string dest
-#define str_cat(...) _str_cat(__VA_ARGS__, (void *)0)
-#define str_cat_s(...) _str_cat_s(__VA_ARGS__, (void *)0)
-void _str_cat(str_t *dest, const char *s1, ...);  // C-string version
-void _str_cat_s(str_t *dest, const str_t *s1, ...);  // string version (faster and safer)
+// String concatenation
+str_t *str_cat(str_t *dest, const char *src);  // C-string version
+str_t *str_cat_s(str_t *dest, const str_t *src);  // string version (faster and safer)
 
 // same as sprintf(), but appends, instead of replace, to valid string s1
 void str_cat_fmt(str_t *dest, const char *fmt, ...);

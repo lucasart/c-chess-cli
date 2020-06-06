@@ -86,19 +86,19 @@ Options options_new(int argc, const char **argv)
                 split_engine_option(argv[i], nodes);
                 o.go.nodes[0] = (uint64_t)atoll(nodes[0].buf);
                 o.go.nodes[1] = (uint64_t)atoll(nodes[1].buf);
-                str_delete(&nodes[0], &nodes[1]);
+                str_del_n(&nodes[0], &nodes[1]);
             } else if (!strcmp(argv[i - 1], "-depth")) {
                 str_t depth[2] = {str_new(), str_new()};
                 split_engine_option(argv[i], depth);
                 o.go.depth[0] = atoi(depth[0].buf);
                 o.go.depth[1] = atoi(depth[1].buf);
-                str_delete(&depth[0], &depth[1]);
+                str_del_n(&depth[0], &depth[1]);
             } else if (!strcmp(argv[i - 1], "-movetime")) {
                 str_t movetime[2] = {str_new(), str_new()};
                 split_engine_option(argv[i], movetime);
                 o.go.movetime[0] = (int64_t)(atof(movetime[0].buf) * 1000);
                 o.go.movetime[1] = (int64_t)(atof(movetime[1].buf) * 1000);
-                str_delete(&movetime[0], &movetime[1]);
+                str_del_n(&movetime[0], &movetime[1]);
             } else if (!strcmp(argv[i - 1], "-resign"))
                 sscanf(argv[i], "%i,%i", &o.go.resignCount, &o.go.resignScore);
             else if (!strcmp(argv[i - 1], "-draw"))
@@ -119,7 +119,7 @@ Options options_new(int argc, const char **argv)
                     o.go.increment[j] = (int64_t)(increment * 1000);
                 }
 
-                str_delete(&tc[0], &tc[1]);
+                str_del_n(&tc[0], &tc[1]);
             } else if (!strcmp(argv[i - 1], "-sprt")) {
                 o.sprt = true;
                 sscanf(argv[i], "%lf,%lf,%lf,%lf", &o.elo0, &o.elo1, &o.alpha, &o.beta);
@@ -138,8 +138,8 @@ Options options_new(int argc, const char **argv)
 
 void options_delete(Options *o)
 {
-    str_delete(&o->openings, &o->pgnout);
+    str_del_n(&o->openings, &o->pgnout);
 
     for (int i = 0; i < 2; i++)
-        str_delete(&o->uciOptions[i], &o->cmd[i], &o->name[i]);
+        str_del_n(&o->uciOptions[i], &o->cmd[i], &o->name[i]);
 }

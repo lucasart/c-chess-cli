@@ -56,10 +56,10 @@ static str_t square_to_string(int square)
     str_t str = str_new();
 
     if (square == NB_SQUARE)
-        str_putc(&str, '-');
+        str_push(&str, '-');
     else {
-        str_putc(&str, file_of(square) + 'a');
-        str_putc(&str, rank_of(square) + '1');
+        str_push(&str, file_of(square) + 'a');
+        str_push(&str, rank_of(square) + '1');
     }
 
     return str;
@@ -301,18 +301,18 @@ str_t pos_get(const Position *pos)
 
             if (bb_test(pos_pieces(pos), square)) {
                 if (cnt)
-                    str_putc(&fen, cnt + '0');
+                    str_push(&fen, cnt + '0');
 
-                str_putc(&fen, PieceLabel[pos_color_on(pos, square)][pos_piece_on(pos, square)]);
+                str_push(&fen, PieceLabel[pos_color_on(pos, square)][pos_piece_on(pos, square)]);
                 cnt = 0;
             } else
                 cnt++;
         }
 
         if (cnt)
-            str_putc(&fen, cnt + '0');
+            str_push(&fen, cnt + '0');
 
-        str_putc(&fen, rank == RANK_1 ? ' ' : '/');
+        str_push(&fen, rank == RANK_1 ? ' ' : '/');
     }
 
     // Turn of play
@@ -320,7 +320,7 @@ str_t pos_get(const Position *pos)
 
     // Castling rights
     if (!pos->castleRooks)
-        str_putc(&fen, '-');
+        str_push(&fen, '-');
     else {
         for (int color = WHITE; color <= BLACK; color++) {
             const bitboard_t b = pos->castleRooks & pos->byColor[color];
@@ -330,11 +330,11 @@ str_t pos_get(const Position *pos)
 
                 // Right side castling
                 if (b & Ray[king][king + RIGHT])
-                    str_putc(&fen, PieceLabel[color][KING]);
+                    str_push(&fen, PieceLabel[color][KING]);
 
                 // Left side castling
                 if (b & Ray[king][king + LEFT])
-                    str_putc(&fen, PieceLabel[color][QUEEN]);
+                    str_push(&fen, PieceLabel[color][QUEEN]);
             }
         }
     }
@@ -507,10 +507,10 @@ str_t pos_move_to_lan(const Position *pos, move_t m, bool chess960)
         to = to > from ? from + 2 : from - 2;  // e1h1 -> e1g1, e1a1 -> e1c1
 
     scope(str_del) str_t fromStr = square_to_string(from), toStr = square_to_string(to);
-    str_cat_s(&lan, &fromStr, &toStr);
+    str_cat_s(str_cat_s(&lan, &fromStr), &toStr);
 
     if (prom < NB_PIECE)
-        str_putc(&lan, PieceLabel[BLACK][prom]);
+        str_push(&lan, PieceLabel[BLACK][prom]);
 
     return lan;
 }
@@ -542,29 +542,29 @@ str_t pos_move_to_san(const Position *pos, move_t m)
     const int piece = pos_piece_on(pos, from);
 
     if (piece == PAWN) {
-        str_putc(&san, file_of(from) + 'a');
+        str_push(&san, file_of(from) + 'a');
 
         if (pos_move_is_capture(pos, m) || to == pos->epSquare)
-            str_putc(&san, 'x', file_of(to) + 'a');
+            str_push(str_push(&san, 'x'), file_of(to) + 'a');
 
-        str_putc(&san, rank_of(to) + '1');
+        str_push(&san, rank_of(to) + '1');
 
         if (prom < NB_PIECE)
-            str_putc(&san, '=', PieceLabel[WHITE][prom]);
+            str_push(str_push(&san, '='), PieceLabel[WHITE][prom]);
     } else if (piece == KING) {
         if (pos_move_is_castling(pos, m))
             str_cpy(&san, to > from ? "O-O" : "O-O-O");
         else {
-            str_putc(&san, 'K');
+            str_push(&san, 'K');
 
             if (pos_move_is_capture(pos, m))
-                str_putc(&san, 'x');
+                str_push(&san, 'x');
 
             scope(str_del) str_t toStr = square_to_string(to);
             str_cat_s(&san, &toStr);
         }
     } else {
-        str_putc(&san, PieceLabel[WHITE][piece]);
+        str_push(&san, PieceLabel[WHITE][piece]);
 
         // ** SAN disambiguation **
 
@@ -609,18 +609,18 @@ str_t pos_move_to_san(const Position *pos, move_t m)
             if (bb_rook_attacks(from, 0) & contesters) {
                 // 2.1.1. Contested rank. Use file to disambiguate
                 if (Rank[rank_of(from)] & contesters)
-                    str_putc(&san, file_of(from) + 'a');
+                    str_push(&san, file_of(from) + 'a');
 
                 // 2.1.2. Contested file. Use rank to disambiguate
                 if (File[file_of(from)] & contesters)
-                    str_putc(&san, rank_of(from) + '1');
+                    str_push(&san, rank_of(from) + '1');
             } else
                 // 2.2. No file or rank in common, use file to disambiguate.
-                str_putc(&san, file_of(from) + 'a');
+                str_push(&san, file_of(from) + 'a');
         }
 
         if (pos_move_is_capture(pos, m))
-            str_putc(&san, 'x');
+            str_push(&san, 'x');
 
         scope(str_del) str_t toStr = square_to_string(to);
         str_cat_s(&san, &toStr);

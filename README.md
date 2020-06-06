@@ -58,12 +58,12 @@ Syntax:
 - `-<option> :<value2>` can you guess? good.
 
 List:
-- cmd: command to run each engine.
-- name: name override for each engine. By default the name is read from `id name` following the UCI
+- `cmd`: command to run each engine.
+- `name`: name override for each engine. By default the name is read from `id name` following the UCI
   protocol (and if that fails cmd value will be used as name).
-- movetime: time limit per move in seconds.
-- nodes: node limit per move.
-- options: UCI options per engine. In this context, `<value1>` and `<value2>`, must be comma
+- `movetime`: time limit per move in seconds.
+- `nodes`: node limit per move.
+- `options`: UCI options per engine. In this context, `<value1>` and `<value2>`, must be comma
   separated, like so: `-options Hash=2,Threads=1:Book=true,Hash=4`. Special characters, like space,
   should be escaped using the shell. For example `-options Time\ Buffer=50`, or `-options "Time Buffer=50"`,
   or whatever is the correct syntax for your shell.

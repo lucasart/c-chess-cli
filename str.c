@@ -127,79 +127,45 @@ void str_ncpy(str_t *dest, const char *restrict src, size_t n)
     assert(str_ok(dest));
 }
 
-void _str_putc(str_t *dest, int c1, ...)
+str_t *str_push(str_t *dest, char c)
 {
     assert(str_ok(dest));
-    va_list args;
-    va_start(args, c1);
-    int next = c1;
 
-    while (next) {
-        str_resize(dest, dest->len + 1);
-        dest->buf[dest->len - 1] = (char)next;
+    str_resize(dest, dest->len + 1);
+    dest->buf[dest->len - 1] = c;
 
-        next = va_arg(args, int);
-    }
-
-    va_end(args);
     assert(str_ok(dest));
+    return dest;
 }
 
-static void do_str_cat(str_t *dest, const char *src, size_t n)
+static str_t *do_str_cat(str_t *dest, const char *src, size_t n)
 {
+    assert(str_ok(dest));
+
     const size_t oldLen = dest->len;
     str_resize(dest, oldLen + n);
     memcpy(&dest->buf[oldLen], src, n);
+
+    assert(str_ok(dest));
+    return dest;
 }
 
-void str_ncat(str_t *dest, const char *src, size_t n)
+str_t *str_ncat(str_t *dest, const char *src, size_t n)
 {
-    assert(str_ok(dest));
-
     if (strlen(src) < n)
         n = strlen(src);
 
-    do_str_cat(dest, src, n);
-
-    assert(str_ok(dest));
+    return do_str_cat(dest, src, n);
 }
 
-void _str_cat(str_t *dest, const char *s1, ...)
+str_t *str_cat(str_t *dest, const char *src)
 {
-    assert(str_ok(dest));
-    va_list args;
-    va_start(args, s1);
-    const char *next = s1;
-
-    while (next) {
-        assert(next);
-        do_str_cat(dest, next, strlen(next));
-        assert(str_ok(dest));
-
-        next = va_arg(args, const char *);
-    }
-
-    va_end(args);
-    assert(str_ok(dest));
+    return do_str_cat(dest, src, strlen(src));
 }
 
-void _str_cat_s(str_t *dest, const str_t *s1, ...)
+str_t *str_cat_s(str_t *dest, const str_t *src)
 {
-    assert(str_ok(dest));
-    va_list args;
-    va_start(args, s1);
-    const str_t *next = s1;
-
-    while (next) {
-        assert(str_ok(next));
-        do_str_cat(dest, next->buf, next->len);
-        assert(str_ok(dest));
-
-        next = va_arg(args, const str_t *);
-    }
-
-    va_end(args);
-    assert(str_ok(dest));
+    return do_str_cat(dest, src->buf, src->len);
 }
 
 static char *do_fmt_u(uintmax_t n, char *s)
@@ -291,7 +257,7 @@ const char *str_tok(const char *s, str_t *token, const char *delim)
     // eat non delimiters into token
     while ((c = *s)) {
         if (!memchr(delim, c, n)) {
-            str_putc(token, c);
+            str_push(token, c);
             s++;
          } else
              break;
@@ -314,7 +280,7 @@ size_t str_getline(str_t *out, FILE *in)
         c = getc_unlocked(in);
 
         if (c != '\n' && c != EOF)
-            str_putc(out, c);
+            str_push(out, c);
         else
             break;
     }
