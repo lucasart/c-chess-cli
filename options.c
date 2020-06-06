@@ -1,6 +1,19 @@
+/*
+ * c-chess-cli, a command line interface for UCI chess engines. Copyright 2020 lucasart.
+ *
+ * c-chess-cli is free software: you can redistribute it and/or modify it under the terms of the GNU
+ * General Public License as published by the Free Software Foundation, either version 3 of the
+ * License, or (at your option) any later version.
+ *
+ * c-chess-cli is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without
+ * even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along with this program. If
+ * not, see <http://www.gnu.org/licenses/>.
+*/
 #include <assert.h>
 #include <limits.h>
-#include <string.h>
 #include "options.h"
 #include "util.h"
 
@@ -21,6 +34,10 @@ static void split_engine_option(const char *in, str_t out[2])
 
 Options options_new(int argc, const char **argv)
 {
+    // List options that expect a value
+    static const char *options[] = {"-concurrency", "-games", "-openings", "-pgnout", "-cmd",
+        "-name", "-options", "-nodes", "-depth", "-draw", "-resign", "-movetime", "-tc", "-sprt"};
+
     // Set default values
     Options o = (Options){0};
 
@@ -45,11 +62,13 @@ Options options_new(int argc, const char **argv)
             if (expectValue)
                 DIE("value expected after '%s'. found tag '%s' instead.\n", argv[i - 1], argv[i]);
 
-            if (strstr("-concurrency -games -openings -pgnout -cmd -name -options -nodes -depth "
-                    "-draw -resign -movetime -tc -sprt", argv[i]))
-                // process tags followed by value
-                expectValue = true;
-            else {
+            for (size_t j = 0; j < sizeof(options) / sizeof(*options); j++)
+                if (!strcmp(argv[i], options[j])) {
+                    expectValue = true;
+                    break;
+                }
+
+            if (!expectValue) {
                 // process tag without value (bool)
                 if (!strcmp(argv[i], "-chess960"))
                     o.go.chess960 = true;

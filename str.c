@@ -214,7 +214,7 @@ void str_cat_fmt(str_t *dest, const char *fmt, ...)
         char buf[24];  // enough to fit a intmax_t with sign prefix '-' and '\0' terminator
 
         if (pct[1] == 's')
-            str_cat(dest, va_arg(args, const char *));  // C-string
+            str_cat(dest, va_arg(args, const char *restrict));  // C-string
         else if (pct[1] == 'S')
             str_cat_s(dest, va_arg(args, const str_t *));  // string
         else if (pct[1] == 'i' || pct[1] == 'I') {  // int or intmax_t
