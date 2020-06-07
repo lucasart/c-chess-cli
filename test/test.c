@@ -186,7 +186,7 @@ static void test_position(void)
         "d2h6 h8h6 f3e4 d8f8 e4g6";
 
     const char *tail = moves;
-    scope(str_del) str_t token = str_new(), sanMoves = str_new();
+    scope(str_del) str_t token = (str_t){0}, sanMoves = (str_t){0};
     int ply = 0;
     hash = 0;
 

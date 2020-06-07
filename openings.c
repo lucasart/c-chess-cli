@@ -1,3 +1,4 @@
+#include <assert.h>
 #include "openings.h"
 #include "util.h"
 
@@ -17,7 +18,7 @@ Openings openings_new(const char *fileName, bool random, int repeat)
 {
     Openings o;
 
-    if (*fileName)
+    if (fileName)
         DIE_IF(!(o.file = fopen(fileName, "r")));
     else
         o.file = NULL;
@@ -35,12 +36,12 @@ Openings openings_new(const char *fileName, bool random, int repeat)
         fseek(o.file, (long)prng(&seed) % size, SEEK_SET);
 
         // Consume current line, likely broken, as we're somewhere in the middle of it
-        scope(str_del) str_t line = str_new();
+        scope(str_del) str_t line = (str_t){0};
         read_infinite(o.file, &line);
     }
 
     pthread_mutex_init(&o.mtx, NULL);
-    o.lastFen = str_new();
+    o.lastFen = (str_t){0};
     o.repeat = repeat;
     o.next = 0;
 
@@ -69,12 +70,13 @@ int openings_next(Openings *o, str_t *fen)
 
     pthread_mutex_lock(&o->mtx);
 
-    if (o->repeat && o->next % 2 == 1)
+    if (o->repeat && o->next % 2 == 1) {
         // Repeat last opening
+        assert(o->lastFen.len);
         str_cpy_s(fen, &o->lastFen);
-    else {
+    } else {
         // Read 'fen' from file, and save in 'o->lastFen'
-        scope(str_del) str_t line = str_new();
+        scope(str_del) str_t line = (str_t){0};
         read_infinite(o->file, &line);
         str_tok(line.buf, fen, ";");
         str_cpy_s(&o->lastFen, fen);

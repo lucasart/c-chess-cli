@@ -51,8 +51,8 @@ static void str_resize(str_t *s, size_t len)
 
 bool str_ok(const str_t *s)
 {
-    return s && s->alloc >= str_round_up(s->len + 1)
-        && s->buf && s->buf[s->len] == '\0' && !memchr(s->buf, 0, s->len);
+    return s && ((s->alloc >= str_round_up(s->len + 1) && s->buf && s->buf[s->len] == '\0'
+        && !memchr(s->buf, 0, s->len)) || (!s->alloc && !s->len && !s->buf));
 }
 
 bool str_eq(const str_t *s1, const str_t *s2)
@@ -61,30 +61,10 @@ bool str_eq(const str_t *s1, const str_t *s2)
     return s1->len == s2->len && !memcmp(s1->buf, s2->buf, s1->len);
 }
 
-str_t str_new()
-{
-    str_t s;
-
-    s.len = 0;
-    s.alloc = str_round_up(s.len + 1);
-    s.buf = malloc(s.alloc);
-    s.buf[s.len] = '\0';
-
-    assert(str_ok(&s));
-    return s;
-}
-
 str_t str_dup(const char *src)
 {
-    assert(src);
-    str_t s;
-
-    s.len = strlen(src);
-    s.alloc = str_round_up(s.len + 1);
-    s.buf = malloc(s.alloc);
-    memcpy(s.buf, src, s.len + 1);
-
-    assert(str_ok(&s));
+    str_t s = {0};
+    str_cpy(&s, src);
     return s;
 }
 
@@ -204,7 +184,7 @@ void str_cat_fmt(str_t *dest, const char *fmt, ...)
 
         if (pct > fmt)
             // '%' found: append the chunk of format string before '%' (if any)
-            str_ncat(dest, fmt, (size_t)(pct - fmt));
+            do_str_cat(dest, fmt, (size_t)(pct - fmt));
 
         bytesLeft -= (size_t)((pct + 2) - fmt);
         fmt = pct + 2;  // move past the '%?' to prepare next loop iteration

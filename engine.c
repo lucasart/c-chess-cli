@@ -61,27 +61,28 @@ static void engine_spawn(Engine *e, const char *cmd, bool readStdErr)
     }
 }
 
-Engine engine_new(const char *cmd, const char *name, FILE *log, Deadline *deadline,
-    const char *uciOptions)
+Engine engine_new(const char *cmd, const char *name, const char *uciOptions, FILE *log,
+    Deadline *deadline)
 {
-    assert(cmd && name && uciOptions);  // log can be NULL
+    DIE_IF(!cmd || !*cmd);
 
     Engine e;
     e.log = log;
-    e.name = str_dup(*name ? name : cmd); // default value
+    const bool nameOverride = name && *name;
+    e.name = str_dup(nameOverride ? name : cmd); // default value
     engine_spawn(&e, cmd, log != NULL);  // spawn child process and plug pipes
 
     deadline_set(deadline, &e, system_msec() + 1000);
     engine_writeln(&e, "uci");
 
-    scope(str_del) str_t line = str_new(), token = str_new();
+    scope(str_del) str_t line = (str_t){0}, token = (str_t){0};
 
     do {
         engine_readln(&e, &line);
         const char *tail = line.buf;
 
         // Set e.name, by parsing "id name %s", only if no name was provided (*name == '\0')
-        if (!*name && (tail = str_tok(tail, &token, " ")) && !strcmp(token.buf, "id")
+        if (!nameOverride && (tail = str_tok(tail, &token, " ")) && !strcmp(token.buf, "id")
                 && (tail = str_tok(tail, &token, " ")) && !strcmp(token.buf, "name") && tail)
             str_cpy(&e.name, tail + 1);
     } while (strcmp(line.buf, "uciok"));
@@ -134,7 +135,7 @@ void engine_sync(const Engine *e, Deadline *deadline)
 {
     deadline_set(deadline, e, system_msec() + 1000);
     engine_writeln(e, "isready");
-    scope(str_del) str_t line = str_new();
+    scope(str_del) str_t line = (str_t){0};
 
     do {
         engine_readln(e, &line);
@@ -148,7 +149,7 @@ bool engine_bestmove(const Engine *e, int *score, int64_t *timeLeft, Deadline *d
 {
     int result = false;
     *score = 0;
-    scope(str_del) str_t line = str_new(), token = str_new();
+    scope(str_del) str_t line = (str_t){0}, token = (str_t){0};
 
     const int64_t start = system_msec(), timeLimit = start + *timeLeft;
     deadline_set(deadline, e, timeLimit + 1000);
