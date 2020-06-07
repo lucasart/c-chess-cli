@@ -22,7 +22,7 @@
 #include "engine.h"
 #include "util.h"
 
-static void engine_spawn(Engine *e, const char *cmd)
+static void engine_spawn(Engine *e, const char *cmd, bool readStdErr)
 {
     // Pipe diagram: Parent -> [1]into[0] -> Child -> [1]outof[0] -> Parent
     // 'into' and 'outof' are pipes, each with 2 ends: read=0, write=1
@@ -41,6 +41,9 @@ static void engine_spawn(Engine *e, const char *cmd)
 
         DIE_IF(dup2(into[0], STDIN_FILENO) < 0);
         DIE_IF(dup2(outof[1], STDOUT_FILENO) < 0);
+
+        if (readStdErr)
+            DIE_IF(dup2(outof[1], STDERR_FILENO) < 0);
 
         close(into[0]);
         close(outof[1]);
@@ -66,7 +69,7 @@ Engine engine_new(const char *cmd, const char *name, FILE *log, Deadline *deadli
     Engine e;
     e.log = log;
     e.name = str_dup(*name ? name : cmd); // default value
-    engine_spawn(&e, cmd);  // spawn child process and plug pipes
+    engine_spawn(&e, cmd, log != NULL);  // spawn child process and plug pipes
 
     deadline_set(deadline, &e, system_msec() + 1000);
     engine_writeln(&e, "uci");
