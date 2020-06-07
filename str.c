@@ -222,26 +222,15 @@ const char *str_tok(const char *s, str_t *token, const char *delim)
     if (!s)
         return NULL;
 
-    char c;
-    str_cpy(token, "");
-    const size_t n = strlen(delim);
+    str_resize(token, 0);
 
     // eat delimiters before token
-    while ((c = *s)) {
-        if (memchr(delim, c, n))
-            s++;
-        else
-            break;
-    }
+    s += strspn(s, delim);
 
     // eat non delimiters into token
-    while ((c = *s)) {
-        if (!memchr(delim, c, n)) {
-            str_push(token, c);
-            s++;
-         } else
-             break;
-    }
+    const size_t n = strcspn(s, delim);
+    str_ncat(token, s, n);
+    s += n;
 
     // return string tail or NULL if token empty
     assert(str_ok(token));
@@ -251,7 +240,7 @@ const char *str_tok(const char *s, str_t *token, const char *delim)
 size_t str_getline(str_t *out, FILE *in)
 {
     assert(str_ok(out) && in);
-    str_cpy(out, "");
+    str_resize(out, 0);
     int c;
 
     flockfile(in);
