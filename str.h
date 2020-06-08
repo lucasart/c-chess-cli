@@ -41,11 +41,11 @@ void str_del(str_t *s);
 } while (0)
 
 // copies 'src' into valid string 'dest'
-void str_cpy(str_t *dest, const char *restrict src);  // C-string version
-void str_cpy_s(str_t *dest, const str_t *src);  // string version (faster and safer)
+str_t *str_cpy(str_t *dest, const char *restrict src);  // C-string version
+str_t *str_cpy_s(str_t *dest, const str_t *src);  // string version (faster and safer)
 
 // copy at most n characters of C-string 'src' into valid string 'dest'
-void str_ncpy(str_t *dest, const char *restrict src, size_t n);
+str_t *str_ncpy(str_t *dest, const char *restrict src, size_t n);
 
 // str_push(&dest, c): append 'c' to a valid string 'dest'
 str_t *str_push(str_t *dest, char c);

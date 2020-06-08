@@ -20,6 +20,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include "str.h"
+#include "util.h"
 
 static size_t str_round_up(size_t n)
 // Round to the next power of 2, at least the size of 2 machine words
@@ -74,53 +75,9 @@ void str_del(str_t *s)
     *s = (str_t){0};
 }
 
-static void do_str_cpy(str_t *dest, const char *restrict src, size_t n)
-{
-    str_resize(dest, n);
-    memcpy(dest->buf, src, dest->len + 1);
-}
-
-void str_cpy(str_t *dest, const char *restrict src)
-{
-    assert(str_ok(dest) && src);
-    do_str_cpy(dest, src, strlen(src));
-    assert(str_ok(dest));
-}
-
-void str_cpy_s(str_t *dest, const str_t *src)
-{
-    assert(str_ok(dest) && str_ok(src));
-    do_str_cpy(dest, src->buf, src->len);
-    assert(str_ok(dest));
-}
-
-void str_ncpy(str_t *dest, const char *restrict src, size_t n)
-{
-    assert(str_ok(dest));
-
-    if (strlen(src) < n)
-        n = strlen(src);
-
-    do_str_cpy(dest, src, n);
-    dest->buf[n] = '\0';
-
-    assert(str_ok(dest));
-}
-
-str_t *str_push(str_t *dest, char c)
-{
-    assert(str_ok(dest));
-
-    str_resize(dest, dest->len + 1);
-    dest->buf[dest->len - 1] = c;
-
-    assert(str_ok(dest));
-    return dest;
-}
-
 static str_t *do_str_cat(str_t *dest, const char *src, size_t n)
 {
-    assert(str_ok(dest));
+    assert(str_ok(dest) && src);
 
     const size_t oldLen = dest->len;
     str_resize(dest, oldLen + n);
@@ -130,11 +87,36 @@ static str_t *do_str_cat(str_t *dest, const char *src, size_t n)
     return dest;
 }
 
+str_t *str_cpy(str_t *dest, const char *restrict src)
+{
+    str_resize(dest, 0);
+    return do_str_cat(dest, src, strlen(src));
+}
+
+str_t *str_cpy_s(str_t *dest, const str_t *src)
+{
+    str_resize(dest, 0);
+    return do_str_cat(dest, src->buf, src->len);
+}
+
+str_t *str_ncpy(str_t *dest, const char *restrict src, size_t n)
+{
+    n = min(n, strlen(src));
+    str_resize(dest, 0);
+    return do_str_cat(dest, src, n);
+}
+
+str_t *str_push(str_t *dest, char c)
+{
+    str_resize(dest, dest->len + 1);
+    dest->buf[dest->len - 1] = c;
+    assert(str_ok(dest));
+    return dest;
+}
+
 str_t *str_ncat(str_t *dest, const char *src, size_t n)
 {
-    if (strlen(src) < n)
-        n = strlen(src);
-
+    n = min(n, strlen(src));
     return do_str_cat(dest, src, n);
 }
 
