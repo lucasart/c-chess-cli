@@ -19,17 +19,15 @@
 
 static void split_engine_option(const char *in, str_t out[2])
 {
-    char *c = strchr(in, ':');
+    size_t n = strcspn(in, ":");
+    str_ncpy(&out[0], in, n);
 
-    if (c) {
-        // break foo:bar -> (foo,bar)
-        str_ncpy(&out[0], in, (size_t)(c - in));
-        str_ncpy(&out[1], c + 1, strlen(in) - (size_t)(c + 1 - in));
-    } else {
-        // duplicate foo -> (foo,foo)
-        str_cpy(&out[0], in);
-        str_cpy(&out[1], in);
-    }
+    if (*(in += n)) {
+        assert(*in == ':');
+        n = strcspn(++in, ":");
+        str_ncpy(&out[1], in, n);
+    } else
+        str_cpy_s(&out[1], &out[0]);
 }
 
 Options options_new(int argc, const char **argv)
