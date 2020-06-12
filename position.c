@@ -57,8 +57,8 @@ static void square_to_string(int square, char str[3])
     if (square == NB_SQUARE)
         *str++ = '-';
     else {
-        *str++ = file_of(square) + 'a';
-        *str++ = rank_of(square) + '1';
+        *str++ = (char)file_of(square) + 'a';
+        *str++ = (char)rank_of(square) + '1';
     }
 
     *str = '\0';
@@ -273,7 +273,7 @@ void pos_set(Position *pos, const char *fen)
 
     // Verify ep square
     if (pos->epSquare != NB_SQUARE) {
-        const int rank = rank_of(pos->epSquare);
+        rank = rank_of(pos->epSquare);
         const int color = rank == RANK_3 ? WHITE : BLACK;
 
         DIE_IF(color == pos->turn);
@@ -300,7 +300,7 @@ str_t pos_get(const Position *pos)
 
             if (bb_test(pos_pieces(pos), square)) {
                 if (cnt)
-                    str_push(&fen, cnt + '0');
+                    str_push(&fen, (char)cnt + '0');
 
                 str_push(&fen, PieceLabel[pos_color_on(pos, square)][pos_piece_on(pos, square)]);
                 cnt = 0;
@@ -309,7 +309,7 @@ str_t pos_get(const Position *pos)
         }
 
         if (cnt)
-            str_push(&fen, cnt + '0');
+            str_push(&fen, (char)cnt + '0');
 
         str_push(&fen, rank == RANK_1 ? ' ' : '/');
     }
@@ -544,12 +544,12 @@ str_t pos_move_to_san(const Position *pos, move_t m)
     const int piece = pos_piece_on(pos, from);
 
     if (piece == PAWN) {
-        str_push(&san, file_of(from) + 'a');
+        str_push(&san, (char)file_of(from) + 'a');
 
         if (pos_move_is_capture(pos, m) || to == pos->epSquare)
-            str_push(str_push(&san, 'x'), file_of(to) + 'a');
+            str_push(str_push(&san, 'x'), (char)file_of(to) + 'a');
 
-        str_push(&san, rank_of(to) + '1');
+        str_push(&san, (char)rank_of(to) + '1');
 
         if (prom < NB_PIECE)
             str_push(str_push(&san, '='), PieceLabel[WHITE][prom]);
@@ -612,14 +612,14 @@ str_t pos_move_to_san(const Position *pos, move_t m)
             if (bb_rook_attacks(from, 0) & contesters) {
                 // 2.1.1. Contested rank. Use file to disambiguate
                 if (Rank[rank_of(from)] & contesters)
-                    str_push(&san, file_of(from) + 'a');
+                    str_push(&san, (char)file_of(from) + 'a');
 
                 // 2.1.2. Contested file. Use rank to disambiguate
                 if (File[file_of(from)] & contesters)
-                    str_push(&san, rank_of(from) + '1');
+                    str_push(&san, (char)rank_of(from) + '1');
             } else
                 // 2.2. No file or rank in common, use file to disambiguate.
-                str_push(&san, file_of(from) + 'a');
+                str_push(&san, (char)file_of(from) + 'a');
         }
 
         if (pos_move_is_capture(pos, m))

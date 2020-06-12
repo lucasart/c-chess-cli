@@ -16,8 +16,6 @@
 #include "bitboard.h"
 #include "str.h"
 
-enum {MATE = 32000};
-
 typedef struct {
     bitboard_t byColor[NB_COLOR];  // eg. byColor[WHITE] = squares occupied by white's army
     bitboard_t byPiece[NB_PIECE];  // eg. byPiece[KNIGHT] = squares occupied by knights (any color)

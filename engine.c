@@ -36,8 +36,8 @@ static void engine_spawn(Engine *e, const char *cmd, bool readStdErr)
 
     if (e->pid == 0) {
         // in the child process
-        close(into[1]);
-        close(outof[0]);
+        DIE_IF(close(into[1]) < 0);
+        DIE_IF(close(outof[0]) < 0);
 
         DIE_IF(dup2(into[0], STDIN_FILENO) < 0);
         DIE_IF(dup2(outof[1], STDOUT_FILENO) < 0);
@@ -45,16 +45,16 @@ static void engine_spawn(Engine *e, const char *cmd, bool readStdErr)
         if (readStdErr)
             DIE_IF(dup2(outof[1], STDERR_FILENO) < 0);
 
-        close(into[0]);
-        close(outof[1]);
+        DIE_IF(close(into[0]) < 0);
+        DIE_IF(close(outof[1]) > 0);
 
         DIE_IF(execlp(cmd, cmd, NULL) < 0);
     } else {
         assert(e->pid > 0);
 
         // in the parent process
-        close(into[0]);
-        close(outof[1]);
+        DIE_IF(close(into[0]) < 0);
+        DIE_IF(close(outof[1]) < 0);
 
         DIE_IF(!(e->in = fdopen(outof[0], "r")));
         DIE_IF(!(e->out = fdopen(into[1], "w")));

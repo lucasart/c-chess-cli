@@ -223,12 +223,12 @@ size_t str_getline(str_t *out, FILE *in)
 {
     assert(str_ok(out) && in);
     str_resize(out, 0);
-    int c;
+    char c;
 
     flockfile(in);
 
     while (true) {
-        c = getc_unlocked(in);
+        c = (char)getc_unlocked(in);
 
         if (c != '\n' && c != EOF)
             str_push(out, c);

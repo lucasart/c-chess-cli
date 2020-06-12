@@ -1,3 +1,17 @@
+/*
+ * c-chess-cli, a command line interface for UCI chess engines. Copyright 2020 lucasart.
+ *
+ * c-chess-cli is free software: you can redistribute it and/or modify it under the terms of the GNU
+ * General Public License as published by the Free Software Foundation, either version 3 of the
+ * License, or (at your option) any later version.
+ *
+ * c-chess-cli is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without
+ * even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+ * General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along with this program. If
+ * not, see <http://www.gnu.org/licenses/>.
+*/
 #include <assert.h>
 #include "openings.h"
 #include "util.h"
@@ -33,7 +47,7 @@ Openings openings_new(const char *fileName, bool random, int repeat)
             DIE("openings_create(): file size = 0");
 
         uint64_t seed = (uint64_t)system_msec();
-        fseek(o.file, (long)prng(&seed) % size, SEEK_SET);
+        DIE_IF(fseek(o.file, (long)prng(&seed) % size, SEEK_SET) < 0);
 
         // Consume current line, likely broken, as we're somewhere in the middle of it
         scope(str_del) str_t line = (str_t){0};

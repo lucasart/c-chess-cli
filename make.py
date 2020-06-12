@@ -19,7 +19,7 @@ else:
 
 # Determine flags for: compilation, warning, and linking
 cflags = '-std=gnu11 {} -mpopcnt -Ofast -flto'.format('-DNDEBUG -s' if not args.debug else '-g')
-wflags = '-Wfatal-errors -Wall -Wextra -Wstrict-prototypes -Wsign-conversion'
+wflags = '-Wfatal-errors -Wall -Wextra -Wstrict-prototypes -Wsign-conversion -Wshadow'
 lflags ='-lpthread -lm {}'.format('-static' if args.static else '')
 
 # Run compiler
