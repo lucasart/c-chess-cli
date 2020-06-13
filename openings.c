@@ -28,12 +28,12 @@ static void read_infinite(FILE *in, str_t *line)
     }
 }
 
-Openings openings_new(const char *fileName, bool random, int repeat)
+Openings openings_new(const str_t *fileName, bool random, int repeat)
 {
     Openings o;
 
-    if (fileName)
-        DIE_IF(!(o.file = fopen(fileName, "r")));
+    if (fileName->len)
+        DIE_IF(!(o.file = fopen(fileName->buf, "r")));
     else
         o.file = NULL;
 
@@ -47,7 +47,7 @@ Openings openings_new(const char *fileName, bool random, int repeat)
             DIE("openings_create(): file size = 0");
 
         uint64_t seed = (uint64_t)system_msec();
-        DIE_IF(fseek(o.file, (long)prng(&seed) % size, SEEK_SET) < 0);
+        DIE_IF(fseek(o.file, (long)(prng(&seed) % (uint64_t)size), SEEK_SET) < 0);
 
         // Consume current line, likely broken, as we're somewhere in the middle of it
         scope(str_del) str_t line = (str_t){0};

@@ -64,9 +64,12 @@ bool str_eq(const str_t *s1, const str_t *s2)
 
 str_t str_dup(const char *src)
 {
-    str_t s = {0};
-    str_cpy(&s, src);
-    return s;
+    return *str_cpy(&(str_t){0}, src);
+}
+
+str_t str_dup_s(const str_t *src)
+{
+    return *str_cpy_s(&(str_t){0}, src);
 }
 
 void str_del(str_t *s)
@@ -118,6 +121,12 @@ str_t *str_ncat(str_t *dest, const char *src, size_t n)
 {
     n = min(n, strlen(src));
     return do_str_cat(dest, src, n);
+}
+
+str_t *str_ncat_s(str_t *dest, const str_t *src, size_t n)
+{
+    n = min(n, src->len);
+    return do_str_cat(dest, src->buf, n);
 }
 
 str_t *str_cat(str_t *dest, const char *src)

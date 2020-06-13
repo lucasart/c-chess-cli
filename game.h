@@ -62,7 +62,7 @@ typedef struct {
     char pad[4];
 } Game;
 
-Game game_new(const char *fen, const GameOptions *go);
+Game game_new(const str_t *fen, const GameOptions *go);
 void game_delete(Game *g);
 
 int game_play(Game *g, const Engine engines[2], Deadline *deadline, bool reverse);

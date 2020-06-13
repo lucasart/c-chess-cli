@@ -42,15 +42,15 @@ static void *thread_start(void *arg)
 
     // Prepare engines[]
     for (int i = 0; i < 2; i++)
-        engines[i] = engine_new(options.cmd[i].buf, options.name[i].buf, options.uciOptions[i].buf,
-            log, &worker->deadline);
+        engines[i] = engine_new(&options.cmd[i], &options.name[i], &options.uciOptions[i], log,
+            &worker->deadline);
 
     int next;
     scope(str_del) str_t fen = (str_t){0};
 
     while ((next = openings_next(&openings, &fen)) <= options.games) {
         // Play 1 game
-        Game game = game_new(fen.buf, &options.go);
+        Game game = game_new(&fen, &options.go);
         const int wld = game_play(&game, engines, &worker->deadline, next % 2 == 0);
 
         // Write to PGN file
@@ -107,7 +107,7 @@ int main(int argc, const char **argv)
 {
     options = options_new(argc, argv);
 
-    openings = openings_new(options.openings.buf, options.random, options.repeat);
+    openings = openings_new(&options.openings, options.random, options.repeat);
 
     pgnout = NULL;
 

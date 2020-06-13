@@ -29,6 +29,7 @@ bool str_eq(const str_t *s1, const str_t *s2);
 
 // returns a valid string, copying its content from C-string 'src'
 str_t str_dup(const char *src);
+str_t str_dup_s(const str_t *src);
 
 void str_del(str_t *s);
 #define scope(func) __attribute__ ((cleanup(func)))
@@ -52,6 +53,7 @@ str_t *str_push(str_t *dest, char c);
 
 // appends at most n characters of C-string 'src' into valid string 'dest'
 str_t *str_ncat(str_t *dest, const char *src, size_t n);
+str_t *str_ncat_s(str_t *dest, const str_t *src, size_t n);
 
 // String concatenation
 str_t *str_cat(str_t *dest, const char *src);  // C-string version

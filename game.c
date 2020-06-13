@@ -103,9 +103,9 @@ static bool illegal_move(move_t move, const move_t *begin, const move_t *end)
     return true;
 }
 
-Game game_new(const char *fen, const GameOptions *go)
+Game game_new(const str_t *fen, const GameOptions *go)
 {
-    assert(fen && *fen && go);
+    assert(fen->len && go);
 
     Game g;
     g.names[WHITE] = (str_t){0};
@@ -114,7 +114,7 @@ Game game_new(const char *fen, const GameOptions *go)
     g.ply = 0;
     g.maxPly = 256;
     g.pos = malloc((size_t)g.maxPly * sizeof(Position));
-    pos_set(&g.pos[0], fen);
+    pos_set(&g.pos[0], fen->buf);
 
     g.state = STATE_NONE;
 

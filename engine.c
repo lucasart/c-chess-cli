@@ -61,39 +61,41 @@ static void engine_spawn(Engine *e, const char *cmd, bool readStdErr)
     }
 }
 
-Engine engine_new(const char *cmd, const char *name, const char *uciOptions, FILE *log,
+Engine engine_new(const str_t *cmd, const str_t *name, const str_t *uciOptions, FILE *log,
     Deadline *deadline)
 {
-    DIE_IF(!cmd || !*cmd);
+    DIE_IF(!cmd->len);
 
     Engine e;
     e.log = log;
-    const bool nameOverride = name && *name;
-    e.name = str_dup(nameOverride ? name : cmd); // default value
-    engine_spawn(&e, cmd, log != NULL);  // spawn child process and plug pipes
+    e.name = str_dup_s(name->len ? name : cmd); // default value
+    engine_spawn(&e, cmd->buf, log != NULL);  // spawn child process and plug pipes
 
     deadline_set(deadline, &e, system_msec() + 1000);
     engine_writeln(&e, "uci");
 
     scope(str_del) str_t line = (str_t){0}, token = (str_t){0};
+    const char *tail;
 
     do {
         engine_readln(&e, &line);
-        const char *tail = line.buf;
+        tail = line.buf;
 
         // Set e.name, by parsing "id name %s", only if no name was provided (*name == '\0')
-        if (!nameOverride && (tail = str_tok(tail, &token, " ")) && !strcmp(token.buf, "id")
+        if (!name->len && (tail = str_tok(tail, &token, " ")) && !strcmp(token.buf, "id")
                 && (tail = str_tok(tail, &token, " ")) && !strcmp(token.buf, "name") && tail)
-            str_cpy(&e.name, tail + 1);
+            str_cpy(&e.name, tail + strspn(tail, " "));
     } while (strcmp(line.buf, "uciok"));
 
     // Parses uciOptions (eg. "Hash=16,Threads=8"), and set engine options accordingly
-    while ((uciOptions = str_tok(uciOptions, &token, ","))) {
+    tail = uciOptions->buf;
+
+    while ((tail = str_tok(tail, &token, ","))) {
         const char *c = strchr(token.buf, '=');
         assert(c);
 
         str_cpy(&line, "setoption name ");
-        str_ncat(&line, token.buf, (size_t)(c - token.buf));
+        str_ncat_s(&line, &token, (size_t)(c - token.buf));
         str_cat(str_cat(&line, " value "), c + 1);
 
         engine_writeln(&e, line.buf);
