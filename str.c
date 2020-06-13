@@ -52,8 +52,8 @@ static void str_resize(str_t *s, size_t len)
 
 bool str_ok(const str_t *s)
 {
-    return s && ((s->alloc >= str_round_up(s->len + 1) && s->buf && s->buf[s->len] == '\0'
-        && !memchr(s->buf, 0, s->len)) || (!s->alloc && !s->len && !s->buf));
+    return s && ((!s->alloc && !s->len && !s->buf)
+        || (s->alloc > s->len && s->buf && s->buf[s->len] == '\0' && !memchr(s->buf, 0, s->len)));
 }
 
 bool str_eq(const str_t *s1, const str_t *s2)
@@ -62,20 +62,10 @@ bool str_eq(const str_t *s1, const str_t *s2)
     return s1->len == s2->len && !memcmp(s1->buf, s2->buf, s1->len);
 }
 
-str_t str_dup(const char *src)
+str_t str_ref(const char *src)
 {
-    return *str_cpy(&(str_t){0}, src);
-}
-
-str_t str_dup_s(const str_t *src)
-{
-    return *str_cpy_s(&(str_t){0}, src);
-}
-
-void str_del(str_t *s)
-{
-    free(s->buf);
-    *s = (str_t){0};
+    const size_t len = strlen(src);
+    return (str_t){.len = len, .alloc = len + 1, .buf = (char *)src};
 }
 
 static str_t *do_str_cat(str_t *dest, const char *src, size_t n)
@@ -90,23 +80,28 @@ static str_t *do_str_cat(str_t *dest, const char *src, size_t n)
     return dest;
 }
 
-str_t *str_cpy(str_t *dest, const char *restrict src)
+str_t str_dup(const str_t *src)
 {
-    str_resize(dest, 0);
-    return do_str_cat(dest, src, strlen(src));
+    return *do_str_cat(&(str_t){0}, src->buf, src->len);
 }
 
-str_t *str_cpy_s(str_t *dest, const str_t *src)
+void str_del(str_t *s)
 {
-    str_resize(dest, 0);
-    return do_str_cat(dest, src->buf, src->len);
+    free(s->buf);
+    *s = (str_t){0};
 }
 
-str_t *str_ncpy(str_t *dest, const char *restrict src, size_t n)
+str_t *str_cpy(str_t *dest, str_t src)
 {
-    n = min(n, strlen(src));
     str_resize(dest, 0);
-    return do_str_cat(dest, src, n);
+    return do_str_cat(dest, src.buf, src.len);
+}
+
+str_t *str_ncpy(str_t *dest, str_t src, size_t n)
+{
+    n = min(n, src.len);
+    str_resize(dest, 0);
+    return do_str_cat(dest, src.buf, n);
 }
 
 str_t *str_push(str_t *dest, char c)
@@ -117,26 +112,15 @@ str_t *str_push(str_t *dest, char c)
     return dest;
 }
 
-str_t *str_ncat(str_t *dest, const char *src, size_t n)
-{
-    n = min(n, strlen(src));
-    return do_str_cat(dest, src, n);
-}
-
-str_t *str_ncat_s(str_t *dest, const str_t *src, size_t n)
+str_t *str_ncat(str_t *dest, const str_t *src, size_t n)
 {
     n = min(n, src->len);
     return do_str_cat(dest, src->buf, n);
 }
 
-str_t *str_cat(str_t *dest, const char *src)
+str_t *str_cat(str_t *dest, str_t src)
 {
-    return do_str_cat(dest, src, strlen(src));
-}
-
-str_t *str_cat_s(str_t *dest, const str_t *src)
-{
-    return do_str_cat(dest, src->buf, src->len);
+    return do_str_cat(dest, src.buf, src.len);
 }
 
 static char *do_fmt_u(uintmax_t n, char *s)
@@ -167,7 +151,7 @@ void str_cat_fmt(str_t *dest, const char *fmt, ...)
 
         if (!pct) {
             // '%' not found: append the rest of the format string and we're done
-            str_cat(dest, fmt);
+            do_str_cat(dest, fmt, bytesLeft);
             break;
         }
 
@@ -185,18 +169,18 @@ void str_cat_fmt(str_t *dest, const char *fmt, ...)
         char buf[24];  // enough to fit a intmax_t with sign prefix '-' and '\0' terminator
 
         if (pct[1] == 's')
-            str_cat(dest, va_arg(args, const char *restrict));  // C-string
+            str_cat(dest, str_ref(va_arg(args, const char *restrict)));  // C-string
         else if (pct[1] == 'S')
-            str_cat_s(dest, va_arg(args, const str_t *));  // string
+            str_cat(dest, *va_arg(args, const str_t *));  // string
         else if (pct[1] == 'i' || pct[1] == 'I') {  // int or intmax_t
             const intmax_t i = pct[1] == 'i' ? va_arg(args, int) : va_arg(args, intmax_t);
             char *s = do_fmt_u((uintmax_t)imaxabs(i), &buf[sizeof(buf) - 1]);
             if (i < 0) *--s = '-';
-            str_cat(dest, s);
+            str_cat(dest, str_ref(s));
         } else if (pct[1] == 'u')  // unsigned int
-            str_cat(dest, do_fmt_u(va_arg(args, unsigned), &buf[sizeof(buf) - 1]));
+            str_cat(dest, str_ref(do_fmt_u(va_arg(args, unsigned), &buf[sizeof(buf) - 1])));
         else if (pct[1] == 'U')  // uintmax_t
-            str_cat(dest, do_fmt_u(va_arg(args, uintmax_t), &buf[sizeof(buf) - 1]));
+            str_cat(dest, str_ref(do_fmt_u(va_arg(args, uintmax_t), &buf[sizeof(buf) - 1])));
         else
             assert(false);  // add your format specifier handler here
     }
@@ -220,7 +204,7 @@ const char *str_tok(const char *s, str_t *token, const char *delim)
 
     // eat non delimiters into token
     const size_t n = strcspn(s, delim);
-    str_ncat(token, s, n);
+    do_str_cat(token, s, n);
     s += n;
 
     // return string tail or NULL if token empty

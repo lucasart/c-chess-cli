@@ -64,10 +64,10 @@ static void square_to_string(int square, char str[3])
     *str = '\0';
 }
 
-static int string_to_square(const char *str)
+static int string_to_square(const str_t *str)
 {
-    return *str != '-'
-        ? square_from(str[1] - '1', str[0] - 'a')
+    return str->buf[0] != '-'
+        ? square_from(str->buf[1] - '1', str->buf[0] - 'a')
         : NB_SQUARE;
 }
 
@@ -167,13 +167,13 @@ static bool pos_move_is_capture(const Position *pos, move_t m)
 }
 
 // Set position from FEN string
-void pos_set(Position *pos, const char *fen)
+void pos_set(Position *pos, const str_t *fen)
 {
     *pos = (Position){0};
     scope(str_del) str_t token = (str_t){0};
 
     // Piece placement
-    fen = str_tok(fen, &token, " ");
+    const char *tail = str_tok(fen->buf, &token, " ");
     DIE_IF(token.len < 10);
     int file = FILE_A, rank = RANK_8;
 
@@ -193,7 +193,7 @@ void pos_set(Position *pos, const char *fen)
     }
 
     // Turn of play
-    fen = str_tok(fen, &token, " ");
+    tail = str_tok(tail, &token, " ");
     DIE_IF(token.len != 1);
 
     if (token.buf[0] == 'w')
@@ -205,7 +205,7 @@ void pos_set(Position *pos, const char *fen)
     }
 
     // Castling rights: optional, default '-'
-    if ((fen = str_tok(fen, &token, " "))) {
+    if ((tail = str_tok(tail, &token, " "))) {
         DIE_IF(token.len > 4);
 
         for (const char *c = token.buf; *c; c++) {
@@ -226,19 +226,19 @@ void pos_set(Position *pos, const char *fen)
     pos->key ^= zobrist_castling(pos->castleRooks);
 
     // En passant square: optional, default '-'
-    if (!(fen = str_tok(fen, &token, " ")))
-        str_cpy(&token, "-");
+    if (!(tail = str_tok(tail, &token, " ")))
+        str_cpy(&token, str_ref("-"));
 
     DIE_IF(token.len > 2);
-    pos->epSquare = (uint8_t)string_to_square(token.buf);
+    pos->epSquare = (uint8_t)string_to_square(&token);
     pos->key ^= ZobristEnPassant[pos->epSquare];
 
     // 50 move counter (in plies, starts at 0): optional, default 0
-    pos->rule50 = (fen = str_tok(fen, &token, " ")) ? (uint8_t)atoi(token.buf) : 0;
+    pos->rule50 = (tail = str_tok(tail, &token, " ")) ? (uint8_t)atoi(token.buf) : 0;
     DIE_IF(pos->rule50 >= 100);
 
     // Full move counter (in moves, starts at 1): optional, default 1
-    pos->fullMove = str_tok(fen, &token, " ") ? (uint16_t)atoi(token.buf) : 1;
+    pos->fullMove = str_tok(tail, &token, " ") ? (uint16_t)atoi(token.buf) : 1;
 
     // Verify piece counts
     for (int color = WHITE; color <= BLACK; color++) {
@@ -315,7 +315,7 @@ str_t pos_get(const Position *pos)
     }
 
     // Turn of play
-    str_cat(&fen, pos->turn == WHITE ? "w " : "b ");
+    str_cat(&fen, str_ref(pos->turn == WHITE ? "w " : "b "));
 
     // Castling rights
     if (!pos->castleRooks)
@@ -499,7 +499,7 @@ str_t pos_move_to_lan(const Position *pos, move_t m, bool chess960)
     int to = move_to(m);
 
     if (!(from | to | prom)) {
-        str_cpy(&lan, "0000");
+        str_cpy(&lan, str_ref("0000"));
         return lan;
     }
 
@@ -509,7 +509,7 @@ str_t pos_move_to_lan(const Position *pos, move_t m, bool chess960)
     char fromStr[3], toStr[3];
     square_to_string(from, fromStr);
     square_to_string(to, toStr);
-    str_cat(str_cat(&lan, fromStr), toStr);
+    str_cat(str_cat(&lan, str_ref(fromStr)), str_ref(toStr));
 
     if (prom < NB_PIECE)
         str_push(&lan, PieceLabel[BLACK][prom]);
@@ -517,11 +517,13 @@ str_t pos_move_to_lan(const Position *pos, move_t m, bool chess960)
     return lan;
 }
 
-move_t pos_lan_to_move(const Position *pos, const char *lan, bool chess960)
+move_t pos_lan_to_move(const Position *pos, const str_t *lan, bool chess960)
 {
-    const int prom = lan[4] ? (int)(strchr(PieceLabel[BLACK], lan[4]) - PieceLabel[BLACK]) : NB_PIECE;
-    const int from = square_from(lan[1] - '1', lan[0] - 'a');
-    int to = square_from(lan[3] - '1', lan[2] - 'a');
+    const int prom = lan->buf[4]
+        ? (int)(strchr(PieceLabel[BLACK], lan->buf[4]) - PieceLabel[BLACK])
+        : NB_PIECE;
+    const int from = square_from(lan->buf[1] - '1', lan->buf[0] - 'a');
+    int to = square_from(lan->buf[3] - '1', lan->buf[2] - 'a');
 
     if (!chess960 && pos_piece_on(pos, from) == KING) {
         if (to == from + 2)  // e1g1 -> e1h1
@@ -555,7 +557,7 @@ str_t pos_move_to_san(const Position *pos, move_t m)
             str_push(str_push(&san, '='), PieceLabel[WHITE][prom]);
     } else if (piece == KING) {
         if (pos_move_is_castling(pos, m))
-            str_cpy(&san, to > from ? "O-O" : "O-O-O");
+            str_cpy(&san, str_ref(to > from ? "O-O" : "O-O-O"));
         else {
             str_push(&san, 'K');
 
@@ -564,7 +566,7 @@ str_t pos_move_to_san(const Position *pos, move_t m)
 
             char toStr[3];
             square_to_string(to, toStr);
-            str_cat(&san, toStr);
+            str_cat(&san, str_ref(toStr));
         }
     } else {
         str_push(&san, PieceLabel[WHITE][piece]);
@@ -627,7 +629,7 @@ str_t pos_move_to_san(const Position *pos, move_t m)
 
         char toStr[3];
         square_to_string(to, toStr);
-        str_cat(&san, toStr);
+        str_cat(&san, str_ref(toStr));
     }
 
     return san;

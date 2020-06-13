@@ -26,25 +26,25 @@ static void uci_position_command(const Game *g, str_t *cmd)
     // Index of the starting FEN, where rule50 was last reset
     const int ply0 = max(g->ply - g->pos[g->ply].rule50, 0);
 
-    str_cpy(cmd, "position fen ");
+    str_cpy(cmd, str_ref("position fen "));
     scope(str_del) str_t fen = pos_get(&g->pos[ply0]);
-    str_cat_s(cmd, &fen);
+    str_cat(cmd, fen);
 
     if (ply0 < g->ply) {
-        str_cat(cmd, " moves");
+        str_cat(cmd, str_ref(" moves"));
 
         for (int ply = ply0 + 1; ply <= g->ply; ply++) {
             scope(str_del) str_t lan = pos_move_to_lan(&g->pos[ply - 1], g->pos[ply].lastMove,
                 g->go.chess960);
             str_push(cmd, ' ');
-            str_cat_s(cmd, &lan);
+            str_cat(cmd, lan);
         }
     }
 }
 
 static void uci_go_command(Game *g, int ei, const int64_t timeLeft[2], str_t *cmd)
 {
-    str_cpy(cmd, "go");
+    str_cpy(cmd, str_ref("go"));
 
     if (g->go.nodes[ei])
         str_cat_fmt(cmd, " nodes %U", g->go.nodes[ei]);
@@ -114,7 +114,7 @@ Game game_new(const str_t *fen, const GameOptions *go)
     g.ply = 0;
     g.maxPly = 256;
     g.pos = malloc((size_t)g.maxPly * sizeof(Position));
-    pos_set(&g.pos[0], fen->buf);
+    pos_set(&g.pos[0], fen);
 
     g.state = STATE_NONE;
 
@@ -137,7 +137,7 @@ int game_play(Game *g, const Engine engines[2], Deadline *deadline, bool reverse
 // - returns {-1,0,1} score from engines[0] pov.
 {
     for (int color = WHITE; color <= BLACK; color++)
-        str_cpy_s(&g->names[color], &engines[color ^ g->pos[0].turn ^ reverse].name);
+        str_cpy(&g->names[color], engines[color ^ g->pos[0].turn ^ reverse].name);
 
     for (int i = 0; i < 2; i++) {
         if (g->go.chess960)
@@ -200,7 +200,7 @@ int game_play(Game *g, const Engine engines[2], Deadline *deadline, bool reverse
             break;
         }
 
-        played = pos_lan_to_move(&g->pos[g->ply], best.buf, g->go.chess960);
+        played = pos_lan_to_move(&g->pos[g->ply], &best, g->go.chess960);
 
         if (illegal_move(played, moves, end)) {
             g->state = STATE_ILLEGAL_MOVE;
@@ -244,35 +244,35 @@ str_t game_decode_state(const Game *g, str_t *reason)
     str_t result = (str_t){0};
 
     if (g->state == STATE_NONE) {
-        str_cpy(&result, "*");
-        str_cpy(reason, "unterminated");
+        str_cpy(&result, str_ref("*"));
+        str_cpy(reason, str_ref("unterminated"));
     } else if (g->state == STATE_CHECKMATE) {
-        str_cpy(&result, g->pos[g->ply].turn == WHITE ? "0-1" : "1-0");
-        str_cpy(reason, "checkmate");
+        str_cpy(&result, str_ref(g->pos[g->ply].turn == WHITE ? "0-1" : "1-0"));
+        str_cpy(reason, str_ref("checkmate"));
     } else if (g->state == STATE_STALEMATE) {
-        str_cpy(&result, "1/2-1/2");
-        str_cpy(reason, "stalemate");
+        str_cpy(&result, str_ref("1/2-1/2"));
+        str_cpy(reason, str_ref("stalemate"));
     } else if (g->state == STATE_THREEFOLD) {
-        str_cpy(&result, "1/2-1/2");
-        str_cpy(reason, "3-fold repetition");
+        str_cpy(&result, str_ref("1/2-1/2"));
+        str_cpy(reason, str_ref("3-fold repetition"));
     } else if (g->state == STATE_FIFTY_MOVES) {
-        str_cpy(&result, "1/2-1/2");
-        str_cpy(reason, "50 moves rule");
+        str_cpy(&result, str_ref("1/2-1/2"));
+        str_cpy(reason, str_ref("50 moves rule"));
     } else if (g->state ==STATE_INSUFFICIENT_MATERIAL) {
-        str_cpy(&result, "1/2-1/2");
-        str_cpy(reason, "insufficient material");
+        str_cpy(&result, str_ref("1/2-1/2"));
+        str_cpy(reason, str_ref("insufficient material"));
     } else if (g->state == STATE_ILLEGAL_MOVE) {
-        str_cpy(&result, g->pos[g->ply].turn == WHITE ? "0-1" : "1-0");
-        str_cpy(reason, "rules infraction");
+        str_cpy(&result, str_ref(g->pos[g->ply].turn == WHITE ? "0-1" : "1-0"));
+        str_cpy(reason, str_ref("rules infraction"));
     } else if (g->state == STATE_DRAW_ADJUDICATION) {
-        str_cpy(&result, "1/2-1/2");
-        str_cpy(reason, "adjudication");
+        str_cpy(&result, str_ref("1/2-1/2"));
+        str_cpy(reason, str_ref("adjudication"));
     } else if (g->state == STATE_RESIGN) {
-        str_cpy(&result, g->pos[g->ply].turn == WHITE ? "0-1" : "1-0");
-        str_cpy(reason, "adjudication");
+        str_cpy(&result, str_ref(g->pos[g->ply].turn == WHITE ? "0-1" : "1-0"));
+        str_cpy(reason, str_ref("adjudication"));
     } else if (g->state == STATE_TIME_LOSS) {
-        str_cpy(&result, g->pos[g->ply].turn == WHITE ? "0-1" : "1-0");
-        str_cpy(reason, "time forfeit");
+        str_cpy(&result, str_ref(g->pos[g->ply].turn == WHITE ? "0-1" : "1-0"));
+        str_cpy(reason, str_ref("time forfeit"));
     } else
         assert(false);
 
@@ -295,7 +295,7 @@ str_t game_pgn(const Game *g)
     str_cat_fmt(&pgn, "[FEN \"%S\"]\n", &fen);
 
     if (g->go.chess960)
-        str_cat(&pgn, "[Variant \"Chess960\"]\n");
+        str_cat(&pgn, str_ref("[Variant \"Chess960\"]\n"));
 
     str_cat_fmt(&pgn, "[PlyCount \"%i\"]\n\n", g->ply);
 
@@ -316,11 +316,9 @@ str_t game_pgn(const Game *g)
                 str_push(&san, '+');  // normal check
         }
 
-        str_cat_s(&pgn, &san);
-        str_cat(&pgn, ply % 10 == 0 ? "\n" : " ");
+        str_push(str_cat(&pgn, san), ply % 10 == 0 ? '\n' : ' ');
     }
 
-    str_cat_s(&pgn, &result);
-    str_cat(&pgn, "\n\n");
+    str_cat(str_cat(&pgn, result), str_ref("\n\n"));
     return pgn;
 }

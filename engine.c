@@ -68,7 +68,7 @@ Engine engine_new(const str_t *cmd, const str_t *name, const str_t *uciOptions, 
 
     Engine e;
     e.log = log;
-    e.name = str_dup_s(name->len ? name : cmd); // default value
+    e.name = str_dup(name->len ? name : cmd); // default value
     engine_spawn(&e, cmd->buf, log != NULL);  // spawn child process and plug pipes
 
     deadline_set(deadline, &e, system_msec() + 1000);
@@ -84,7 +84,7 @@ Engine engine_new(const str_t *cmd, const str_t *name, const str_t *uciOptions, 
         // Set e.name, by parsing "id name %s", only if no name was provided (*name == '\0')
         if (!name->len && (tail = str_tok(tail, &token, " ")) && !strcmp(token.buf, "id")
                 && (tail = str_tok(tail, &token, " ")) && !strcmp(token.buf, "name") && tail)
-            str_cpy(&e.name, tail + strspn(tail, " "));
+            str_cpy(&e.name, str_ref(tail + strspn(tail, " ")));
     } while (strcmp(line.buf, "uciok"));
 
     // Parses uciOptions (eg. "Hash=16,Threads=8"), and set engine options accordingly
@@ -94,9 +94,9 @@ Engine engine_new(const str_t *cmd, const str_t *name, const str_t *uciOptions, 
         const char *c = strchr(token.buf, '=');
         assert(c);
 
-        str_cpy(&line, "setoption name ");
-        str_ncat_s(&line, &token, (size_t)(c - token.buf));
-        str_cat(str_cat(&line, " value "), c + 1);
+        str_cpy(&line, str_ref("setoption name "));
+        str_ncat(&line, &token, (size_t)(c - token.buf));
+        str_cat_fmt(&line, " value %s", c + 1);
 
         engine_writeln(&e, line.buf);
     }
@@ -176,7 +176,7 @@ bool engine_bestmove(const Engine *e, int *score, int64_t *timeLeft, Deadline *d
                     DIE("illegal syntax after 'score' in '%s'\n", line.buf);
             }
         } else if (!strcmp(token.buf, "bestmove") && str_tok(tail, &token, " ")) {
-            str_cpy_s(best, &token);
+            str_cpy(best, token);
             result = true;
         }
     }

@@ -78,7 +78,7 @@ int openings_next(Openings *o, str_t *fen)
         const int next = ++o->next;
         pthread_mutex_unlock(&o->mtx);
 
-        str_cpy(fen, "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");  // start pos
+        str_cpy(fen, str_ref("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"));
         return next;
     }
 
@@ -87,13 +87,13 @@ int openings_next(Openings *o, str_t *fen)
     if (o->repeat && o->next % 2 == 1) {
         // Repeat last opening
         assert(o->lastFen.len);
-        str_cpy_s(fen, &o->lastFen);
+        str_cpy(fen, o->lastFen);
     } else {
         // Read 'fen' from file, and save in 'o->lastFen'
         scope(str_del) str_t line = (str_t){0};
         read_infinite(o->file, &line);
         str_tok(line.buf, fen, ";");
-        str_cpy_s(&o->lastFen, fen);
+        str_cpy(&o->lastFen, *fen);
     }
 
     const int next = ++o->next;

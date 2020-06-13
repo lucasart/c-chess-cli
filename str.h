@@ -27,37 +27,36 @@ typedef struct {
 bool str_ok(const str_t *s);
 bool str_eq(const str_t *s1, const str_t *s2);
 
-// returns a valid string, copying its content from C-string 'src'
-str_t str_dup(const char *src);
-str_t str_dup_s(const str_t *src);
+// Make a string ref out of a C-string. This allows to use C-string as input to str_*() functions,
+// without any copying, and without duplicating all functions.
+str_t str_ref(const char *src);
+
+// returns a string, copying its content from 'src'
+str_t str_dup(const str_t *src);
 
 void str_del(str_t *s);
 #define scope(func) __attribute__ ((cleanup(func)))
 
 #define str_del_n(...) do { \
     str_t *_s[] = {__VA_ARGS__}; \
-    for (size_t _i = 0; _i < sizeof(_s) / sizeof(*_s); _i++) { \
+    for (size_t _i = 0; _i < sizeof(_s) / sizeof(*_s); _i++) \
         str_del(_s[_i]); \
-    } \
 } while (0)
 
-// copies 'src' into valid string 'dest'
-str_t *str_cpy(str_t *dest, const char *restrict src);  // C-string version
-str_t *str_cpy_s(str_t *dest, const str_t *src);  // string version (faster and safer)
+// copies 'src' into 'dest'
+str_t *str_cpy(str_t *dest, str_t src);
 
-// copy at most n characters of C-string 'src' into valid string 'dest'
-str_t *str_ncpy(str_t *dest, const char *restrict src, size_t n);
+// copy at most n characters of 'src' into 'dest'
+str_t *str_ncpy(str_t *dest, str_t src, size_t n);
 
-// str_push(&dest, c): append 'c' to a valid string 'dest'
+// append 'c' to 'dest'
 str_t *str_push(str_t *dest, char c);
 
-// appends at most n characters of C-string 'src' into valid string 'dest'
-str_t *str_ncat(str_t *dest, const char *src, size_t n);
-str_t *str_ncat_s(str_t *dest, const str_t *src, size_t n);
+// appends at most n characters of 'src' to 'dest'
+str_t *str_ncat(str_t *dest, const str_t *src, size_t n);
 
 // String concatenation
-str_t *str_cat(str_t *dest, const char *src);  // C-string version
-str_t *str_cat_s(str_t *dest, const str_t *src);  // string version (faster and safer)
+str_t *str_cat(str_t *dest, str_t src);
 
 // same as sprintf(), but appends, instead of replace, to valid string s1
 void str_cat_fmt(str_t *dest, const char *fmt, ...);

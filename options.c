@@ -20,14 +20,14 @@
 static void split_engine_option(const char *in, str_t out[2])
 {
     size_t n = strcspn(in, ":");
-    str_ncpy(&out[0], in, n);
+    str_ncpy(&out[0], str_ref(in), n);  // FIXME: in should be str_t, and str_slice_ref() to move along without strlen()
 
     if (*(in += n)) {
         assert(*in == ':');
         n = strcspn(++in, ":");
-        str_ncpy(&out[1], in, n);
+        str_ncpy(&out[1], str_ref(in), n);
     } else
-        str_cpy_s(&out[1], &out[0]);
+        str_cpy(&out[1], out[0]);
 }
 
 Options options_new(int argc, const char **argv)
@@ -89,9 +89,9 @@ Options options_new(int argc, const char **argv)
             else if (!strcmp(argv[i - 1], "-games"))
                 o.games = atoi(argv[i]);
             else if (!strcmp(argv[i - 1], "-openings"))
-                str_cpy(&o.openings, argv[i]);
+                str_cpy(&o.openings, str_ref(argv[i]));
             else if (!strcmp(argv[i - 1], "-pgnout"))
-                str_cpy(&o.pgnout, argv[i]);
+                str_cpy(&o.pgnout, str_ref(argv[i]));
             else if (!strcmp(argv[i - 1], "-cmd"))
                 split_engine_option(argv[i], o.cmd);
             else if (!strcmp(argv[i - 1], "-name"))
