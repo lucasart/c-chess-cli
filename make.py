@@ -4,21 +4,26 @@ import argparse, os
 p = argparse.ArgumentParser(description='c-chess-cli build script')
 p.add_argument('-c', '--compiler', help='Compiler', choices=['cc', 'gcc', 'clang', 'musl-gcc',
     'musl-clang'], default='cc')
-p.add_argument('-o', '--output', help='Output file', default='./c-chess-cli')
+p.add_argument('-o', '--output', help='Output file', default='')
 p.add_argument('-d', '--debug', action='store_true', help='Debug compile')
 p.add_argument('-s', '--static', action='store_true', help='Static compile')
-p.add_argument('-t', '--test', action='store_true', help='compile and run tests')
+p.add_argument('-p', '--program', help='Program to compile', choices=['main', 'test', 'engine'], default='main')
 args = p.parse_args()
 
-# Select source files, depending on which program is being compiled
+# Select source files, and set output file, depending on which program is being compiled
 sources = 'bitboard.c gen.c position.c str.c util.c'
-if args.test:
-    sources += ' test/test.c'
-else:
+if args.program == 'main':
     sources += ' engine.c game.c main.c openings.c options.c sprt.c workers.c'
+    if args.output == '': args.output = './c-chess-cli'
+elif args.program == 'test':
+    sources += ' test/test.c'
+    if args.output == '': args.output = './test/test'
+elif args.program == 'engine':
+    sources += ' test/engine.c'
+    if args.output == '': args.output = './test/engine'
 
 # Determine flags for: compilation, warning, and linking
-cflags = '-std=gnu11 {} -mpopcnt -Ofast -flto'.format('-DNDEBUG -s' if not args.debug else '-g')
+cflags = '-I. -std=gnu11 {} -mpopcnt -Ofast -flto'.format('-DNDEBUG -s' if not args.debug else '-g')
 wflags = '-Wfatal-errors -Wall -Wextra -Wstrict-prototypes -Wsign-conversion -Wshadow'
 lflags ='-lpthread -lm {}'.format('-static' if args.static else '')
 
@@ -28,6 +33,6 @@ print(cmd)
 res = os.system(cmd)
 
 # Run tests. Only if we compiled the test program, and compilation was successful
-if res == 0 and args.test:
+if res == 0 and args.program == 'test':
     print("running tests...")
     os.system(args.output)

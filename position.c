@@ -64,10 +64,10 @@ static void square_to_string(int square, char str[3])
     *str = '\0';
 }
 
-static int string_to_square(const str_t *str)
+static int string_to_square(str_t str)
 {
-    return str->buf[0] != '-'
-        ? square_from(str->buf[1] - '1', str->buf[0] - 'a')
+    return str.buf[0] != '-'
+        ? square_from(str.buf[1] - '1', str.buf[0] - 'a')
         : NB_SQUARE;
 }
 
@@ -167,13 +167,13 @@ static bool pos_move_is_capture(const Position *pos, move_t m)
 }
 
 // Set position from FEN string
-void pos_set(Position *pos, const str_t *fen)
+void pos_set(Position *pos, str_t fen)
 {
     *pos = (Position){0};
     scope(str_del) str_t token = (str_t){0};
 
     // Piece placement
-    const char *tail = str_tok(fen->buf, &token, " ");
+    const char *tail = str_tok(fen.buf, &token, " ");
     DIE_IF(token.len < 10);
     int file = FILE_A, rank = RANK_8;
 
@@ -230,7 +230,7 @@ void pos_set(Position *pos, const str_t *fen)
         str_cpy(&token, str_ref("-"));
 
     DIE_IF(token.len > 2);
-    pos->epSquare = (uint8_t)string_to_square(&token);
+    pos->epSquare = (uint8_t)string_to_square(token);
     pos->key ^= ZobristEnPassant[pos->epSquare];
 
     // 50 move counter (in plies, starts at 0): optional, default 0
@@ -517,13 +517,13 @@ str_t pos_move_to_lan(const Position *pos, move_t m, bool chess960)
     return lan;
 }
 
-move_t pos_lan_to_move(const Position *pos, const str_t *lan, bool chess960)
+move_t pos_lan_to_move(const Position *pos, str_t lan, bool chess960)
 {
-    const int prom = lan->buf[4]
-        ? (int)(strchr(PieceLabel[BLACK], lan->buf[4]) - PieceLabel[BLACK])
+    const int prom = lan.buf[4]
+        ? (int)(strchr(PieceLabel[BLACK], lan.buf[4]) - PieceLabel[BLACK])
         : NB_PIECE;
-    const int from = square_from(lan->buf[1] - '1', lan->buf[0] - 'a');
-    int to = square_from(lan->buf[3] - '1', lan->buf[2] - 'a');
+    const int from = square_from(lan.buf[1] - '1', lan.buf[0] - 'a');
+    int to = square_from(lan.buf[3] - '1', lan.buf[2] - 'a');
 
     if (!chess960 && pos_piece_on(pos, from) == KING) {
         if (to == from + 2)  // e1g1 -> e1h1

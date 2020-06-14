@@ -114,7 +114,7 @@ Game game_new(const str_t *fen, const GameOptions *go)
     g.ply = 0;
     g.maxPly = 256;
     g.pos = malloc((size_t)g.maxPly * sizeof(Position));
-    pos_set(&g.pos[0], fen);
+    pos_set(&g.pos[0], *fen);
 
     g.state = STATE_NONE;
 
@@ -200,7 +200,7 @@ int game_play(Game *g, const Engine engines[2], Deadline *deadline, bool reverse
             break;
         }
 
-        played = pos_lan_to_move(&g->pos[g->ply], &best, g->go.chess960);
+        played = pos_lan_to_move(&g->pos[g->ply], best, g->go.chess960);
 
         if (illegal_move(played, moves, end)) {
             g->state = STATE_ILLEGAL_MOVE;

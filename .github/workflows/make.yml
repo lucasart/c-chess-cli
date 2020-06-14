@@ -16,4 +16,4 @@ jobs:
     - name: make
       run: ./make.py
     - name: make check
-      run: ./make.py -t
+      run: ./make.py -p test
