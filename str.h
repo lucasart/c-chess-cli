@@ -24,15 +24,15 @@ typedef struct {
 } str_t;
 
 // checks if string 's' is valid
-bool str_ok(const str_t *s);
-bool str_eq(const str_t *s1, const str_t *s2);
+bool str_ok(str_t s);
+bool str_eq(str_t s1, str_t s2);
 
 // Make a string ref out of a C-string. This allows to use C-string as input to str_*() functions,
 // without any copying, and without duplicating all functions.
 str_t str_ref(const char *src);
 
 // returns a string, copying its content from 'src'
-str_t str_dup(const str_t *src);
+str_t str_dup(str_t src);
 
 void str_del(str_t *s);
 #define scope(func) __attribute__ ((cleanup(func)))
@@ -53,7 +53,7 @@ str_t *str_ncpy(str_t *dest, str_t src, size_t n);
 str_t *str_push(str_t *dest, char c);
 
 // appends at most n characters of 'src' to 'dest'
-str_t *str_ncat(str_t *dest, const str_t *src, size_t n);
+str_t *str_ncat(str_t *dest, str_t src, size_t n);
 
 // String concatenation
 str_t *str_cat(str_t *dest, str_t src);

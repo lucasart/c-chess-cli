@@ -38,7 +38,7 @@ static void str_resize(str_t *s, size_t len)
 // may contain 0's before the end. This will cause problems with most code, starting with the C
 // standard library, which is why this function is not exposed to the API.
 {
-    assert(str_ok(s));
+    assert(str_ok(*s));
     s->len = len;
 
     // Implement lazy realloc strategy
@@ -50,16 +50,16 @@ static void str_resize(str_t *s, size_t len)
     s->buf[len] = '\0';
 }
 
-bool str_ok(const str_t *s)
+bool str_ok(str_t s)
 {
-    return s && ((!s->alloc && !s->len && !s->buf)
-        || (s->alloc > s->len && s->buf && s->buf[s->len] == '\0' && !memchr(s->buf, 0, s->len)));
+    return (!s.alloc && !s.len && !s.buf)
+        || (s.alloc > s.len && s.buf && s.buf[s.len] == '\0' && !memchr(s.buf, 0, s.len));
 }
 
-bool str_eq(const str_t *s1, const str_t *s2)
+bool str_eq(str_t s1, str_t s2)
 {
     assert(str_ok(s1) && str_ok(s2));
-    return s1->len == s2->len && !memcmp(s1->buf, s2->buf, s1->len);
+    return s1.len == s2.len && !memcmp(s1.buf, s2.buf, s1.len);
 }
 
 str_t str_ref(const char *src)
@@ -70,19 +70,19 @@ str_t str_ref(const char *src)
 
 static str_t *do_str_cat(str_t *dest, const char *src, size_t n)
 {
-    assert(str_ok(dest) && src);
+    assert(str_ok(*dest) && src);
 
     const size_t oldLen = dest->len;
     str_resize(dest, oldLen + n);
     memcpy(&dest->buf[oldLen], src, n);
 
-    assert(str_ok(dest));
+    assert(str_ok(*dest));
     return dest;
 }
 
-str_t str_dup(const str_t *src)
+str_t str_dup(str_t src)
 {
-    return *do_str_cat(&(str_t){0}, src->buf, src->len);
+    return *do_str_cat(&(str_t){0}, src.buf, src.len);
 }
 
 void str_del(str_t *s)
@@ -108,14 +108,14 @@ str_t *str_push(str_t *dest, char c)
 {
     str_resize(dest, dest->len + 1);
     dest->buf[dest->len - 1] = c;
-    assert(str_ok(dest));
+    assert(str_ok(*dest));
     return dest;
 }
 
-str_t *str_ncat(str_t *dest, const str_t *src, size_t n)
+str_t *str_ncat(str_t *dest, str_t src, size_t n)
 {
-    n = min(n, src->len);
-    return do_str_cat(dest, src->buf, n);
+    n = min(n, src.len);
+    return do_str_cat(dest, src.buf, n);
 }
 
 str_t *str_cat(str_t *dest, str_t src)
@@ -137,9 +137,9 @@ static char *do_fmt_u(uintmax_t n, char *s)
 void str_cat_fmt(str_t *dest, const char *fmt, ...)
 // Supported formats
 // - Integers: %i (int), %I (intmax_t), %u (unsigned), %U (uintmax_t)
-// - Strings: %s (const char *), %S (const str_t *)
+// - Strings: %s (const char *), %S (str_t)
 {
-    assert(str_ok(dest) && fmt);
+    assert(str_ok(*dest) && fmt);
 
     va_list args;
     va_start(args, fmt);
@@ -171,7 +171,7 @@ void str_cat_fmt(str_t *dest, const char *fmt, ...)
         if (pct[1] == 's')
             str_cat(dest, str_ref(va_arg(args, const char *restrict)));  // C-string
         else if (pct[1] == 'S')
-            str_cat(dest, *va_arg(args, const str_t *));  // string
+            str_cat(dest, va_arg(args, str_t));  // string
         else if (pct[1] == 'i' || pct[1] == 'I') {  // int or intmax_t
             const intmax_t i = pct[1] == 'i' ? va_arg(args, int) : va_arg(args, intmax_t);
             char *s = do_fmt_u((uintmax_t)imaxabs(i), &buf[sizeof(buf) - 1]);
@@ -186,12 +186,12 @@ void str_cat_fmt(str_t *dest, const char *fmt, ...)
     }
 
     va_end(args);
-    assert(str_ok(dest));
+    assert(str_ok(*dest));
 }
 
 const char *str_tok(const char *s, str_t *token, const char *delim)
 {
-    assert(str_ok(token) && delim && *delim);
+    assert(str_ok(*token) && delim && *delim);
 
     // empty tail: no-op
     if (!s)
@@ -208,13 +208,13 @@ const char *str_tok(const char *s, str_t *token, const char *delim)
     s += n;
 
     // return string tail or NULL if token empty
-    assert(str_ok(token));
+    assert(str_ok(*token));
     return token->len ? s : NULL;
 }
 
 size_t str_getline(str_t *out, FILE *in)
 {
-    assert(str_ok(out) && in);
+    assert(str_ok(*out) && in);
     str_resize(out, 0);
     char c;
 
@@ -233,6 +233,6 @@ size_t str_getline(str_t *out, FILE *in)
 
     const size_t n = out->len + (c == '\n');
 
-    assert(str_ok(out));
+    assert(str_ok(*out));
     return n;
 }

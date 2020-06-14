@@ -199,8 +199,8 @@ static void test_position(void)
 
         scope(str_del) str_t san = pos_move_to_san(&pos[ply % 2], m),
             lan = pos_move_to_lan(&pos[ply % 2], m, false);
-        str_cat_fmt(&sanMoves, "%S ", &san);
-        TEST(str_eq(&lan, &token));
+        str_cat_fmt(&sanMoves, "%S ", san);
+        TEST(str_eq(lan, token));
 
         ply++;
     }

@@ -68,7 +68,7 @@ Engine engine_new(const str_t *cmd, const str_t *name, const str_t *uciOptions, 
 
     Engine e;
     e.log = log;
-    e.name = str_dup(name->len ? name : cmd); // default value
+    e.name = str_dup(name->len ? *name : *cmd); // default value
     engine_spawn(&e, cmd->buf, log != NULL);  // spawn child process and plug pipes
 
     deadline_set(deadline, &e, system_msec() + 1000);
@@ -95,7 +95,7 @@ Engine engine_new(const str_t *cmd, const str_t *name, const str_t *uciOptions, 
         assert(c);
 
         str_cpy(&line, str_ref("setoption name "));
-        str_ncat(&line, &token, (size_t)(c - token.buf));
+        str_ncat(&line, token, (size_t)(c - token.buf));
         str_cat_fmt(&line, " value %s", c + 1);
 
         engine_writeln(&e, line.buf);

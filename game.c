@@ -283,16 +283,16 @@ str_t game_pgn(const Game *g)
 {
     str_t pgn = (str_t){0};
 
-    str_cat_fmt(&pgn, "[White \"%S\"]\n", &g->names[WHITE]);
-    str_cat_fmt(&pgn, "[Black \"%S\"]\n", &g->names[BLACK]);
+    str_cat_fmt(&pgn, "[White \"%S\"]\n", g->names[WHITE]);
+    str_cat_fmt(&pgn, "[Black \"%S\"]\n", g->names[BLACK]);
 
     // Result in PGN format "1-0", "0-1", "1/2-1/2" (from white pov)
     scope(str_del) str_t reason = (str_t){0}, result = game_decode_state(g, &reason);
-    str_cat_fmt(&pgn, "[Result \"%S\"]\n", &result);
-    str_cat_fmt(&pgn, "[Termination \"%S\"]\n", &reason);
+    str_cat_fmt(&pgn, "[Result \"%S\"]\n", result);
+    str_cat_fmt(&pgn, "[Termination \"%S\"]\n", reason);
 
     scope(str_del) str_t fen = pos_get(&g->pos[0]);
-    str_cat_fmt(&pgn, "[FEN \"%S\"]\n", &fen);
+    str_cat_fmt(&pgn, "[FEN \"%S\"]\n", fen);
 
     if (g->go.chess960)
         str_cat(&pgn, str_ref("[Variant \"Chess960\"]\n"));
