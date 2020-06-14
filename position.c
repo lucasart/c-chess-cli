@@ -170,7 +170,7 @@ static bool pos_move_is_capture(const Position *pos, move_t m)
 void pos_set(Position *pos, str_t fen)
 {
     *pos = (Position){0};
-    scope(str_del) str_t token = (str_t){0};
+    scope(str_del) str_t token = {0};
 
     // Piece placement
     const char *tail = str_tok(fen.buf, &token, " ");
@@ -289,7 +289,7 @@ void pos_set(Position *pos, str_t fen)
 // Get FEN string of position
 str_t pos_get(const Position *pos)
 {
-    str_t fen = (str_t){0};
+    str_t fen = {0};
 
     // Piece placement
     for (int rank = RANK_8; rank >= RANK_1; rank--) {
@@ -494,7 +494,7 @@ bool pos_move_is_castling(const Position *pos, move_t m)
 
 str_t pos_move_to_lan(const Position *pos, move_t m, bool chess960)
 {
-    str_t lan = (str_t){0};
+    str_t lan = {0};
     const int from = move_from(m), prom = move_prom(m);
     int to = move_to(m);
 
@@ -539,7 +539,7 @@ str_t pos_move_to_san(const Position *pos, move_t m)
 // Converts a move to Standard Algebraic Notation. Note that the '+' (check) or '#' (checkmate)
 // suffixes are not generated here.
 {
-    str_t san = (str_t){0};
+    str_t san = {0};
 
     const int us = pos->turn;
     const int from = move_from(m), to = move_to(m), prom = move_prom(m);

@@ -74,7 +74,7 @@ Engine engine_new(const str_t *cmd, const str_t *name, const str_t *uciOptions, 
     deadline_set(deadline, &e, system_msec() + 1000);
     engine_writeln(&e, "uci");
 
-    scope(str_del) str_t line = (str_t){0}, token = (str_t){0};
+    scope(str_del) str_t line = {0}, token = {0};
     const char *tail;
 
     do {
@@ -137,7 +137,7 @@ void engine_sync(const Engine *e, Deadline *deadline)
 {
     deadline_set(deadline, e, system_msec() + 1000);
     engine_writeln(e, "isready");
-    scope(str_del) str_t line = (str_t){0};
+    scope(str_del) str_t line = {0};
 
     do {
         engine_readln(e, &line);
@@ -151,7 +151,7 @@ bool engine_bestmove(const Engine *e, int *score, int64_t *timeLeft, Deadline *d
 {
     int result = false;
     *score = 0;
-    scope(str_del) str_t line = (str_t){0}, token = (str_t){0};
+    scope(str_del) str_t line = {0}, token = {0};
 
     const int64_t start = system_msec(), timeLimit = start + *timeLeft;
     deadline_set(deadline, e, timeLimit + 1000);

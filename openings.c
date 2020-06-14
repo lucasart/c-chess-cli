@@ -50,7 +50,7 @@ Openings openings_new(const str_t *fileName, bool random, int repeat)
         DIE_IF(fseek(o.file, (long)(prng(&seed) % (uint64_t)size), SEEK_SET) < 0);
 
         // Consume current line, likely broken, as we're somewhere in the middle of it
-        scope(str_del) str_t line = (str_t){0};
+        scope(str_del) str_t line = {0};
         read_infinite(o.file, &line);
     }
 
@@ -90,7 +90,7 @@ int openings_next(Openings *o, str_t *fen)
         str_cpy(fen, o->lastFen);
     } else {
         // Read 'fen' from file, and save in 'o->lastFen'
-        scope(str_del) str_t line = (str_t){0};
+        scope(str_del) str_t line = {0};
         read_infinite(o->file, &line);
         str_tok(line.buf, fen, ";");
         str_cpy(&o->lastFen, *fen);

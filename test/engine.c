@@ -25,7 +25,7 @@ typedef struct {
 
 static void parse_go(const char *tail, Go *go)
 {
-    scope(str_del) str_t token = (str_t){0};
+    scope(str_del) str_t token = {0};
     tail = str_tok(tail, &token, " ");
     assert(tail);
 
@@ -35,7 +35,7 @@ static void parse_go(const char *tail, Go *go)
 
 static void parse_position(const char *tail, Position *pos)
 {
-    scope(str_del) str_t token = (str_t){0};
+    scope(str_del) str_t token = {0};
     tail = str_tok(tail, &token, " ");
     assert(tail);
 
@@ -43,7 +43,7 @@ static void parse_position(const char *tail, Position *pos)
         pos_set(pos, str_ref("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"));
         tail = str_tok(tail, &token, " ");
     } else if (!strcmp(token.buf, "fen")) {
-        scope(str_del) str_t fen = (str_t){0};
+        scope(str_del) str_t fen = {0};
 
         while ((tail = str_tok(tail, &token, " ")) && strcmp(token.buf, "moves"))
             str_push(str_cat(&fen, token), ' ');
@@ -110,7 +110,7 @@ int main(void)
     Go go = {0};
     uint64_t seed = 0;
 
-    scope(str_del) str_t line = (str_t){0}, token = (str_t){0};
+    scope(str_del) str_t line = {0}, token = {0};
 
     while (str_getline(&line, stdin)) {
         const char *tail = str_tok(line.buf, &token, " ");

@@ -41,15 +41,7 @@ Options options_new(int argc, const char **argv)
 
     o.concurrency = 1;
     o.games = 1;
-    o.openings = (str_t){0};
-    o.pgnout = (str_t){0};
     o.alpha = o.beta = 0.05;
-
-    for (int i = 0; i < 2; i++) {
-        o.cmd[i] = (str_t){0};
-        o.name[i] = (str_t){0};
-        o.uciOptions[i] = (str_t){0};
-    }
 
     int i;
     bool expectValue = false;  // pattern: '-tag [value]'. should next arg be a value or tag ?
@@ -99,19 +91,19 @@ Options options_new(int argc, const char **argv)
             else if (!strcmp(argv[i - 1], "-options"))
                 split_engine_option(argv[i], o.uciOptions);
             else if (!strcmp(argv[i - 1], "-nodes")) {
-                str_t nodes[2] = {(str_t){0}, (str_t){0}};
+                str_t nodes[2] = {{0}, {0}};
                 split_engine_option(argv[i], nodes);
                 o.go.nodes[0] = (uint64_t)atoll(nodes[0].buf);
                 o.go.nodes[1] = (uint64_t)atoll(nodes[1].buf);
                 str_del_n(&nodes[0], &nodes[1]);
             } else if (!strcmp(argv[i - 1], "-depth")) {
-                str_t depth[2] = {(str_t){0}, (str_t){0}};
+                str_t depth[2] = {{0}, {0}};
                 split_engine_option(argv[i], depth);
                 o.go.depth[0] = atoi(depth[0].buf);
                 o.go.depth[1] = atoi(depth[1].buf);
                 str_del_n(&depth[0], &depth[1]);
             } else if (!strcmp(argv[i - 1], "-movetime")) {
-                str_t movetime[2] = {(str_t){0}, (str_t){0}};
+                str_t movetime[2] = {{0}, {0}};
                 split_engine_option(argv[i], movetime);
                 o.go.movetime[0] = (int64_t)(atof(movetime[0].buf) * 1000);
                 o.go.movetime[1] = (int64_t)(atof(movetime[1].buf) * 1000);
@@ -121,7 +113,7 @@ Options options_new(int argc, const char **argv)
             else if (!strcmp(argv[i - 1], "-draw"))
                 sscanf(argv[i], "%i,%i", &o.go.drawCount, &o.go.drawScore);
             else if (!strcmp(argv[i - 1], "-tc")) {
-                str_t tc[2] = {(str_t){0}, (str_t){0}};
+                str_t tc[2] = {{0}, {0}};
                 split_engine_option(argv[i], tc);
 
                 for (int j = 0; j < 2; j++) {

@@ -34,7 +34,7 @@ static void *thread_start(void *arg)
     // Prepare log file
     FILE *log = NULL;
 
-    scope(str_del) str_t logName = (str_t){0};
+    scope(str_del) str_t logName = {0};
     str_cat_fmt(&logName, "c-chess-cli.%i.log", worker->id);
 
     if (options.debug)
@@ -46,7 +46,7 @@ static void *thread_start(void *arg)
             &worker->deadline);
 
     int next;
-    scope(str_del) str_t fen = (str_t){0};
+    scope(str_del) str_t fen = {0};
 
     while ((next = openings_next(&openings, &fen)) <= options.games) {
         // Play 1 game
@@ -60,7 +60,7 @@ static void *thread_start(void *arg)
         }
 
         // Write to stdout a one line summary of the game
-        scope(str_del) str_t reason = (str_t){0}, result = game_decode_state(&game, &reason);
+        scope(str_del) str_t reason = {0}, result = game_decode_state(&game, &reason);
         printf("[%i] %s vs %s: %s (%s)\n", worker->id, game.names[WHITE].buf,
             game.names[BLACK].buf, result.buf, reason.buf);
 

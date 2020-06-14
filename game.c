@@ -108,8 +108,7 @@ Game game_new(const str_t *fen, const GameOptions *go)
     assert(fen->len && go);
 
     Game g;
-    g.names[WHITE] = (str_t){0};
-    g.names[BLACK] = (str_t){0};
+    g.names[WHITE] = g.names[BLACK] = (str_t){0};
 
     g.ply = 0;
     g.maxPly = 256;
@@ -147,7 +146,7 @@ int game_play(Game *g, const Engine engines[2], Deadline *deadline, bool reverse
         engine_sync(&engines[i], deadline);
     }
 
-    scope(str_del) str_t posCmd = (str_t){0}, goCmd = (str_t){0}, best = (str_t){0};
+    scope(str_del) str_t posCmd = {0}, goCmd = {0}, best = {0};
     move_t played = 0;
     int drawPlyCount = 0;
     int resignCount[NB_COLOR] = {0};
@@ -241,7 +240,7 @@ int game_play(Game *g, const Engine engines[2], Deadline *deadline, bool reverse
 
 str_t game_decode_state(const Game *g, str_t *reason)
 {
-    str_t result = (str_t){0};
+    str_t result = {0};
 
     if (g->state == STATE_NONE) {
         str_cpy(&result, str_ref("*"));
@@ -281,13 +280,13 @@ str_t game_decode_state(const Game *g, str_t *reason)
 
 str_t game_pgn(const Game *g)
 {
-    str_t pgn = (str_t){0};
+    str_t pgn = {0};
 
     str_cat_fmt(&pgn, "[White \"%S\"]\n", g->names[WHITE]);
     str_cat_fmt(&pgn, "[Black \"%S\"]\n", g->names[BLACK]);
 
     // Result in PGN format "1-0", "0-1", "1/2-1/2" (from white pov)
-    scope(str_del) str_t reason = (str_t){0}, result = game_decode_state(g, &reason);
+    scope(str_del) str_t reason = {0}, result = game_decode_state(g, &reason);
     str_cat_fmt(&pgn, "[Result \"%S\"]\n", result);
     str_cat_fmt(&pgn, "[Termination \"%S\"]\n", reason);
 
