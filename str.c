@@ -33,7 +33,7 @@ static size_t str_round_up(size_t n)
     return p2;
 }
 
-static void str_resize(str_t *s, size_t len)
+void str_resize(str_t *s, size_t len)
 // After this call, 's' may be invalid according to the strict definition of str_ok(), because it
 // may contain 0's before the end. This will cause problems with most code, starting with the C
 // standard library, which is why this function is not exposed to the API.

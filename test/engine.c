@@ -14,42 +14,102 @@
 */
 // Stand alone program: minimal UCI engine (random mover) used for testing and benchmarking
 #include "gen.h"
+#include "util.h"
 
 #define uci_printf(...) printf(__VA_ARGS__), fflush(stdout)
 #define uci_puts(str) puts(str), fflush(stdout)
 
-void parse_position(const char *tail, Position *pos)
+typedef struct {
+    int depth;
+} Go;
+
+static void parse_go(const char *tail, Go *go)
 {
     scope(str_del) str_t token = (str_t){0};
-
     tail = str_tok(tail, &token, " ");
     assert(tail);
 
-    if (!strcmp(tail, "startpos"))
+    if (!strcmp(token.buf, "depth") && (tail = str_tok(tail, &token, " ")))
+        go->depth = atoi(token.buf);
+}
+
+static void parse_position(const char *tail, Position *pos)
+{
+    scope(str_del) str_t token = (str_t){0};
+    tail = str_tok(tail, &token, " ");
+    assert(tail);
+
+    if (!strcmp(token.buf, "startpos")) {
         pos_set(pos, str_ref("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"));
-    else if (!strcmp(tail, "fen")) {
+        tail = str_tok(tail, &token, " ");
+    } else if (!strcmp(token.buf, "fen")) {
         scope(str_del) str_t fen = (str_t){0};
 
         while ((tail = str_tok(tail, &token, " ")) && strcmp(token.buf, "moves"))
             str_push(str_cat(&fen, token), ' ');
 
-        Position p[2];
-        int ply = 0;
-        pos_set(&p[ply], fen);
-
-        if (!strcmp(token.buf, "moves")) {
-            while ((tail = str_tok(tail, &token, " ")))
-                pos_move(&p[(ply + 1) % 2], &p[ply % 2], pos_lan_to_move(&p[ply % 2], token, false));
-
-            *pos = p[(ply + 1) % 2];
-        }
+        pos_set(pos, fen);
     } else
         assert(false);
+
+    if (!strcmp(token.buf, "moves")) {
+        Position p[2];
+        int idx = 0;
+        p[0] = *pos;
+
+        while ((tail = str_tok(tail, &token, " "))) {
+            const move_t m = pos_lan_to_move(&p[idx], token, false);
+            pos_move(&p[1 - idx], &p[idx], m);
+            idx = 1 - idx;
+        }
+
+        *pos = p[idx];
+    }
+}
+
+static void random_pv(const Position *pos, uint64_t *seed, int len, str_t *pv)
+{
+    str_resize(pv, 0);
+    Position p[2];
+    p[0] = *pos;
+
+    for (int ply = 0; ply < len; ply++) {
+        // Generate and count legal moves
+        move_t moves[MAX_MOVES];
+        const uint64_t n = (uint64_t)(gen_all_moves(&p[ply % 2], moves) - moves);
+        if (n == 0)
+            break;
+
+        // Choose a random one
+        const move_t m = moves[prng(seed) % n];
+
+        scope(str_del) str_t lan = pos_move_to_lan(&p[ply % 2], m, false);
+        str_push(str_cat(pv, lan), ' ');
+
+        pos_move(&p[(ply + 1) % 2], &p[ply % 2], m);
+    }
+}
+
+static void run_go(const Position *pos, const Go *go, uint64_t *seed)
+{
+    scope(str_del) str_t pv = {0};
+
+    for (int depth = 1; depth <= go->depth; depth++) {
+        random_pv(pos, seed, depth, &pv);
+        uci_printf("info depth %d score cp %d pv %s\n", depth, 0, pv.buf);
+    }
+
+    scope(str_del) str_t token = {0};
+    str_tok(pv.buf, &token, " ");
+    uci_printf("bestmove %s\n", token.buf);
 }
 
 int main(void)
 {
-    Position pos;
+    Position pos = {0};
+    Go go = {0};
+    uint64_t seed = 0;
+
     scope(str_del) str_t line = (str_t){0}, token = (str_t){0};
 
     while (str_getline(&line, stdin)) {
@@ -61,7 +121,10 @@ int main(void)
             uci_puts("readyok");
         else if (!strcmp(token.buf, "position"))
             parse_position(tail, &pos);
-        else if (!strcmp(token.buf, "quit"))
+        else if (!strcmp(token.buf, "go")) {
+            parse_go(tail, &go);
+            run_go(&pos, &go, &seed);
+        } else if (!strcmp(token.buf, "quit"))
             break;
     }
 }

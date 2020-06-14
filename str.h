@@ -23,6 +23,8 @@ typedef struct {
     size_t len;  // number of characters for string content, excluding '\0' terminator
 } str_t;
 
+void str_resize(str_t *s, size_t len);
+
 // checks if string 's' is valid
 bool str_ok(str_t s);
 bool str_eq(str_t s1, str_t s2);
