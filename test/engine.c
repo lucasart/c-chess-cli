@@ -33,7 +33,7 @@ static void parse_go(const char *tail, Go *go)
         go->depth = atoi(token.buf);
 }
 
-static void parse_position(const char *tail, Position *pos)
+static void parse_position(const char *tail, Position *pos, bool chess960)
 {
     scope(str_del) str_t token = {0};
     tail = str_tok(tail, &token, " ");
@@ -58,7 +58,7 @@ static void parse_position(const char *tail, Position *pos)
         p[0] = *pos;
 
         while ((tail = str_tok(tail, &token, " "))) {
-            const move_t m = pos_lan_to_move(&p[idx], token, false);
+            const move_t m = pos_lan_to_move(&p[idx], token, chess960);
             pos_move(&p[1 - idx], &p[idx], m);
             idx = 1 - idx;
         }
@@ -67,7 +67,7 @@ static void parse_position(const char *tail, Position *pos)
     }
 }
 
-static void random_pv(const Position *pos, uint64_t *seed, int len, str_t *pv)
+static void random_pv(const Position *pos, bool chess960, uint64_t *seed, int len, str_t *pv)
 {
     str_resize(pv, 0);
     Position p[2];
@@ -83,19 +83,19 @@ static void random_pv(const Position *pos, uint64_t *seed, int len, str_t *pv)
         // Choose a random one
         const move_t m = moves[prng(seed) % n];
 
-        scope(str_del) str_t lan = pos_move_to_lan(&p[ply % 2], m, false);
+        scope(str_del) str_t lan = pos_move_to_lan(&p[ply % 2], m, chess960);
         str_push(str_cat(pv, lan), ' ');
 
         pos_move(&p[(ply + 1) % 2], &p[ply % 2], m);
     }
 }
 
-static void run_go(const Position *pos, const Go *go, uint64_t *seed)
+static void run_go(const Position *pos, bool chess960, const Go *go, uint64_t *seed)
 {
     scope(str_del) str_t pv = {0};
 
     for (int depth = 1; depth <= go->depth; depth++) {
-        random_pv(pos, seed, depth, &pv);
+        random_pv(pos, chess960, seed, depth, &pv);
         uci_printf("info depth %d score cp %d pv %s\n", depth, 0, pv.buf);
     }
 
@@ -104,10 +104,24 @@ static void run_go(const Position *pos, const Go *go, uint64_t *seed)
     uci_printf("bestmove %s\n", token.buf);
 }
 
+static void parse_option(const char *tail, bool *chess960)
+{
+    scope(str_del) str_t token = {0};
+
+    if ((tail = str_tok(tail, &token, " ")) && !strcmp(token.buf, "name")) {
+        if ((tail = str_tok(tail, &token, " ")) && !strcmp(token.buf, "UCI_Chess960")
+                && (tail = str_tok(tail, &token, " ")) && !strcmp(token.buf, "value")
+                && (tail = str_tok(tail, &token, " ")))
+            *chess960 = strcmp(token.buf, "false");
+    } else
+        assert(false);
+}
+
 int main(void)
 {
     Position pos = {0};
     Go go = {0};
+    bool chess960 = false;
     uint64_t seed = 0;
 
     scope(str_del) str_t line = {0}, token = {0};
@@ -115,15 +129,19 @@ int main(void)
     while (str_getline(&line, stdin)) {
         const char *tail = str_tok(line.buf, &token, " ");
 
-        if (!strcmp(token.buf, "uci"))
+        if (!strcmp(token.buf, "uci")) {
+            uci_puts("id name test");
+            uci_printf("option name UCI_Chess960 type check default %s\n", chess960 ? "true" : "false");
             uci_puts("uciok");
+        } else if (!strcmp(token.buf, "setoption"))
+            parse_option(tail, &chess960);
         else if (!strcmp(token.buf, "isready"))
             uci_puts("readyok");
         else if (!strcmp(token.buf, "position"))
-            parse_position(tail, &pos);
+            parse_position(tail, &pos, chess960);
         else if (!strcmp(token.buf, "go")) {
             parse_go(tail, &go);
-            run_go(&pos, &go, &seed);
+            run_go(&pos, chess960, &go, &seed);
         } else if (!strcmp(token.buf, "quit"))
             break;
     }
