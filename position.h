@@ -29,10 +29,10 @@ typedef struct {
     uint8_t turn;  // turn of play (WHITE or BLACK)
     uint8_t epSquare;  // en-passant square (NB_SQUARE if none)
     uint8_t rule50;  // ply counter for 50-move rule, ranging from 0 to 100 = draw (unless mated)
-    char pad;
+    bool chess960;  // for move<->string conversions ("e1h1" if chess960 else "e1g1")
 } Position;
 
-void pos_set(Position *pos, str_t fen);
+void pos_set(Position *pos, str_t fen, bool chess960);
 str_t pos_get(const Position *pos);
 void pos_move(Position *pos, const Position *before, move_t m);
 
@@ -46,8 +46,8 @@ int pos_color_on(const Position *pos, int square);
 int pos_piece_on(const Position *pos, int square);
 
 bool pos_move_is_castling(const Position *pos, move_t m);
-str_t *pos_move_to_lan(const Position *pos, move_t m, bool chess960, str_t *out);
+str_t *pos_move_to_lan(const Position *pos, move_t m, str_t *out);
 str_t *pos_move_to_san(const Position *pos, move_t m, str_t *out);
-move_t pos_lan_to_move(const Position *pos, str_t lan, bool chess960);
+move_t pos_lan_to_move(const Position *pos, str_t lan);
 
 void pos_print(const Position *pos);

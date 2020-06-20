@@ -12,7 +12,6 @@
  * You should have received a copy of the GNU General Public License along with this program. If
  * not, see <http://www.gnu.org/licenses/>.
 */
-#include <stdlib.h>
 #include "game.h"
 #include "gen.h"
 #include "str.h"
@@ -35,7 +34,7 @@ static void uci_position_command(const Game *g, str_t *cmd)
 
         for (int ply = ply0 + 1; ply <= g->ply; ply++) {
             str_push(cmd, ' ');
-            pos_move_to_lan(&g->pos[ply - 1], g->pos[ply].lastMove, g->go.chess960, cmd);
+            pos_move_to_lan(&g->pos[ply - 1], g->pos[ply].lastMove, cmd);
         }
     }
 }
@@ -111,11 +110,10 @@ Game game_new(const str_t *fen, const GameOptions *go)
     g.ply = 0;
     g.maxPly = 256;
     g.pos = malloc((size_t)g.maxPly * sizeof(Position));
-    pos_set(&g.pos[0], *fen);
-
+    pos_set(&g.pos[0], *fen, go->chess960);
     g.state = STATE_NONE;
 
-    memcpy(&g.go, go, sizeof(*go));
+    g.go = *go;
 
     return g;
 }
@@ -197,7 +195,7 @@ int game_play(Game *g, const Engine engines[2], Deadline *deadline, bool reverse
             break;
         }
 
-        played = pos_lan_to_move(&g->pos[g->ply], best, g->go.chess960);
+        played = pos_lan_to_move(&g->pos[g->ply], best);
 
         if (illegal_move(played, moves, end)) {
             g->state = STATE_ILLEGAL_MOVE;

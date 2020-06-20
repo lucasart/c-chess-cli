@@ -167,7 +167,7 @@ static bool pos_move_is_capture(const Position *pos, move_t m)
 }
 
 // Set position from FEN string
-void pos_set(Position *pos, str_t fen)
+void pos_set(Position *pos, str_t fen, bool chess960)
 {
     *pos = (Position){0};
     scope(str_del) str_t token = {0};
@@ -224,6 +224,10 @@ void pos_set(Position *pos, str_t fen)
     }
 
     pos->key ^= zobrist_castling(pos->castleRooks);
+
+    // Chess960
+    pos->chess960 = chess960;
+    // TODO: DIE_IF(pos_need_chess960() && !chess960)
 
     // En passant square: optional, default '-'
     if (!(tail = str_tok(tail, &token, " ")))
@@ -492,7 +496,7 @@ bool pos_move_is_castling(const Position *pos, move_t m)
     return bb_test(pos->byColor[pos->turn], move_to(m));
 }
 
-str_t *pos_move_to_lan(const Position *pos, move_t m, bool chess960, str_t *out)
+str_t *pos_move_to_lan(const Position *pos, move_t m, str_t *out)
 {
     const int from = move_from(m), prom = move_prom(m);
     int to = move_to(m);
@@ -502,7 +506,7 @@ str_t *pos_move_to_lan(const Position *pos, move_t m, bool chess960, str_t *out)
         return out;
     }
 
-    if (!chess960 && pos_move_is_castling(pos, m))
+    if (!pos->chess960 && pos_move_is_castling(pos, m))
         to = to > from ? from + 2 : from - 2;  // e1h1 -> e1g1, e1a1 -> e1c1
 
     char fromStr[3], toStr[3];
@@ -516,7 +520,7 @@ str_t *pos_move_to_lan(const Position *pos, move_t m, bool chess960, str_t *out)
     return out;
 }
 
-move_t pos_lan_to_move(const Position *pos, str_t lan, bool chess960)
+move_t pos_lan_to_move(const Position *pos, str_t lan)
 {
     const int prom = lan.buf[4]
         ? (int)(strchr(PieceLabel[BLACK], lan.buf[4]) - PieceLabel[BLACK])
@@ -524,7 +528,7 @@ move_t pos_lan_to_move(const Position *pos, str_t lan, bool chess960)
     const int from = square_from(lan.buf[1] - '1', lan.buf[0] - 'a');
     int to = square_from(lan.buf[3] - '1', lan.buf[2] - 'a');
 
-    if (!chess960 && pos_piece_on(pos, from) == KING) {
+    if (!pos->chess960 && pos_piece_on(pos, from) == KING) {
         if (to == from + 2)  // e1g1 -> e1h1
             to++;
         else if (to == from - 2)  // e1c1 -> e1a1
@@ -652,6 +656,6 @@ void pos_print(const Position *pos)
     puts(fen.buf);
 
     scope(str_del) str_t msg = str_dup(str_ref("Last move: "));
-    pos_move_to_lan(pos, pos->lastMove, true, &msg);
+    pos_move_to_lan(pos, pos->lastMove, &msg);
     puts(msg.buf);
 }
