@@ -34,10 +34,8 @@ static void uci_position_command(const Game *g, str_t *cmd)
         str_cat(cmd, str_ref(" moves"));
 
         for (int ply = ply0 + 1; ply <= g->ply; ply++) {
-            scope(str_del) str_t lan = pos_move_to_lan(&g->pos[ply - 1], g->pos[ply].lastMove,
-                g->go.chess960);
             str_push(cmd, ' ');
-            str_cat(cmd, lan);
+            pos_move_to_lan(&g->pos[ply - 1], g->pos[ply].lastMove, g->go.chess960, cmd);
         }
     }
 }
@@ -304,18 +302,19 @@ str_t game_pgn(const Game *g)
             str_cat_fmt(&pgn, g->pos[ply - 1].turn == WHITE ? "%i. " : "%i... ",
                 g->pos[ply - 1].fullMove);
 
-        // Prepare SAN base
-        scope(str_del) str_t san = pos_move_to_san(&g->pos[ply - 1], g->pos[ply].lastMove);
+        // Append SAN move
+        pos_move_to_san(&g->pos[ply - 1], g->pos[ply].lastMove, &pgn);
 
-        // Append check markers to SAN
+        // Append check marker
         if (g->pos[ply].checkers) {
             if (ply == g->ply && g->state == STATE_CHECKMATE)
-                str_push(&san, '#');  // checkmate
+                str_push(&pgn, '#');  // checkmate
             else
-                str_push(&san, '+');  // normal check
+                str_push(&pgn, '+');  // normal check
         }
 
-        str_push(str_cat(&pgn, san), ply % 10 == 0 ? '\n' : ' ');
+        // Append delimiter
+        str_push(&pgn, ply % 10 == 0 ? '\n' : ' ');
     }
 
     str_cat(str_cat(&pgn, result), str_ref("\n\n"));

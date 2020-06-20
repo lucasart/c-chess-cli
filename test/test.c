@@ -183,10 +183,10 @@ static void test_position(void)
     const str_t fen = str_ref(fens[1]);
     pos_set(&pos[0], fen);
     const char *moves = "e1g1 e8c8 a2a3 c7c6 g2g4 f6g4 c3a4 f7f5 a3b4 f5e4 d5c6 c8b8 g1h1 g7h6 "
-        "d2h6 h8h6 f3e4 d8f8 e4g6";
+        "d2h6 h8h6 f3e4 d8f8 e4g6 ";
 
     const char *tail = moves;
-    scope(str_del) str_t token = {0}, sanMoves = {0};
+    scope(str_del) str_t token = {0}, sanMoves = {0}, lanMoves= {0};
     int ply = 0;
     hash = 0;
 
@@ -195,15 +195,13 @@ static void test_position(void)
         pos_move(&pos[(ply + 1) % 2], &pos[ply % 2], m);
         hash_blocks(&pos[(ply + 1) % 2], sizeof(Position), &hash);
 
-        scope(str_del) str_t san = pos_move_to_san(&pos[ply % 2], m),
-            lan = pos_move_to_lan(&pos[ply % 2], m, false);
-        str_cat_fmt(&sanMoves, "%S ", san);
-        TEST(str_eq(lan, token));
-
+        str_push(pos_move_to_lan(&pos[ply % 2], m, false, &lanMoves), ' ');
+        str_push(pos_move_to_san(&pos[ply % 2], m, &sanMoves), ' ');
         ply++;
     }
 
     TEST(hash == 0x4ce2254fc1869ebe);
+    TEST(!strcmp(lanMoves.buf, moves));
     TEST(!strcmp(sanMoves.buf, "O-O O-O-O a3 c6 g4 Nxg4 Na4 f5 axb4 fxe4 dxc6 Kb8 Kh1 Bh6 Bxh6 "
         "Rxh6 Qxe4 Rf8 Qxg6 "));
 }

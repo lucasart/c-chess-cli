@@ -82,10 +82,7 @@ static void random_pv(const Position *pos, bool chess960, uint64_t *seed, int le
 
         // Choose a random one
         const move_t m = moves[prng(seed) % n];
-
-        scope(str_del) str_t lan = pos_move_to_lan(&p[ply % 2], m, chess960);
-        str_push(str_cat(pv, lan), ' ');
-
+        str_push(pos_move_to_lan(&p[ply % 2], m, chess960, pv), ' ');
         pos_move(&p[(ply + 1) % 2], &p[ply % 2], m);
     }
 }
