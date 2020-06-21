@@ -13,7 +13,7 @@ typedef struct {
     char pad[3];
 } Openings;
 
-Openings openings_new(const str_t *fileName, bool random, int repeat);
-void openings_delete(Openings *openings);
+Openings openings_new(const str_t *fileName, bool random, int repeat, int threadId);
+void openings_delete(Openings *openings, int threadId);
 
-int openings_next(Openings *o, str_t *fen);
+int openings_next(Openings *o, str_t *fen, int threadId);

@@ -24,7 +24,7 @@ typedef struct {
     FILE *in, *out, *log;
     str_t name;
     pid_t pid;
-    char pad[4];
+    int threadId;
 } Engine;
 
 // Deadlines overdues are unrecovrable errors. Given a choice, we prefer to handle them gracefully
@@ -41,7 +41,7 @@ typedef struct {
 
 const Engine *deadline_overdue(Deadline *deadline);
 Engine engine_new(const str_t *cmd, const str_t *name, const str_t *uciOptions, FILE *log,
-    Deadline *deadline);
+    Deadline *deadline, int threadId);
 void engine_delete(Engine *e);
 
 void engine_readln(const Engine *e, str_t *line);

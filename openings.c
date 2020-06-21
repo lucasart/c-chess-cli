@@ -16,7 +16,7 @@
 #include "openings.h"
 #include "util.h"
 
-static void read_infinite(FILE *in, str_t *line)
+static void read_infinite(FILE *in, str_t *line, int threadId)
 // Read from an infinite file (wrap around EOF)
 {
     if (!str_getline(line, in)) {
@@ -24,34 +24,35 @@ static void read_infinite(FILE *in, str_t *line)
         rewind(in);
 
         // Try again after rewind, now failure is fatal
-        DIE_IF(!str_getline(line, in));
+        if (!str_getline(line, in))
+            DIE("[%d] cannot read from openings\n", threadId);
     }
 }
 
-Openings openings_new(const str_t *fileName, bool random, int repeat)
+Openings openings_new(const str_t *fileName, bool random, int repeat, int threadId)
 {
     Openings o;
 
     if (fileName->len)
-        DIE_IF(!(o.file = fopen(fileName->buf, "r")));
+        DIE_IF_(threadId, !(o.file = fopen(fileName->buf, "r")));
     else
         o.file = NULL;
 
     if (o.file && random) {
         // Establish file size
         long size;
-        DIE_IF(fseek(o.file, 0, SEEK_END) < 0);
-        DIE_IF((size = ftell(o.file)) < 0);
+        DIE_IF_(threadId, fseek(o.file, 0, SEEK_END) < 0);
+        DIE_IF_(threadId, (size = ftell(o.file)) < 0);
 
         if (!size)
             DIE("openings_create(): file size = 0");
 
         uint64_t seed = (uint64_t)system_msec();
-        DIE_IF(fseek(o.file, (long)(prng(&seed) % (uint64_t)size), SEEK_SET) < 0);
+        DIE_IF_(threadId, fseek(o.file, (long)(prng(&seed) % (uint64_t)size), SEEK_SET) < 0);
 
         // Consume current line, likely broken, as we're somewhere in the middle of it
         scope(str_del) str_t line = {0};
-        read_infinite(o.file, &line);
+        read_infinite(o.file, &line, threadId);
     }
 
     pthread_mutex_init(&o.mtx, NULL);
@@ -62,16 +63,16 @@ Openings openings_new(const str_t *fileName, bool random, int repeat)
     return o;
 }
 
-void openings_delete(Openings *o)
+void openings_delete(Openings *o, int threadId)
 {
     if (o->file)
-        DIE_IF(fclose(o->file) < 0);
+        DIE_IF_(threadId, fclose(o->file) < 0);
 
     pthread_mutex_destroy(&o->mtx);
     str_del(&o->lastFen);
 }
 
-int openings_next(Openings *o, str_t *fen)
+int openings_next(Openings *o, str_t *fen, int threadId)
 {
     if (!o->file) {
         pthread_mutex_lock(&o->mtx);
@@ -91,7 +92,7 @@ int openings_next(Openings *o, str_t *fen)
     } else {
         // Read 'fen' from file, and save in 'o->lastFen'
         scope(str_del) str_t line = {0};
-        read_infinite(o->file, &line);
+        read_infinite(o->file, &line, threadId);
         str_tok(line.buf, fen, ";");
         str_cpy(&o->lastFen, *fen);
     }

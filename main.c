@@ -38,17 +38,17 @@ static void *thread_start(void *arg)
     str_cat_fmt(&logName, "c-chess-cli.%i.log", worker->id);
 
     if (options.debug)
-        DIE_IF(!(log = fopen(logName.buf, "w")));
+        DIE_IF_(worker->id, !(log = fopen(logName.buf, "w")));
 
     // Prepare engines[]
     for (int i = 0; i < 2; i++)
         engines[i] = engine_new(&options.cmd[i], &options.name[i], &options.uciOptions[i], log,
-            &worker->deadline);
+            &worker->deadline, worker->id);
 
     int next;
     scope(str_del) str_t fen = {0};
 
-    while ((next = openings_next(&openings, &fen)) <= options.games) {
+    while ((next = openings_next(&openings, &fen, worker->id)) <= options.games) {
         // Play 1 game
         Game game = game_new(&fen, &options.go);
         const int wld = game_play(&game, engines, &worker->deadline, next % 2 == 0);
@@ -56,7 +56,7 @@ static void *thread_start(void *arg)
         // Write to PGN file
         if (pgnout) {
             scope(str_del) str_t pgn = game_pgn(&game);
-            DIE_IF(fputs(pgn.buf, pgnout) < 0);
+            DIE_IF_(worker->id, fputs(pgn.buf, pgnout) < 0);
         }
 
         // Write to stdout a one line summary of the game
@@ -97,7 +97,7 @@ static void *thread_start(void *arg)
         engine_delete(&engines[i]);
 
     if (log)
-        DIE_IF(fclose(log) < 0);
+        DIE_IF_(worker->id, fclose(log) < 0);
 
     WorkersBusy--;
     return NULL;
@@ -107,12 +107,12 @@ int main(int argc, const char **argv)
 {
     options = options_new(argc, argv);
 
-    openings = openings_new(&options.openings, options.random, options.repeat);
+    openings = openings_new(&options.openings, options.random, options.repeat, -1);
 
     pgnout = NULL;
 
     if (options.pgnout.len)
-        DIE_IF(!(pgnout = fopen(options.pgnout.buf, "w")));
+        DIE_IF_(-1, !(pgnout = fopen(options.pgnout.buf, "w")));
 
     pthread_t threads[options.concurrency];
     workers_new(options.concurrency);
@@ -129,7 +129,7 @@ int main(int argc, const char **argv)
             const Engine *deadEngine = deadline_overdue(&Workers[i].deadline);
 
             if (deadEngine)
-                DIE("[%d] engine %s unresponsive\n", i, deadEngine->name.buf);
+                DIE("[%d] engine %s is unresponsive\n", i, deadEngine->name.buf);
         }
     } while (WorkersBusy > 0);
 
@@ -139,9 +139,9 @@ int main(int argc, const char **argv)
     workers_delete();
 
     if (pgnout)
-        DIE_IF(fclose(pgnout) < 0);
+        DIE_IF_(-1, fclose(pgnout) < 0);
 
-    openings_delete(&openings);
+    openings_delete(&openings, -1);
     options_delete(&options);
     return 0;
 }
