@@ -216,7 +216,7 @@ size_t str_getline(str_t *out, FILE *in)
 {
     assert(str_ok(*out) && in);
     str_resize(out, 0);
-    char c;
+    int c;
 
     flockfile(in);
 
