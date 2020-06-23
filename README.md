@@ -45,7 +45,9 @@ Syntax: `-<flag>`.
 List:
 - `chess960`: use Chess960/FRC castling rules.
 - `debug`: write all I/O communication with engines to file(s). This produces `c-chess-cli.id.log`,
-where `id` is the thread id (range `0..concurrency-1`).
+where `id` is the thread id (range `0..concurrency-1`). Note that all communications (including
+error messages) starting with `[id]` mean within the context of thread number `id`, which tells you
+which log file to inspect.
 - `random`: start from a random opening in the EPD file. Proceed sequentially afterwards.
 - `repeat`: repeat each opening twice, with each engine playing both sides.
 

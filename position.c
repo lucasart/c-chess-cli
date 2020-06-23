@@ -167,46 +167,57 @@ static bool pos_move_is_capture(const Position *pos, move_t m)
 }
 
 // Set position from FEN string
-void pos_set(Position *pos, str_t fen, bool chess960)
+bool pos_set(Position *pos, str_t fen, bool chess960)
 {
     *pos = (Position){0};
     scope(str_del) str_t token = {0};
 
     // Piece placement
     const char *tail = str_tok(fen.buf, &token, " ");
-    DIE_IF(token.len < 10);
     int file = FILE_A, rank = RANK_8;
 
     for (const char *c = token.buf; *c; c++) {
         if ('1' <= *c && *c <= '8') {
             file += *c -'0';
-            DIE_IF(file > NB_FILE);
+
+            if (file > NB_FILE)
+                return false;
         } else if (*c == '/') {
             rank--;
             file = FILE_A;
         } else {
-            DIE_IF(!strchr("nbrqkpNBRQKP", *c));
+            if (!strchr("nbrqkpNBRQKP", *c))
+                return false;
+
             const bool color = islower((unsigned char)*c);
             set_square(pos, color, (int)(strchr(PieceLabel[color], *c) - PieceLabel[color]),
                 square_from(rank, file++));
         }
     }
 
+    if (rank != RANK_1)
+        return false;
+
     // Turn of play
     tail = str_tok(tail, &token, " ");
-    DIE_IF(token.len != 1);
+
+    if (token.len != 1)
+        return false;
 
     if (token.buf[0] == 'w')
         pos->turn = WHITE;
     else {
-        DIE_IF(token.buf[0] != 'b');
+        if (token.buf[0] != 'b')
+            return false;
+
         pos->turn = BLACK;
         pos->key ^= ZobristTurn;
     }
 
     // Castling rights: optional, default '-'
     if ((tail = str_tok(tail, &token, " "))) {
-        DIE_IF(token.len > 4);
+        if (token.len > 4)
+            return false;
 
         for (const char *c = token.buf; *c; c++) {
             rank = isupper((unsigned char)*c) ? RANK_1 : RANK_8;
@@ -218,8 +229,8 @@ void pos_set(Position *pos, str_t fen, bool chess960)
                 bb_set(&pos->castleRooks, bb_lsb(Rank[rank] & pos->byPiece[ROOK]));
             else if ('A' <= uc && uc <= 'H')
                 bb_set(&pos->castleRooks, square_from(rank, uc - 'A'));
-            else
-                DIE_IF(*c != '-' || pos->castleRooks || c[1] != '\0');
+            else if (*c != '-' || pos->castleRooks || c[1] != '\0')
+                return false;
         }
     }
 
@@ -227,51 +238,61 @@ void pos_set(Position *pos, str_t fen, bool chess960)
 
     // Chess960
     pos->chess960 = chess960;
-    // TODO: DIE_IF(pos_need_chess960() && !chess960)
+    // TODO: if (pos_need_chess960(pos) && !chess960) return false;
 
     // En passant square: optional, default '-'
     if (!(tail = str_tok(tail, &token, " ")))
         str_cpy(&token, str_ref("-"));
 
-    DIE_IF(token.len > 2);
+    if (token.len > 2)
+        return false;
+
     pos->epSquare = (uint8_t)string_to_square(token);
     pos->key ^= ZobristEnPassant[pos->epSquare];
 
     // 50 move counter (in plies, starts at 0): optional, default 0
     pos->rule50 = (tail = str_tok(tail, &token, " ")) ? (uint8_t)atoi(token.buf) : 0;
-    DIE_IF(pos->rule50 >= 100);
+
+    if (pos->rule50 >= 100)
+        return false;
 
     // Full move counter (in moves, starts at 1): optional, default 1
     pos->fullMove = str_tok(tail, &token, " ") ? (uint16_t)atoi(token.buf) : 1;
 
     // Verify piece counts
-    for (int color = WHITE; color <= BLACK; color++) {
-        DIE_IF(bb_count(pos_pieces_cpp(pos, color, KNIGHT, PAWN)) > 10);
-        DIE_IF(bb_count(pos_pieces_cpp(pos, color, BISHOP, PAWN)) > 10);
-        DIE_IF(bb_count(pos_pieces_cpp(pos, color, ROOK, PAWN)) > 10);
-        DIE_IF(bb_count(pos_pieces_cpp(pos, color, QUEEN, PAWN)) > 9);
-        DIE_IF(bb_count(pos_pieces_cp(pos, color, PAWN)) > 8);
-        DIE_IF(bb_count(pos_pieces_cp(pos, color, KING)) != 1);
-        DIE_IF(bb_count(pos->byColor[color]) > 16);
-    }
+    for (int color = WHITE; color <= BLACK; color++)
+        if (bb_count(pos_pieces_cpp(pos, color, KNIGHT, PAWN)) > 10
+                || bb_count(pos_pieces_cpp(pos, color, BISHOP, PAWN)) > 10
+                || bb_count(pos_pieces_cpp(pos, color, ROOK, PAWN)) > 10
+                || bb_count(pos_pieces_cpp(pos, color, QUEEN, PAWN)) > 9
+                || bb_count(pos_pieces_cp(pos, color, PAWN)) > 8
+                || bb_count(pos_pieces_cp(pos, color, KING)) != 1
+                || bb_count(pos->byColor[color]) > 16)
+            return false;
 
     // Verify pawn ranks
-    DIE_IF(pos->byPiece[PAWN] & (Rank[RANK_1] | Rank[RANK_8]));
+    if (pos->byPiece[PAWN] & (Rank[RANK_1] | Rank[RANK_8]))
+        return false;
 
     // Verify castle rooks
     if (pos->castleRooks) {
-        DIE_IF(pos->castleRooks & ~((Rank[RANK_1] & pos_pieces_cp(pos, WHITE, ROOK))
-            | (Rank[RANK_8] & pos_pieces_cp(pos, BLACK, ROOK))));
+        if (pos->castleRooks & ~((Rank[RANK_1] & pos_pieces_cp(pos, WHITE, ROOK))
+                | (Rank[RANK_8] & pos_pieces_cp(pos, BLACK, ROOK))))
+            return false;
 
         for (int color = WHITE; color <= BLACK; color++) {
             const bitboard_t b = pos->castleRooks & pos->byColor[color];
 
-            if (bb_count(b) == 2)
-                DIE_IF(!(Segment[bb_lsb(b)][bb_msb(b)] & pos_pieces_cp(pos, color, KING)));
-            else if (bb_count(b) == 1)
-                DIE_IF(pos_pieces_cp(pos, color, KING) & (File[FILE_A] | File[FILE_H]));
-            else
-                DIE_IF(b);
+            if (bb_count(b) == 2) {
+                if (!(Segment[bb_lsb(b)][bb_msb(b)] & pos_pieces_cp(pos, color, KING)))
+                    return false;
+            } else if (bb_count(b) == 1) {
+                if (pos_pieces_cp(pos, color, KING) & (File[FILE_A] | File[FILE_H]))
+                    return false;
+            } else if (b) {
+                assert(bb_count(b) >= 3);
+                return false;
+            }
         }
     }
 
@@ -280,14 +301,16 @@ void pos_set(Position *pos, str_t fen, bool chess960)
         rank = rank_of(pos->epSquare);
         const int color = rank == RANK_3 ? WHITE : BLACK;
 
-        DIE_IF(color == pos->turn);
-        DIE_IF(bb_test(pos_pieces(pos), pos->epSquare));
-        DIE_IF(rank != RANK_3 && rank != RANK_6);
-        DIE_IF(!bb_test(pos_pieces_cp(pos, color, PAWN), pos->epSquare + push_inc(color)));
-        DIE_IF(bb_test(pos_pieces(pos), pos->epSquare - push_inc(color)));
+        if ((color == pos->turn)
+                || (bb_test(pos_pieces(pos), pos->epSquare))
+                || (rank != RANK_3 && rank != RANK_6)
+                || (!bb_test(pos_pieces_cp(pos, color, PAWN), pos->epSquare + push_inc(color)))
+                || (bb_test(pos_pieces(pos), pos->epSquare - push_inc(color))))
+            return false;
     }
 
     finish(pos);
+    return true;
 }
 
 // Get FEN string of position

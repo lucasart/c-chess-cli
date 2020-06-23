@@ -41,14 +41,7 @@ void system_sleep(int64_t msec);
     exit(EXIT_FAILURE); \
 } while (0)
 
-#define DIE_IF(v) do { \
-    if (v) { \
-        fprintf(stderr, "error in %s: (%d). %s\n", __FILE__, __LINE__, strerror(errno)); \
-        exit(EXIT_FAILURE); \
-    } \
-} while (0)
-
-#define DIE_IF_(id, v) do { \
+#define DIE_IF(id, v) do { \
     if (v) { \
         fprintf(stderr, "[%d] error in %s: (%d). %s\n", id, __FILE__, __LINE__, strerror(errno)); \
         exit(EXIT_FAILURE); \

@@ -49,12 +49,12 @@ uint64_t hash(const void *buffer, size_t length, uint64_t seed)
 int64_t system_msec()
 {
     struct timespec t;
-    DIE_IF(clock_gettime(CLOCK_MONOTONIC, &t) < 0);
+    clock_gettime(CLOCK_MONOTONIC, &t);
     return t.tv_sec * 1000LL + t.tv_nsec / 1000000;
 }
 
 void system_sleep(int64_t msec)
 {
-    struct timespec t = {.tv_sec = msec / 1000, .tv_nsec = (msec % 1000) * 1000000LL};
-    DIE_IF(nanosleep(&t, NULL) < 0);
+    const struct timespec t = {.tv_sec = msec / 1000, .tv_nsec = (msec % 1000) * 1000000LL};
+    nanosleep(&t, NULL);
 }

@@ -221,10 +221,10 @@ size_t str_getline(str_t *out, FILE *in)
     flockfile(in);
 
     while (true) {
-        c = (char)getc_unlocked(in);
+        c = getc_unlocked(in);
 
         if (c != '\n' && c != EOF)
-            str_push(out, c);
+            str_push(out, (char)c);
         else
             break;
     }
