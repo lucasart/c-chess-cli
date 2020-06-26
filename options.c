@@ -48,7 +48,7 @@ Options options_new(int argc, const char **argv)
     bool expectValue = false;  // pattern: '-tag [value]'. should next arg be a value or tag ?
 
     for (i = 1; i < argc; i++) {
-        if (argv[i][0] == '-' && isalpha((unsigned)argv[i][1])) {
+        if (argv[i][0] == '-' && isalpha((unsigned char)argv[i][1])) {
             // process tag
             if (expectValue)
                 DIE("value expected after '%s'. found tag '%s' instead.\n", argv[i - 1], argv[i]);

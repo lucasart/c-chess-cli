@@ -189,7 +189,7 @@ bool pos_set(Position *pos, str_t fen)
             if (!strchr("nbrqkpNBRQKP", *c))
                 return false;
 
-            const bool color = islower((unsigned)*c);
+            const bool color = islower((unsigned char)*c);
             set_square(pos, color, (int)(strchr(PieceLabel[color], *c) - PieceLabel[color]),
                 square_from(rank, file++));
         }
@@ -220,7 +220,7 @@ bool pos_set(Position *pos, str_t fen)
             return false;
 
         for (const char *c = token.buf; *c; c++) {
-            rank = isupper((unsigned)*c) ? RANK_1 : RANK_8;
+            rank = isupper((unsigned char)*c) ? RANK_1 : RANK_8;
             char uc = (char)toupper(*c);
 
             if (uc == 'K')
