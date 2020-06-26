@@ -61,9 +61,7 @@ Options options_new(int argc, const char **argv)
 
             if (!expectValue) {
                 // process tag without value (bool)
-                if (!strcmp(argv[i], "-chess960"))
-                    o.go.chess960 = true;
-                else if (!strcmp(argv[i], "-random"))
+                if (!strcmp(argv[i], "-random"))
                     o.random = true;
                 else if (!strcmp(argv[i], "-repeat"))
                     o.repeat = true;

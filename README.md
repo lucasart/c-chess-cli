@@ -14,7 +14,7 @@ See `make.py --help` for more options.
 
 ```
 ./c-chess-cli -cmd demolito:../Engines/critter_1.6a -options Hash=8,Threads=2:Threads=1 \
-    -games 8 -concurrency 4 -openings ../spsa/book.epd -repeat -movetime 0.15 -depth 10 \
+    -games 8 -concurrency 4 -openings test/chess960.epd -repeat -movetime 0.15 -depth 10 \
     -resign 3,700 -draw 8,10 -pgnout out.pgn
 ```
 
@@ -26,7 +26,9 @@ List of `<option> <value>`:
 - `concurrency c`: number of games played concurrently.
 - `draw n,s`: draw when |score| <= `s` (in cp) for `n` consecutive moves, for both sides.
 - `games n`: number of games to play.
-- `openings file`: input file, in EPD format, where opening positions are read.
+- `openings file`: input file, in EPD format, where opening positions are read. Note that
+  chess960 is auto-detected by analysing each FEN, so there is no command line parameter
+  for it.
 - `pgnout file`: output file, in PGN format, where games are written.
 - `resign n,s`: resign when score <= -`s` (in cp) for `n` consecutive moves, for the losing side.
 - `sprt elo0,elo1,alpha,beta`: performs a [Sequantial Probability Ratio Test](https://en.wikipedia.org/wiki/Sequential_probability_ratio_test)
@@ -43,7 +45,6 @@ List of `<option> <value>`:
 Syntax: `-<flag>`.
 
 List:
-- `chess960`: use Chess960/FRC castling rules.
 - `debug`: write all I/O communication with engines to file(s). This produces `c-chess-cli.id.log`,
 where `id` is the thread id (range `0..concurrency-1`). Note that all communications (including
 error messages) starting with `[id]` mean within the context of thread number `id`, which tells you

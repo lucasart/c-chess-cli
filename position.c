@@ -167,7 +167,7 @@ static bool pos_move_is_capture(const Position *pos, move_t m)
 }
 
 // Set position from FEN string
-bool pos_set(Position *pos, str_t fen, bool chess960)
+bool pos_set(Position *pos, str_t fen)
 {
     *pos = (Position){0};
     scope(str_del) str_t token = {0};
@@ -236,9 +236,16 @@ bool pos_set(Position *pos, str_t fen, bool chess960)
 
     pos->key ^= zobrist_castling(pos->castleRooks);
 
-    // Chess960
-    pos->chess960 = chess960;
-    // TODO: if (pos_need_chess960(pos) && !chess960) return false;
+    // Chess960 auto-detect
+    bitboard_t rooks = pos->castleRooks;
+
+    while (rooks && !pos->chess960) {
+        const int rook = bb_pop_lsb(&rooks);
+        const int king = pos_king_square(pos, pos_color_on(pos, rook));
+
+        if ((FILE_A < file_of(rook) && file_of(rook) < FILE_H) || file_of(king) != FILE_E)
+            pos->chess960 = true;
+    }
 
     // En passant square: optional, default '-'
     if (!(tail = str_tok(tail, &token, " ")))

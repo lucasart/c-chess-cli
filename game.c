@@ -101,7 +101,7 @@ static bool illegal_move(move_t move, const move_t *begin, const move_t *end)
     return true;
 }
 
-Game game_new(const str_t *fen, bool chess960)
+Game game_new(const str_t *fen)
 {
     assert(fen->len);
 
@@ -111,7 +111,7 @@ Game game_new(const str_t *fen, bool chess960)
     g.ply = 0;
     g.maxPly = 256;
     g.pos = malloc((size_t)g.maxPly * sizeof(Position));
-    pos_set(&g.pos[0], *fen, chess960);
+    pos_set(&g.pos[0], *fen);
     g.state = STATE_NONE;
 
     return g;
@@ -135,7 +135,7 @@ int game_play(Game *g, const GameOptions *go, const Engine engines[2], Deadline 
         str_cpy(&g->names[color], engines[color ^ g->pos[0].turn ^ reverse].name);
 
     for (int i = 0; i < 2; i++) {
-        if (go->chess960)
+        if (g->pos[0].chess960)
             engine_writeln(&engines[i], "setoption name UCI_Chess960 value true");
 
         engine_writeln(&engines[i], "ucinewgame");

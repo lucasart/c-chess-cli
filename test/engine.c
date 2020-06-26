@@ -40,8 +40,7 @@ static void parse_position(const char *tail, Position *pos)
     assert(tail);
 
     if (!strcmp(token.buf, "startpos")) {
-        pos_set(pos, str_ref("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"),
-            pos->chess960);
+        pos_set(pos, str_ref("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"));
         tail = str_tok(tail, &token, " ");
     } else if (!strcmp(token.buf, "fen")) {
         scope(str_del) str_t fen = {0};
@@ -49,7 +48,7 @@ static void parse_position(const char *tail, Position *pos)
         while ((tail = str_tok(tail, &token, " ")) && strcmp(token.buf, "moves"))
             str_push(str_cat(&fen, token), ' ');
 
-        pos_set(pos, fen, pos->chess960);
+        pos_set(pos, fen);
     } else
         assert(false);
 
@@ -102,19 +101,6 @@ static void run_go(const Position *pos, const Go *go, uint64_t *seed)
     uci_printf("bestmove %s\n", token.buf);
 }
 
-static void parse_option(const char *tail, Position *pos)
-{
-    scope(str_del) str_t token = {0};
-
-    if ((tail = str_tok(tail, &token, " ")) && !strcmp(token.buf, "name")) {
-        if ((tail = str_tok(tail, &token, " ")) && !strcmp(token.buf, "UCI_Chess960")
-                && (tail = str_tok(tail, &token, " ")) && !strcmp(token.buf, "value")
-                && (tail = str_tok(tail, &token, " ")))
-            pos->chess960 = strcmp(token.buf, "false");
-    } else
-        assert(false);
-}
-
 int main(void)
 {
     Position pos = {0};
@@ -127,13 +113,10 @@ int main(void)
         const char *tail = str_tok(line.buf, &token, " ");
 
         if (!strcmp(token.buf, "uci")) {
-            uci_puts("id name test");
-            uci_printf("option name UCI_Chess960 type check default %s\n", pos.chess960 ? "true"
-                : "false");
+            uci_puts("id name engine");
+            uci_puts("option name UCI_Chess960 type check default false");
             uci_puts("uciok");
-        } else if (!strcmp(token.buf, "setoption"))
-            parse_option(tail, &pos);
-        else if (!strcmp(token.buf, "isready"))
+        } else if (!strcmp(token.buf, "isready"))
             uci_puts("readyok");
         else if (!strcmp(token.buf, "position"))
             parse_position(tail, &pos);

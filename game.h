@@ -50,8 +50,6 @@ typedef struct {
     int depth[2];
     int resignCount, resignScore;
     int drawCount, drawScore;
-    bool chess960;
-    char pad[7];
 } GameOptions;
 
 typedef struct {
@@ -61,7 +59,7 @@ typedef struct {
     char pad[4];
 } Game;
 
-Game game_new(const str_t *fen, bool chess960);
+Game game_new(const str_t *fen);
 void game_delete(Game *g);
 
 int game_play(Game *g, const GameOptions *go, const Engine engines[2], Deadline *deadline,
