@@ -39,30 +39,31 @@ static void uci_position_command(const Game *g, str_t *cmd)
     }
 }
 
-static void uci_go_command(Game *g, int ei, const int64_t timeLeft[2], str_t *cmd)
+static void uci_go_command(Game *g, const GameOptions *go, int ei, const int64_t timeLeft[2],
+    str_t *cmd)
 {
     str_cpy(cmd, str_ref("go"));
 
-    if (g->go.nodes[ei])
-        str_cat_fmt(cmd, " nodes %U", g->go.nodes[ei]);
+    if (go->nodes[ei])
+        str_cat_fmt(cmd, " nodes %U", go->nodes[ei]);
 
-    if (g->go.depth[ei])
-        str_cat_fmt(cmd, " depth %i", g->go.depth[ei]);
+    if (go->depth[ei])
+        str_cat_fmt(cmd, " depth %i", go->depth[ei]);
 
-    if (g->go.movetime[ei])
-        str_cat_fmt(cmd, " movetime %I", g->go.movetime[ei]);
+    if (go->movetime[ei])
+        str_cat_fmt(cmd, " movetime %I", go->movetime[ei]);
 
-    if (g->go.time[ei]) {
+    if (go->time[ei]) {
         const int color = g->pos[g->ply].turn;
 
         str_cat_fmt(cmd, " wtime %I winc %I btime %I binc %I",
-            timeLeft[ei ^ color], g->go.increment[ei ^ color],
-            timeLeft[ei ^ color ^ BLACK], g->go.increment[ei ^ color ^ BLACK]);
+            timeLeft[ei ^ color], go->increment[ei ^ color],
+            timeLeft[ei ^ color ^ BLACK], go->increment[ei ^ color ^ BLACK]);
     }
 
-    if (g->go.movestogo[ei])
+    if (go->movestogo[ei])
         str_cat_fmt(cmd, " movestogo %i",
-            g->go.movestogo[ei] - ((g->ply / 2) % g->go.movestogo[ei]));
+            go->movestogo[ei] - ((g->ply / 2) % go->movestogo[ei]));
 }
 
 static int game_apply_chess_rules(const Game *g, move_t *begin, move_t **end)
@@ -100,9 +101,9 @@ static bool illegal_move(move_t move, const move_t *begin, const move_t *end)
     return true;
 }
 
-Game game_new(const str_t *fen, const GameOptions *go)
+Game game_new(const str_t *fen, bool chess960)
 {
-    assert(fen->len && go);
+    assert(fen->len);
 
     Game g;
     g.names[WHITE] = g.names[BLACK] = (str_t){0};
@@ -110,10 +111,8 @@ Game game_new(const str_t *fen, const GameOptions *go)
     g.ply = 0;
     g.maxPly = 256;
     g.pos = malloc((size_t)g.maxPly * sizeof(Position));
-    pos_set(&g.pos[0], *fen, go->chess960);
+    pos_set(&g.pos[0], *fen, chess960);
     g.state = STATE_NONE;
-
-    g.go = *go;
 
     return g;
 }
@@ -125,7 +124,8 @@ void game_delete(Game *g)
     str_del_n(&g->names[WHITE], &g->names[BLACK]);
 }
 
-int game_play(Game *g, const Engine engines[2], Deadline *deadline, bool reverse)
+int game_play(Game *g, const GameOptions *go, const Engine engines[2], Deadline *deadline,
+    bool reverse)
 // Play a game:
 // - engines[reverse] plays the first move (which does not mean white, that depends on the FEN)
 // - sets g->state value: see enum STATE_* codes
@@ -135,7 +135,7 @@ int game_play(Game *g, const Engine engines[2], Deadline *deadline, bool reverse
         str_cpy(&g->names[color], engines[color ^ g->pos[0].turn ^ reverse].name);
 
     for (int i = 0; i < 2; i++) {
-        if (g->go.chess960)
+        if (go->chess960)
             engine_writeln(&engines[i], "setoption name UCI_Chess960 value true");
 
         engine_writeln(&engines[i], "ucinewgame");
@@ -147,7 +147,7 @@ int game_play(Game *g, const Engine engines[2], Deadline *deadline, bool reverse
     int drawPlyCount = 0;
     int resignCount[NB_COLOR] = {0};
     int ei;  // engines[ei] has the move
-    int64_t timeLeft[2] = {g->go.time[0], g->go.time[1]};
+    int64_t timeLeft[2] = {go->time[0], go->time[1]};
 
     for (g->ply = 0; ; g->ply++) {
         if (g->ply >= g->maxPly) {
@@ -170,21 +170,21 @@ int game_play(Game *g, const Engine engines[2], Deadline *deadline, bool reverse
         engine_sync(&engines[ei], deadline);
 
         // Prepare timeLeft[ei]
-        if (g->go.movetime[ei])
+        if (go->movetime[ei])
             // movetime is special: discard movestogo, time, increment
-            timeLeft[ei] = g->go.movetime[ei];
-        else if (g->go.time[ei]) {
+            timeLeft[ei] = go->movetime[ei];
+        else if (go->time[ei]) {
             // Always apply increment (can be zero)
-            timeLeft[ei] += g->go.increment[ei];
+            timeLeft[ei] += go->increment[ei];
 
             // movestogo specific clock reset event
-            if (g->go.movestogo[ei] && g->ply > 1 && ((g->ply / 2) % g->go.movestogo[ei]) == 0)
-                timeLeft[ei] += g->go.time[ei];
+            if (go->movestogo[ei] && g->ply > 1 && ((g->ply / 2) % go->movestogo[ei]) == 0)
+                timeLeft[ei] += go->time[ei];
         } else
             // Only depth and/or nodes limit
             timeLeft[ei] = INT64_MAX / 2;  // HACK: system_msec() + timeLeft must not overflow
 
-        uci_go_command(g, ei, timeLeft, &goCmd);
+        uci_go_command(g, go, ei, timeLeft, &goCmd);
         engine_writeln(&engines[ei], goCmd.buf);
 
         int score;
@@ -202,14 +202,14 @@ int game_play(Game *g, const Engine engines[2], Deadline *deadline, bool reverse
             break;
         }
 
-        if ((g->go.time[ei] || g->go.movetime[ei]) && timeLeft[ei] < 0) {
+        if ((go->time[ei] || go->movetime[ei]) && timeLeft[ei] < 0) {
             g->state = STATE_TIME_LOSS;
             break;
         }
 
         // Apply draw adjudication rule
-        if (g->go.drawCount && abs(score) <= g->go.drawScore) {
-            if (++drawPlyCount >= 2 * g->go.drawCount) {
+        if (go->drawCount && abs(score) <= go->drawScore) {
+            if (++drawPlyCount >= 2 * go->drawCount) {
                 g->state = STATE_DRAW_ADJUDICATION;
                 break;
             }
@@ -217,8 +217,8 @@ int game_play(Game *g, const Engine engines[2], Deadline *deadline, bool reverse
             drawPlyCount = 0;
 
         // Apply resign rule
-        if (g->go.resignCount && score <= -g->go.resignScore) {
-            if (++resignCount[ei] >= g->go.resignCount) {
+        if (go->resignCount && score <= -go->resignScore) {
+            if (++resignCount[ei] >= go->resignCount) {
                 g->state = STATE_RESIGN;
                 break;
             }
@@ -289,7 +289,7 @@ str_t game_pgn(const Game *g)
     scope(str_del) str_t fen = pos_get(&g->pos[0]);
     str_cat_fmt(&pgn, "[FEN \"%S\"]\n", fen);
 
-    if (g->go.chess960)
+    if (g->pos[0].chess960)
         str_cat(&pgn, str_ref("[Variant \"Chess960\"]\n"));
 
     str_cat_fmt(&pgn, "[PlyCount \"%i\"]\n\n", g->ply);

@@ -50,8 +50,8 @@ static void *thread_start(void *arg)
 
     while ((next = openings_next(&openings, &fen, worker->id)) <= options.games) {
         // Play 1 game
-        Game game = game_new(&fen, &options.go);
-        const int wld = game_play(&game, engines, &worker->deadline, next % 2 == 0);
+        Game game = game_new(&fen, options.go.chess960);
+        const int wld = game_play(&game, &options.go, engines, &worker->deadline, next % 2 == 0);
 
         // Write to PGN file
         if (pgnout) {

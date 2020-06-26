@@ -57,14 +57,14 @@ typedef struct {
 typedef struct {
     str_t names[NB_COLOR];  // names of players, by color
     Position *pos;  // list of positions (including moves) since game start
-    GameOptions go;
     int ply, maxPly, state;
     char pad[4];
 } Game;
 
-Game game_new(const str_t *fen, const GameOptions *go);
+Game game_new(const str_t *fen, bool chess960);
 void game_delete(Game *g);
 
-int game_play(Game *g, const Engine engines[2], Deadline *deadline, bool reverse);
+int game_play(Game *g, const GameOptions *go, const Engine engines[2], Deadline *deadline,
+    bool reverse);
 str_t game_decode_state(const Game *g, str_t *reason);
 str_t game_pgn(const Game *g);
