@@ -1,6 +1,6 @@
 ## c-chess-cli
 
-c-chess-cli is a command line interface for UCI chess engines written in C, for POSIX systems.
+c-chess-cli is a command line interface for UCI chess engines written in C, for POSIX systems (including Linux, MacOS, Android). For Windows, you must run it in a POSIX enviroment, such as an [msys2 shell](https://www.msys2.org/).
 
 ## How to compile ?
 
