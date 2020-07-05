@@ -28,24 +28,6 @@ uint64_t prng(uint64_t *state)
     return rnd;
 }
 
-// Simple hash function I derived from SplitMix64. Known limitations:
-// - alignment: 'buffer' must be 8-byte aligned.
-// - length: must be a multiple of 8 bytes.
-// - endianness: don't care (assume little-endian).
-uint64_t hash(const void *buffer, size_t length, uint64_t seed)
-{
-    assert((uintptr_t)buffer % 8 == 0 && length % 8 == 0);
-    const uint64_t *blocks = (const uint64_t *)buffer;
-    uint64_t result = 0;
-
-    for (size_t i = 0; i < length / 8; i++) {
-        seed ^= blocks[i];
-        result ^= prng(&seed);
-    }
-
-    return result;
-}
-
 int64_t system_msec()
 {
     struct timespec t;

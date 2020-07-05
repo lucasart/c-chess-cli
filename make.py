@@ -27,7 +27,7 @@ cflags = '-I. -std=gnu11 {} -mpopcnt -Ofast -flto'.format('-DNDEBUG -s' if not a
 wflags = '-Wfatal-errors -Wall -Wextra -Wstrict-prototypes -Wsign-conversion -Wshadow'
 lflags ='-lpthread -lm'
 if args.static: lflags += ' -static'
-if 'ANDROID_ARGUMENT' in os.environ: lflags += ' -latomic'
+if 'ANDROID_DATA' in os.environ: lflags += ' -latomic'
 
 # Run compiler
 cmd = '{} {} {} {} -o {} {}'.format(args.compiler, cflags, wflags, sources, args.output, lflags)
