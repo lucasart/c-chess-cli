@@ -18,16 +18,13 @@
 #include "options.h"
 #include "util.h"
 
+// Parse a value in="a:b" into out[]=(a, b), or (a,a) if ":" is missing.
 static void split_engine_option(const char *in, str_t out[2])
 {
-    size_t n = strcspn(in, ":");
-    str_ncpy(&out[0], str_ref(in), n);  // FIXME: in should be str_t, and str_slice_ref() to move along without strlen()
+    in = str_tok(in, &out[0], ":");
+    in = str_tok(in, &out[1], ":");
 
-    if (*(in += n)) {
-        assert(*in == ':');
-        n = strcspn(++in, ":");
-        str_ncpy(&out[1], str_ref(in), n);
-    } else
+    if (!in)
         str_cpy(&out[1], out[0]);
 }
 
