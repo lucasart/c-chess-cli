@@ -82,7 +82,7 @@ Options options_new(int argc, const char **argv)
             else if (!strcmp(argv[i - 1], "-openings"))
                 str_cpy(&o.openings, str_ref(argv[i]));
             else if (!strcmp(argv[i - 1], "-pgnout"))
-                str_cpy(&o.pgnout, str_ref(argv[i]));
+                str_cpy(&o.pgnOut, str_ref(argv[i]));
             else if (!strcmp(argv[i - 1], "-cmd"))
                 split_engine_option(argv[i], o.cmd);
             else if (!strcmp(argv[i - 1], "-name"))
@@ -146,7 +146,7 @@ Options options_new(int argc, const char **argv)
 
 void options_delete(Options *o)
 {
-    str_del_n(&o->openings, &o->pgnout);
+    str_del_n(&o->openings, &o->pgnOut);
 
     for (int i = 0; i < 2; i++)
         str_del_n(&o->uciOptions[i], &o->cmd[i], &o->name[i]);

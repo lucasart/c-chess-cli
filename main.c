@@ -24,7 +24,6 @@
 
 static Options options;
 static Openings openings;
-static FILE *pgnout;
 
 static void *thread_start(void *arg)
 {
@@ -54,9 +53,9 @@ static void *thread_start(void *arg)
         const int wld = game_play(&game, &options.go, engines, &worker->deadline, next % 2 == 0);
 
         // Write to PGN file
-        if (pgnout) {
+        if (worker->pgnOut) {
             scope(str_del) str_t pgn = game_pgn(&game);
-            DIE_IF(worker->id, fputs(pgn.buf, pgnout) < 0);
+            DIE_IF(worker->id, fputs(pgn.buf, worker->pgnOut) < 0);
         }
 
         // Write to stdout a one line summary of the game
@@ -109,13 +108,13 @@ int main(int argc, const char **argv)
 
     openings = openings_new(&options.openings, options.random, options.repeat, -1);
 
-    pgnout = NULL;
+    FILE *pgnOut = NULL;
 
-    if (options.pgnout.len)
-        DIE_IF(-1, !(pgnout = fopen(options.pgnout.buf, "w")));
+    if (options.pgnOut.len)
+        DIE_IF(-1, !(pgnOut = fopen(options.pgnOut.buf, "w")));
 
     pthread_t threads[options.concurrency];
-    workers_new(options.concurrency);
+    workers_new(options.concurrency, pgnOut);
 
     for (int i = 0; i < options.concurrency; i++) {
         WorkersBusy++;
@@ -138,8 +137,8 @@ int main(int argc, const char **argv)
 
     workers_delete();
 
-    if (pgnout)
-        DIE_IF(-1, fclose(pgnout) < 0);
+    if (pgnOut)
+        DIE_IF(-1, fclose(pgnOut) < 0);
 
     openings_delete(&openings, -1);
     options_delete(&options);

@@ -19,6 +19,7 @@
 // Per thread data
 typedef struct {
     Deadline deadline;
+    FILE *pgnOut;
     int id;  // starts at 0
     int wldCount[3];  // counts wins, losses, and draws
 } Worker;
@@ -26,7 +27,7 @@ typedef struct {
 extern Worker *Workers;
 extern _Atomic(int) WorkersBusy;  // how many workers are busy
 
-void workers_new(int count);
+void workers_new(int count, FILE *pgnOut);
 void workers_delete(void);
 
 void workers_add_result(Worker *worker, int result, int wld[3]);

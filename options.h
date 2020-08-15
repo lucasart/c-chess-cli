@@ -18,7 +18,7 @@
 #include "str.h"
 
 typedef struct {
-    str_t openings, pgnout, cmd[2], name[2], uciOptions[2];
+    str_t openings, pgnOut, cmd[2], name[2], uciOptions[2];
     double elo0, elo1, alpha, beta;
     GameOptions go;
     int concurrency, games;

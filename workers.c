@@ -22,7 +22,7 @@ static pthread_mutex_t mtxWorkers = PTHREAD_MUTEX_INITIALIZER;
 
 _Atomic(int) WorkersBusy = 0;
 
-void workers_new(int count)
+void workers_new(int count, FILE *pgnOut)
 {
     WorkersCount = count;
     Workers = calloc((size_t)count, sizeof(Worker));
@@ -30,6 +30,7 @@ void workers_new(int count)
     for (int i = 0; i < count; i++) {
         pthread_mutex_init(&Workers[i].deadline.mtx, NULL);
         Workers[i].id = i;
+        Workers[i].pgnOut = pgnOut;
     }
 }
 
