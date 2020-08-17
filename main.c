@@ -111,7 +111,7 @@ int main(int argc, const char **argv)
     FILE *pgnOut = NULL;
 
     if (options.pgnOut.len)
-        DIE_IF(-1, !(pgnOut = fopen(options.pgnOut.buf, "w")));
+        DIE_IF(0, !(pgnOut = fopen(options.pgnOut.buf, "w")));
 
     pthread_t threads[options.concurrency];
     workers_new(options.concurrency, pgnOut);
@@ -138,7 +138,7 @@ int main(int argc, const char **argv)
     workers_delete();
 
     if (pgnOut)
-        DIE_IF(-1, fclose(pgnOut) < 0);
+        DIE_IF(0, fclose(pgnOut) < 0);
 
     openings_delete(&openings, -1);
     options_delete(&options);

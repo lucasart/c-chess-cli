@@ -20,7 +20,7 @@
 typedef struct {
     Deadline deadline;
     FILE *pgnOut;
-    int id;  // starts at 0
+    int id;  // starts at 1 (0 is for main thread)
     int wldCount[3];  // counts wins, losses, and draws
 } Worker;
 
