@@ -11,9 +11,9 @@ p.add_argument('-p', '--program', help='Program to compile', choices=['main', 't
 args = p.parse_args()
 
 # Select source files, and set output file, depending on which program is being compiled
-sources = 'bitboard.c gen.c position.c str.c util.c'
+sources = 'src/bitboard.c src/gen.c src/position.c src/str.c src/util.c'
 if args.program == 'main':
-    sources += ' engine.c game.c main.c openings.c options.c sprt.c workers.c'
+    sources += ' src/engine.c src/game.c src/main.c src/openings.c src/options.c src/sprt.c src/workers.c'
     if args.output == '': args.output = './c-chess-cli'
 elif args.program == 'test':
     sources += ' test/test.c'
@@ -23,7 +23,7 @@ elif args.program == 'engine':
     if args.output == '': args.output = './test/engine'
 
 # Determine flags for: compilation, warning, and linking
-cflags = '-I. -std=gnu11 {} -mpopcnt -Ofast -flto'.format('-DNDEBUG -s' if not args.debug else '-g')
+cflags = '-I./src -std=gnu11 {} -mpopcnt -Ofast -flto'.format('-DNDEBUG -s' if not args.debug else '-g')
 wflags = '-Wfatal-errors -Wall -Wextra -Wstrict-prototypes -Wsign-conversion -Wshadow'
 lflags ='-lpthread -lm'
 if args.static: lflags += ' -static'
