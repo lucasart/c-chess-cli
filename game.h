@@ -43,16 +43,6 @@ enum {
 };
 
 typedef struct {
-    // Per engine, by index in engines[] array (not the same as color)
-    int64_t movetime[2], time[2], increment[2];
-    uint64_t nodes[2];
-    int movestogo[2];
-    int depth[2];
-    int resignCount, resignScore;
-    int drawCount, drawScore;
-} GameOptions;
-
-typedef struct {
     str_t names[NB_COLOR];  // names of players, by color
     Position *pos;  // list of positions (including moves) since game start
     int ply, maxPly, state;

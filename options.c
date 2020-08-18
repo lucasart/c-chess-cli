@@ -28,15 +28,15 @@ static void split_engine_option(const char *in, str_t out[2])
         str_cpy(&out[1], out[0]);
 }
 
-Options options_new(int argc, const char **argv)
+Options options_new(int argc, const char **argv, GameOptions *go)
 {
     // List options that expect a value
     static const char *options[] = {"-concurrency", "-games", "-openings", "-pgnout", "-cmd",
-        "-name", "-options", "-nodes", "-depth", "-draw", "-resign", "-movetime", "-tc", "-sprt"};
+        "-name", "-options", "-nodes", "-depth", "-draw", "-resign", "-movetime", "-tc", "-sprt",
+        "-sample"};
 
     // Set default values
-    Options o = (Options){0};
-
+    Options o = {0};
     o.concurrency = 1;
     o.games = 1;
     o.alpha = o.beta = 0.05;
@@ -89,25 +89,25 @@ Options options_new(int argc, const char **argv)
             else if (!strcmp(argv[i - 1], "-nodes")) {
                 str_t nodes[2] = {{0}, {0}};
                 split_engine_option(argv[i], nodes);
-                o.go.nodes[0] = (uint64_t)atoll(nodes[0].buf);
-                o.go.nodes[1] = (uint64_t)atoll(nodes[1].buf);
+                go->nodes[0] = (uint64_t)atoll(nodes[0].buf);
+                go->nodes[1] = (uint64_t)atoll(nodes[1].buf);
                 str_del_n(&nodes[0], &nodes[1]);
             } else if (!strcmp(argv[i - 1], "-depth")) {
                 str_t depth[2] = {{0}, {0}};
                 split_engine_option(argv[i], depth);
-                o.go.depth[0] = atoi(depth[0].buf);
-                o.go.depth[1] = atoi(depth[1].buf);
+                go->depth[0] = atoi(depth[0].buf);
+                go->depth[1] = atoi(depth[1].buf);
                 str_del_n(&depth[0], &depth[1]);
             } else if (!strcmp(argv[i - 1], "-movetime")) {
                 str_t movetime[2] = {{0}, {0}};
                 split_engine_option(argv[i], movetime);
-                o.go.movetime[0] = (int64_t)(atof(movetime[0].buf) * 1000);
-                o.go.movetime[1] = (int64_t)(atof(movetime[1].buf) * 1000);
+                go->movetime[0] = (int64_t)(atof(movetime[0].buf) * 1000);
+                go->movetime[1] = (int64_t)(atof(movetime[1].buf) * 1000);
                 str_del_n(&movetime[0], &movetime[1]);
             } else if (!strcmp(argv[i - 1], "-resign"))
-                sscanf(argv[i], "%i,%i", &o.go.resignCount, &o.go.resignScore);
+                sscanf(argv[i], "%i,%i", &go->resignCount, &go->resignScore);
             else if (!strcmp(argv[i - 1], "-draw"))
-                sscanf(argv[i], "%i,%i", &o.go.drawCount, &o.go.drawScore);
+                sscanf(argv[i], "%i,%i", &go->drawCount, &go->drawScore);
             else if (!strcmp(argv[i - 1], "-tc")) {
                 str_t tc[2] = {{0}, {0}};
                 split_engine_option(argv[i], tc);
@@ -116,18 +116,34 @@ Options options_new(int argc, const char **argv)
                     double time = 0, increment = 0;
 
                     if (strchr(tc[j].buf, '/'))
-                        sscanf(tc[j].buf, "%i/%lf+%lf", &o.go.movestogo[j], &time, &increment);
+                        sscanf(tc[j].buf, "%i/%lf+%lf", &go->movestogo[j], &time, &increment);
                     else
                         sscanf(tc[j].buf, "%lf+%lf", &time, &increment);
 
-                    o.go.time[j] = (int64_t)(time * 1000);
-                    o.go.increment[j] = (int64_t)(increment * 1000);
+                    go->time[j] = (int64_t)(time * 1000);
+                    go->increment[j] = (int64_t)(increment * 1000);
                 }
 
                 str_del_n(&tc[0], &tc[1]);
-            } else if (!strcmp(argv[i - 1], "-sprt")) {
+            }
+            else if (!strcmp(argv[i - 1], "-sprt")) {
                 o.sprt = true;
                 sscanf(argv[i], "%lf,%lf,%lf,%lf", &o.elo0, &o.elo1, &o.alpha, &o.beta);
+            } else if (!strcmp(argv[i - 1], "-sample")) {
+                scope(str_del) str_t token = {0};
+                const char *tail = str_tok(argv[i], &token, ",");
+                assert(tail);
+
+                // Parse sample frequency (and check range)
+                go->sampleFrequency = atof(token.buf);
+                if (go->sampleFrequency > 1.0 || go->sampleFrequency < 0.0)
+                    DIE("Sample frequency '%f' must be between 0 and 1\n", go->sampleFrequency);
+
+                // Parse filename (default sample.bin if omitted)
+                if ((tail = str_tok(tail, &token, ",")))
+                    o.sampleFileName = str_dup(token);
+                else
+                    o.sampleFileName = str_dup(str_ref("sample.bin"));
             } else
                 assert(false);
 
@@ -147,4 +163,6 @@ void options_delete(Options *o)
 
     for (int i = 0; i < 2; i++)
         str_del_n(&o->uciOptions[i], &o->cmd[i], &o->name[i]);
+
+    str_del(&o->sampleFileName);
 }

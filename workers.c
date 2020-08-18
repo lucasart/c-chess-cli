@@ -22,7 +22,7 @@ static pthread_mutex_t mtxWorkers = PTHREAD_MUTEX_INITIALIZER;
 
 _Atomic(int) WorkersBusy = 0;
 
-void workers_new(int count, FILE *pgnOut)
+void workers_new(int count, FILE *pgnOut, const GameOptions *go)
 {
     WorkersCount = count;
     Workers = calloc((size_t)count, sizeof(Worker));
@@ -31,6 +31,7 @@ void workers_new(int count, FILE *pgnOut)
         pthread_mutex_init(&Workers[i].deadline.mtx, NULL);
         Workers[i].id = i + 1;
         Workers[i].pgnOut = pgnOut;
+        Workers[i].go = go;
     }
 }
 

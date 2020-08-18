@@ -50,7 +50,7 @@ static void *thread_start(void *arg)
     while ((next = openings_next(&openings, &fen, worker->id)) <= options.games) {
         // Play 1 game
         Game game = game_new(&fen);
-        const int wld = game_play(&game, &options.go, engines, &worker->deadline, next % 2 == 0);
+        const int wld = game_play(&game, worker->go, engines, &worker->deadline, next % 2 == 0);
 
         // Write to PGN file
         if (worker->pgnOut) {
@@ -104,7 +104,8 @@ static void *thread_start(void *arg)
 
 int main(int argc, const char **argv)
 {
-    options = options_new(argc, argv);
+    GameOptions go = {0};
+    options = options_new(argc, argv, &go);
 
     openings = openings_new(&options.openings, options.random, options.repeat, -1);
 
@@ -114,7 +115,7 @@ int main(int argc, const char **argv)
         DIE_IF(0, !(pgnOut = fopen(options.pgnOut.buf, "w")));
 
     pthread_t threads[options.concurrency];
-    workers_new(options.concurrency, pgnOut);
+    workers_new(options.concurrency, pgnOut, &go);
 
     for (int i = 0; i < options.concurrency; i++) {
         WorkersBusy++;

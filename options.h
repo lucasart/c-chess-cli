@@ -14,11 +14,11 @@
 */
 #pragma once
 #include <inttypes.h>
-#include "game.h"
+#include "workers.h"
 #include "str.h"
 
 typedef struct {
-    str_t openings, pgnOut, cmd[2], name[2], uciOptions[2];
+    str_t openings, pgnOut, cmd[2], name[2], uciOptions[2], sampleFileName;
     double elo0, elo1, alpha, beta;
     GameOptions go;
     int concurrency, games;
@@ -26,5 +26,5 @@ typedef struct {
     char pad[4];
 } Options;
 
-Options options_new(int argc, const char **argv);
+Options options_new(int argc, const char **argv, GameOptions *go);
 void options_delete(Options *o);
