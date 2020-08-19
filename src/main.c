@@ -110,9 +110,11 @@ int main(int argc, const char **argv)
     openings = openings_new(&options.openings, options.random, options.repeat, -1);
 
     FILE *pgnOut = NULL;
-
     if (options.pgnOut.len)
         DIE_IF(0, !(pgnOut = fopen(options.pgnOut.buf, "w")));
+
+    if (options.sampleFileName.len)
+        DIE_IF(0, !(go.sampleFile = fopen(options.sampleFileName.buf, "wb+")));
 
     pthread_t threads[options.concurrency];
     workers_new(options.concurrency, pgnOut, &go);
@@ -140,6 +142,9 @@ int main(int argc, const char **argv)
 
     if (pgnOut)
         DIE_IF(0, fclose(pgnOut) < 0);
+
+    if (go.sampleFile)
+        DIE_IF(0, fclose(go.sampleFile) < 0);
 
     openings_delete(&openings, -1);
     options_delete(&options);

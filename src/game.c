@@ -17,6 +17,12 @@
 #include "str.h"
 #include "util.h"
 
+typedef struct {
+    bitboard_t byColor[NB_COLOR];
+    bitboard_t byPiece[NB_PIECE];
+    int32_t score;
+} Sample;
+
 static void uci_position_command(const Game *g, str_t *cmd)
 // Builds a string of the form "position fen ... [moves ...]". Implements rule50 pruning: start from
 // the last position that reset the rule50 counter, to reduce the move list to the minimum, without
@@ -224,6 +230,16 @@ int game_play(Game *g, const GameOptions *go, const Engine engines[2], Deadline 
             }
         } else
             resignCount[ei] = 0;
+
+        // Write sample: position (compactly encoded) + score
+        // FIXME: heed go->sampleFrequency
+        if (go->sampleFile) {
+            Sample sample;
+            memcpy(sample.byColor, g->pos[g->ply].byColor, sizeof(sample.byColor));
+            memcpy(sample.byColor, g->pos[g->ply].byPiece, sizeof(sample.byPiece));
+            sample.score = score;
+            fwrite(&sample, sizeof(sample), 1, go->sampleFile);
+        }
     }
 
     assert(g->state != STATE_NONE);

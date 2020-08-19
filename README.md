@@ -31,6 +31,9 @@ List of `option value`:
   for it.
 - `pgnout file`: output file, in PGN format, where games are written.
 - `resign n,s`: resign when score <= -`s` (in cp) for `n` consecutive moves, for the losing side.
+- `sample freq[,file]`: collects sample of position and search score. `freq` is the frequency (between
+  0 and 1), and `file` is the output file (if omitted, defaults to `sample.bin`). More details in
+  Sample section below.
 - `sprt elo0,elo1,alpha,beta`: performs a [Sequential Probability Ratio Test](https://en.wikipedia.org/wiki/Sequential_probability_ratio_test)
   for `H1: elo=elo1` vs `H0: elo=elo0`, where `alpha` is the type I error probability (false positive),
   and `beta` is type II error probability (false negative). It uses the GSPRT approximation of the LLR
@@ -69,3 +72,34 @@ List:
 - `options`: UCI options per engine. In this context, `value1` and `value2`, must be comma
   separated, like so: `-options Hash=2,Threads=1:Book=true,Hash=4`. Special characters, like space,
   should be escaped using the appropriate shell syntax. For example `-options Time\ Buffer=50`, or `-options "Time Buffer=50"`.
+
+### Sampling
+
+This is only of interest for chess engine programmers. The intent of this feature is to the generate
+training data, which can be used to teach a neural network to evaluate chess positions.
+
+Using `-sample freq[,file]` will generate a binary file of samples, in this format:
+```
+struct {
+    uint64_t byColor[NB_COLOR];  // bit #i is set if piece of color on square #i
+    uint64_t byPiece[NB_PIECE];  // bit #i is set if piece of type on square #i
+    int32_t score;  // search result from the engine, in centipawns
+};
+```
+Where color, piece, and square indexing are as follows:
+```
+enum {WHITE, BLACK, NB_COLOR};
+enum {KNIGHT, BISHOP, ROOK, QUEEN, KING, PAWN, NB_PIECE};
+enum {
+    A1, B1, C1, D1, E1, F1, G1, H1,
+    A2, B2, C2, D2, E2, F2, G2, H2,
+    A3, B3, C3, D3, E3, F3, G3, H3,
+    A4, B4, C4, D4, E4, F4, G4, H4,
+    A5, B5, C5, D5, E5, F5, G5, H5,
+    A6, B6, C6, D6, E6, F6, G6, H6,
+    A7, B7, C7, D7, E7, F7, G7, H7,
+    A8, B8, C8, D8, E8, F8, G8, H8,
+    NB_SQUARE
+};
+```
+And `score` is the final score of the search given by the engine.

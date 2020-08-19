@@ -21,6 +21,7 @@ typedef struct {
     int64_t movetime[2], time[2], increment[2];
     uint64_t nodes[2];
     double sampleFrequency;
+    FILE *sampleFile;
     int movestogo[2];
     int depth[2];
     int resignCount, resignScore;
