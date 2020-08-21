@@ -16,6 +16,7 @@
 #include "gen.h"
 #include "str.h"
 #include "util.h"
+#include "vec.h"
 
 typedef struct {
     bitboard_t byColor[NB_COLOR];
@@ -115,8 +116,8 @@ Game game_new(const str_t *fen)
     g.names[WHITE] = g.names[BLACK] = (str_t){0};
 
     g.ply = 0;
-    g.maxPly = 256;
-    g.pos = malloc((size_t)g.maxPly * sizeof(Position));
+    g.pos = vec_new();
+    vec_push(g.pos, (Position){0});
     pos_set(&g.pos[0], *fen);
     g.state = STATE_NONE;
 
@@ -125,8 +126,7 @@ Game game_new(const str_t *fen)
 
 void game_delete(Game *g)
 {
-    free(g->pos);
-    g->pos = NULL;
+    vec_free(g->pos);
     str_del_n(&g->names[WHITE], &g->names[BLACK]);
 }
 
@@ -156,11 +156,6 @@ int game_play(Game *g, const GameOptions *go, const Engine engines[2], Deadline 
     int64_t timeLeft[2] = {go->time[0], go->time[1]};
 
     for (g->ply = 0; ; g->ply++) {
-        if (g->ply >= g->maxPly) {
-            g->maxPly *= 2;
-            g->pos = realloc(g->pos, (size_t)g->maxPly * sizeof(Position));
-        }
-
         if (played)
             pos_move(&g->pos[g->ply], &g->pos[g->ply - 1], played);
 
@@ -240,6 +235,8 @@ int game_play(Game *g, const GameOptions *go, const Engine engines[2], Deadline 
             sample.score = score;
             fwrite(&sample, sizeof(sample), 1, go->sampleFile);
         }
+
+        vec_push(g->pos, (Position){0});
     }
 
     assert(g->state != STATE_NONE);

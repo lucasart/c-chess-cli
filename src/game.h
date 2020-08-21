@@ -45,8 +45,7 @@ enum {
 typedef struct {
     str_t names[NB_COLOR];  // names of players, by color
     Position *pos;  // list of positions (including moves) since game start
-    int ply, maxPly, state;
-    char pad[4];
+    int ply, state;
 } Game;
 
 Game game_new(const str_t *fen);

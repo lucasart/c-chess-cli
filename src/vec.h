@@ -22,7 +22,7 @@ typedef struct {
 })
 
 #define vec_free(v) \
-    free(vec_ptr((v)))
+    (free(vec_ptr(v)), v = NULL)
 
 #define vec_size(v) \
     vec_ptr((v))->size
@@ -44,7 +44,7 @@ typedef struct {
     ((v) = vec_do_grow((v), sizeof(*(v)), n))
 
 #define vec_clear(v) \
-    (vec_ptr((v))->size = 0)
+    (vec_ptr(v)->size = 0)
 
 static void *vec_do_grow(void *v, size_t esize, size_t n)
 {
