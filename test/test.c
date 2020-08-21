@@ -16,6 +16,7 @@
 #include <stdio.h>
 #include "gen.h"
 #include "util.h"
+#include "vec.h"
 
 static uint64_t hash_mix(uint64_t block)
 {
@@ -282,6 +283,19 @@ void test_gen(void)
     }
 }
 
+static void test_vec(void)
+{
+    int *values = vec_new();
+
+    for (int i = 0; i < 25; i++)
+        vec_push(values, i);
+
+    for (int i = 0; i < 25; i++)
+        printf("values[%d] = %d\n", i, vec_pop(values));
+
+    vec_free(values);
+}
+
 int main(void)
 {
     test_bitboard();
@@ -292,6 +306,8 @@ int main(void)
 
     test_gen();
     puts("gen ok");
+
+    test_vec();
 
     return 0;
 }
