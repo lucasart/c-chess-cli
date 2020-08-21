@@ -15,6 +15,7 @@
 #pragma once
 #include "position.h"
 #include "engine.h"
+#include "vec.h"
 #include "workers.h"
 
 enum {
@@ -43,8 +44,15 @@ enum {
 };
 
 typedef struct {
+    bitboard_t byColor[NB_COLOR];
+    bitboard_t byPiece[NB_PIECE];
+    int32_t score;
+} Sample;
+
+typedef struct {
     str_t names[NB_COLOR];  // names of players, by color
     Position *pos;  // list of positions (including moves) since game start
+    Sample *samples;  // list of samples when generating training data
     int ply, state;
 } Game;
 

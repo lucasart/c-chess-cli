@@ -21,7 +21,6 @@ typedef struct {
     int64_t movetime[2], time[2], increment[2];
     uint64_t nodes[2];
     double sampleFrequency;
-    FILE *sampleFile;
     int movestogo[2];
     int depth[2];
     int resignCount, resignScore;
@@ -32,6 +31,7 @@ typedef struct {
 typedef struct {
     Deadline deadline;
     FILE *pgnOut;
+    FILE *sampleFile;
     const GameOptions *go;
     int id;  // starts at 1 (0 is for main thread)
     int wldCount[3];  // counts wins, losses, and draws
@@ -40,7 +40,7 @@ typedef struct {
 extern Worker *Workers;
 extern _Atomic(int) WorkersBusy;  // how many workers are busy
 
-void workers_new(int count, FILE *pgnOut, const GameOptions *go);
+void workers_new(int count, FILE *pgnOut, FILE *sampleFile, const GameOptions *go);
 void workers_delete(void);
 
 void workers_add_result(Worker *worker, int result, int wld[3]);

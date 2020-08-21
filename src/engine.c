@@ -244,7 +244,7 @@ const Engine *deadline_overdue(Deadline *deadline)
         return e;
     } else {
         if (e && e->log)
-            DIE_IF(e->threadId, fprintf(e->log, "deadline passed: %s responded at %" PRId64 ", %"
+            DIE_IF(e->threadId, fprintf(e->log, "deadline ok: %s responded at %" PRId64 ", %"
                 PRId64 "ms before the deadline.\n", e->name.buf, time, timeLimit - time) < 0);
 
         return NULL;

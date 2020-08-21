@@ -16,13 +16,6 @@
 #include "gen.h"
 #include "str.h"
 #include "util.h"
-#include "vec.h"
-
-typedef struct {
-    bitboard_t byColor[NB_COLOR];
-    bitboard_t byPiece[NB_PIECE];
-    int32_t score;
-} Sample;
 
 static void uci_position_command(const Game *g, str_t *cmd)
 // Builds a string of the form "position fen ... [moves ...]". Implements rule50 pruning: start from
@@ -119,6 +112,8 @@ Game game_new(const str_t *fen)
     g.pos = vec_new();
     vec_push(g.pos, (Position){0});
     pos_set(&g.pos[0], *fen);
+
+    g.samples = vec_new();
     g.state = STATE_NONE;
 
     return g;
@@ -127,6 +122,7 @@ Game game_new(const str_t *fen)
 void game_delete(Game *g)
 {
     vec_free(g->pos);
+    vec_free(g->samples);
     str_del_n(&g->names[WHITE], &g->names[BLACK]);
 }
 
@@ -227,14 +223,12 @@ int game_play(Game *g, const GameOptions *go, const Engine engines[2], Deadline 
             resignCount[ei] = 0;
 
         // Write sample: position (compactly encoded) + score
-        // FIXME: heed go->sampleFrequency
-        if (go->sampleFile) {
-            Sample sample;
-            memcpy(sample.byColor, g->pos[g->ply].byColor, sizeof(sample.byColor));
-            memcpy(sample.byColor, g->pos[g->ply].byPiece, sizeof(sample.byPiece));
-            sample.score = score;
-            fwrite(&sample, sizeof(sample), 1, go->sampleFile);
-        }
+        // FIXME: heed sampleFrequency
+        Sample sample;
+        memcpy(sample.byColor, g->pos[g->ply].byColor, sizeof(sample.byColor));
+        memcpy(sample.byColor, g->pos[g->ply].byPiece, sizeof(sample.byPiece));
+        sample.score = score;
+        vec_push(g->samples, sample);
 
         vec_push(g->pos, (Position){0});
     }

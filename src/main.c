@@ -58,6 +58,11 @@ static void *thread_start(void *arg)
             DIE_IF(worker->id, fputs(pgn.buf, worker->pgnOut) < 0);
         }
 
+        // Write to Sample file
+        if (worker->sampleFile)
+            DIE_IF(worker->id, fwrite(game.samples, sizeof(Sample), vec_size(game.samples),
+                worker->sampleFile) < vec_size(game.samples));
+
         // Write to stdout a one line summary of the game
         scope(str_del) str_t reason = {0}, result = game_decode_state(&game, &reason);
         printf("[%i] %s vs %s: %s (%s)\n", worker->id, game.names[WHITE].buf,
@@ -113,11 +118,12 @@ int main(int argc, const char **argv)
     if (options.pgnOut.len)
         DIE_IF(0, !(pgnOut = fopen(options.pgnOut.buf, "w")));
 
+    FILE *sampleFile = NULL;
     if (options.sampleFileName.len)
-        DIE_IF(0, !(go.sampleFile = fopen(options.sampleFileName.buf, "wb+")));
+        DIE_IF(0, !(sampleFile = fopen(options.sampleFileName.buf, "wb+")));
 
     pthread_t threads[options.concurrency];
-    workers_new(options.concurrency, pgnOut, &go);
+    workers_new(options.concurrency, pgnOut, sampleFile, &go);
 
     for (int i = 0; i < options.concurrency; i++) {
         WorkersBusy++;
@@ -143,8 +149,8 @@ int main(int argc, const char **argv)
     if (pgnOut)
         DIE_IF(0, fclose(pgnOut) < 0);
 
-    if (go.sampleFile)
-        DIE_IF(0, fclose(go.sampleFile) < 0);
+    if (sampleFile)
+        DIE_IF(0, fclose(sampleFile) < 0);
 
     openings_delete(&openings, -1);
     options_delete(&options);
