@@ -46,7 +46,7 @@ enum {
 typedef struct {
     bitboard_t byColor[NB_COLOR];
     bitboard_t byPiece[NB_PIECE];
-    int32_t score;
+    int32_t score, pad;
 } Sample;
 
 typedef struct {

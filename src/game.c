@@ -184,7 +184,7 @@ int game_play(Game *g, const GameOptions *go, const Engine engines[2], Deadline 
         uci_go_command(g, go, ei, timeLeft, &goCmd);
         engine_writeln(&engines[ei], goCmd.buf);
 
-        int score;
+        int score = 0;
         const bool ok = engine_bestmove(&engines[ei], &score, &timeLeft[ei], deadline, &best);
 
         if (!ok) {  // engine_bestmove() time out before parsing a bestmove
@@ -226,8 +226,9 @@ int game_play(Game *g, const GameOptions *go, const Engine engines[2], Deadline 
         // FIXME: heed sampleFrequency
         Sample sample;
         memcpy(sample.byColor, g->pos[g->ply].byColor, sizeof(sample.byColor));
-        memcpy(sample.byColor, g->pos[g->ply].byPiece, sizeof(sample.byPiece));
+        memcpy(sample.byPiece, g->pos[g->ply].byPiece, sizeof(sample.byPiece));
         sample.score = score;
+        sample.pad = 0;
         vec_push(g->samples, sample);
 
         vec_push(g->pos, (Position){0});

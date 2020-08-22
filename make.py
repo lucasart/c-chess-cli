@@ -24,7 +24,7 @@ elif args.program == 'engine':
 
 # Determine flags for: compilation, warning, and linking
 cflags = '-I./src -std=gnu11 {} -mpopcnt -Ofast -flto'.format('-DNDEBUG -s' if not args.debug else '-g')
-wflags = '-Wfatal-errors -Wall -Wextra -Wstrict-prototypes -Wsign-conversion -Wshadow'
+wflags = '-Wfatal-errors -Wall -Wextra -Wstrict-prototypes -Wsign-conversion -Wshadow -Wpadded'
 lflags ='-lpthread -lm'
 if args.static: lflags += ' -static'
 if 'ANDROID_DATA' in os.environ: lflags += ' -latomic'
