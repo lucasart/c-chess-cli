@@ -22,7 +22,7 @@
 #include "engine.h"
 #include "util.h"
 
-static void engine_spawn(Engine *e, const char *cmd, bool readStdErr)
+static void engine_spawn(Engine *e, const char *cmd, const char *cwd, bool readStdErr)
 {
     // Pipe diagram: Parent -> [1]into[0] -> Child -> [1]outof[0] -> Parent
     // 'into' and 'outof' are pipes, each with 2 ends: read=0, write=1
@@ -42,12 +42,16 @@ static void engine_spawn(Engine *e, const char *cmd, bool readStdErr)
         DIE_IF(e->threadId, dup2(into[0], STDIN_FILENO) < 0);
         DIE_IF(e->threadId, dup2(outof[1], STDOUT_FILENO) < 0);
 
+        // When readStdErr, dump stderr into stdout, like doing '2>&1' in bash
         if (readStdErr)
             DIE_IF(e->threadId, dup2(outof[1], STDERR_FILENO) < 0);
 
+        // Close file descriptors that won't be needed anymore
         DIE_IF(e->threadId, close(into[0]) < 0);
         DIE_IF(e->threadId, close(outof[1]) > 0);
 
+        // Set current working directory, and execute child process
+        DIE_IF(e->threadId, chdir(cwd) < 0);
         DIE_IF(e->threadId, execlp(cmd, cmd, NULL) < 0);
     } else {
         assert(e->pid > 0);
@@ -71,7 +75,7 @@ Engine engine_new(const str_t *cmd, const str_t *name, const str_t *uciOptions, 
     e.threadId = threadId;
     e.log = log;
     e.name = str_dup(name->len ? *name : *cmd); // default value
-    engine_spawn(&e, cmd->buf, log != NULL);  // spawn child process and plug pipes
+    engine_spawn(&e, cmd->buf, "./", log != NULL);  // spawn child process and plug pipes
 
     deadline_set(deadline, &e, system_msec() + 1000);
     engine_writeln(&e, "uci");
