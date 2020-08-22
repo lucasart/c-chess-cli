@@ -22,7 +22,7 @@
 #include "engine.h"
 #include "util.h"
 
-static void engine_spawn(Engine *e, const char *cmd, const char *cwd, bool readStdErr)
+static void engine_spawn(Engine *e, const char *cwd, const char *run, bool readStdErr)
 {
     // Pipe diagram: Parent -> [1]into[0] -> Child -> [1]outof[0] -> Parent
     // 'into' and 'outof' are pipes, each with 2 ends: read=0, write=1
@@ -50,9 +50,9 @@ static void engine_spawn(Engine *e, const char *cmd, const char *cwd, bool readS
         DIE_IF(e->threadId, close(into[0]) < 0);
         DIE_IF(e->threadId, close(outof[1]) > 0);
 
-        // Set current working directory, and execute child process
+        // Set cwd as current directory, and execute run
         DIE_IF(e->threadId, chdir(cwd) < 0);
-        DIE_IF(e->threadId, execlp(cmd, cmd, NULL) < 0);
+        DIE_IF(e->threadId, execlp(run, run, NULL) < 0);
     } else {
         assert(e->pid > 0);
 
@@ -65,17 +65,31 @@ static void engine_spawn(Engine *e, const char *cmd, const char *cwd, bool readS
     }
 }
 
-Engine engine_new(const str_t *cmd, const str_t *name, const str_t *uciOptions, FILE *log,
-    Deadline *deadline, int threadId)
+Engine engine_new(str_t cmd, str_t name, str_t uciOptions, FILE *log, Deadline *deadline,
+    int threadId)
 {
-    if (!cmd->len)
+    if (!cmd.len)
         DIE("[%d] missing command to start engine.\n", threadId);
 
     Engine e;
     e.threadId = threadId;
     e.log = log;
-    e.name = str_dup(name->len ? *name : *cmd); // default value
-    engine_spawn(&e, cmd->buf, "./", log != NULL);  // spawn child process and plug pipes
+    e.name = str_dup(name.len ? name : cmd); // default value
+
+    // Split cmd into (cwd, run), because we want to run the engine with its own direcory as cwd.
+    // eg. with "/": cmd = "../Engines/stockfish" => cwd = "../Engines", run = "./stockfish"
+    // eg. without "/": cmd = "stockfish" => cwd = "./", run = "stockfish" (only works if in PATH)
+    scope(str_del) str_t cwd = str_dup(str_ref("./")), run = str_dup(cmd);
+    const char *lastSlash = strrchr(cmd.buf, '/');
+
+    if (lastSlash) {
+        str_ncpy(&cwd, cmd, (size_t)(lastSlash - cmd.buf));
+        str_cpy(&run, str_ref("./"));
+        str_cat(&run, str_ref(lastSlash + 1));
+    }
+
+    // Spawn child process and plug pipes
+    engine_spawn(&e, cwd.buf, run.buf, log != NULL);
 
     deadline_set(deadline, &e, system_msec() + 1000);
     engine_writeln(&e, "uci");
@@ -88,13 +102,13 @@ Engine engine_new(const str_t *cmd, const str_t *name, const str_t *uciOptions, 
         tail = line.buf;
 
         // Set e.name, by parsing "id name %s", only if no name was provided (*name == '\0')
-        if (!name->len && (tail = str_tok(tail, &token, " ")) && !strcmp(token.buf, "id")
+        if (!name.len && (tail = str_tok(tail, &token, " ")) && !strcmp(token.buf, "id")
                 && (tail = str_tok(tail, &token, " ")) && !strcmp(token.buf, "name") && tail)
             str_cpy(&e.name, str_ref(tail + strspn(tail, " ")));
     } while (strcmp(line.buf, "uciok"));
 
     // Parses uciOptions (eg. "Hash=16,Threads=8"), and set engine options accordingly
-    tail = uciOptions->buf;
+    tail = uciOptions.buf;
 
     while ((tail = str_tok(tail, &token, ","))) {
         const char *c = strchr(token.buf, '=');
@@ -111,7 +125,7 @@ Engine engine_new(const str_t *cmd, const str_t *name, const str_t *uciOptions, 
     return e;
 }
 
-void engine_delete(Engine *e)
+void engine_del(Engine *e)
 {
     str_del(&e->name);
     DIE_IF(e->threadId, fclose(e->in) == EOF);

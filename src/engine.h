@@ -40,9 +40,9 @@ typedef struct {
 } Deadline;
 
 const Engine *deadline_overdue(Deadline *deadline);
-Engine engine_new(const str_t *cmd, const str_t *name, const str_t *uciOptions, FILE *log,
-    Deadline *deadline, int threadId);
-void engine_delete(Engine *e);
+Engine engine_new(str_t cmd, str_t name, str_t uciOptions, FILE *log, Deadline *deadline,
+    int threadId);
+void engine_del(Engine *e);
 
 void engine_readln(const Engine *e, str_t *line);
 void engine_writeln(const Engine *e, char *buf);

@@ -41,7 +41,7 @@ static void *thread_start(void *arg)
 
     // Prepare engines[]
     for (int i = 0; i < 2; i++)
-        engines[i] = engine_new(&options.cmd[i], &options.name[i], &options.uciOptions[i], log,
+        engines[i] = engine_new(options.cmd[i], options.name[i], options.uciOptions[i], log,
             &worker->deadline, worker->id);
 
     int next;
@@ -98,7 +98,7 @@ static void *thread_start(void *arg)
     }
 
     for (int i = 0; i < 2; i++)
-        engine_delete(&engines[i]);
+        engine_del(&engines[i]);
 
     if (log)
         DIE_IF(worker->id, fclose(log) < 0);
