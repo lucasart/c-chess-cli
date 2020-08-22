@@ -83,13 +83,19 @@ Using `-sample freq[,file]` will generate a binary file of samples, in this form
 struct {
     uint64_t byColor[NB_COLOR];  // bit #i is set if piece of color on square #i
     uint64_t byPiece[NB_PIECE];  // bit #i is set if piece of type on square #i
-    int32_t score;  // search result from the engine, in centipawns
+    int16_t score;  // score returned by the engine (in cp)
+    int8_t result;  // game result from turn's pov: -1 (loss), 0 (draw), +1 (win)
+    uint8_t turn;  // turn of play
+    uint8_t epSquare;  // en-passant square (NB_SQUARE if none)
+    uint8_t castleRooks[NB_COLOR];  // rooks available for castling; a file bitmask by color
+    uint8_t rule50; // ply counter for 50-move rule, from 0 to 99 (100 would be draw or mated)
 };
 ```
-Where color, piece, and square indexing are as follows:
+Where color, piece, file, and square indexing are as follows:
 ```
 enum {WHITE, BLACK, NB_COLOR};
 enum {KNIGHT, BISHOP, ROOK, QUEEN, KING, PAWN, NB_PIECE};
+enum {FILE_A, FILE_B, FILE_C, FILE_D, FILE_E, FILE_F, FILE_G, FILE_H, NB_FILE};
 enum {
     A1, B1, C1, D1, E1, F1, G1, H1,
     A2, B2, C2, D2, E2, F2, G2, H2,
@@ -102,4 +108,3 @@ enum {
     NB_SQUARE
 };
 ```
-And `score` is the final score of the search given by the engine.

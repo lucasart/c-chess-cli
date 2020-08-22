@@ -228,7 +228,12 @@ int game_play(Game *g, const GameOptions *go, const Engine engines[2], Deadline 
         memcpy(sample.byColor, g->pos[g->ply].byColor, sizeof(sample.byColor));
         memcpy(sample.byPiece, g->pos[g->ply].byPiece, sizeof(sample.byPiece));
         sample.score = score;
-        sample.pad = 0;
+        sample.turn = g->pos[g->ply].turn;
+        sample.result = 0;  // unknown yet
+        sample.epSquare = g->pos[g->ply].epSquare;
+        sample.castleRooks[WHITE] = (uint8_t)g->pos[g->ply].castleRooks;
+        sample.castleRooks[BLACK] = (uint8_t)(g->pos[g->ply].castleRooks >> A8);
+        sample.rule50 = g->pos[g->ply].rule50;
         vec_push(g->samples, sample);
 
         vec_push(g->pos, (Position){0});
@@ -236,10 +241,13 @@ int game_play(Game *g, const GameOptions *go, const Engine engines[2], Deadline 
 
     assert(g->state != STATE_NONE);
 
-    if (g->state < STATE_SEPARATOR)
-        return ei == 0 ? RESULT_LOSS : RESULT_WIN;
-    else
-        return RESULT_DRAW;
+    const int result = g->state < STATE_SEPARATOR
+        ? (ei == 0 ? RESULT_LOSS : RESULT_WIN)  // engine on the move has lost (for any reason)
+        : RESULT_DRAW;  // draw (of any kind)
+
+    // FIXME: loop across samples, and set sample.result (-1/0/+1 from turn's pov)
+
+    return result;
 }
 
 str_t game_decode_state(const Game *g, str_t *reason)
