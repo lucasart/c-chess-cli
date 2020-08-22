@@ -11,7 +11,7 @@ p.add_argument('-p', '--program', help='Program to compile', choices=['main', 't
 args = p.parse_args()
 
 # Select source files, and set output file, depending on which program is being compiled
-sources = 'src/bitboard.c src/gen.c src/position.c src/str.c src/util.c'
+sources = 'src/bitboard.c src/gen.c src/position.c src/str.c src/util.c src/vec.c'
 if args.program == 'main':
     sources += ' src/engine.c src/game.c src/main.c src/openings.c src/options.c src/sprt.c src/workers.c'
     if args.output == '': args.output = './c-chess-cli'

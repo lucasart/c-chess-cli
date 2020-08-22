@@ -12,23 +12,16 @@ typedef struct {
     char buf[];
 } vec_t;
 
-#define vec_ptr(v) \
-    ((vec_t *)((char *)(v) - offsetof(vec_t, buf)))
+vec_t *vec_ptr(void *v);
+const vec_t *vec_cptr(const void *v);
 
-#define vec_new() ({ \
-    vec_t *p = malloc(sizeof(vec_t)); \
-    p->size = p->capacity = 0; \
-    (void *)p->buf; \
-})
+void *vec_new(void);
+void vec_del(void *v);
 
-#define vec_free(v) \
-    (free(vec_ptr(v)), v = NULL)
+size_t vec_size(const void *v);
+size_t vec_capacity(const void *v);
 
-#define vec_size(v) \
-    vec_ptr((v))->size
-
-#define vec_capacity(v) \
-    vec_ptr((v))->capacity
+void *vec_do_grow(void *v, size_t esize, size_t n);
 
 #define vec_push(v, e) \
     do { \
@@ -45,18 +38,3 @@ typedef struct {
 
 #define vec_clear(v) \
     (vec_ptr(v)->size = 0)
-
-static void *vec_do_grow(void *v, size_t esize, size_t n)
-{
-    assert(v);
-    vec_t *p;
-
-    p = vec_ptr(v);
-    p = realloc(p, sizeof(vec_t) + esize * (p->capacity + n));
-    p->capacity += n;
-
-    if (p->size > p->capacity)
-        p->size = p->capacity;
-
-    return p->buf;
-}

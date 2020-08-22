@@ -287,13 +287,15 @@ static void test_vec(void)
 {
     int *values = vec_new();
 
-    for (int i = 0; i < 25; i++)
+    for (int i = 0; i < 100; i++)
         vec_push(values, i);
 
-    for (int i = 0; i < 25; i++)
-        printf("values[%d] = %d\n", i, vec_pop(values));
+    int sum = 0;
+    for (int i = 0; i < 100; i++)
+        sum += vec_pop(values);
 
-    vec_free(values);
+    vec_del(values);
+    TEST(sum == 99 * 50);
 }
 
 int main(void)
@@ -308,6 +310,7 @@ int main(void)
     puts("gen ok");
 
     test_vec();
+    puts("vec ok");
 
     return 0;
 }

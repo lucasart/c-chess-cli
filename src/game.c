@@ -121,8 +121,8 @@ Game game_new(const str_t *fen)
 
 void game_delete(Game *g)
 {
-    vec_free(g->pos);
-    vec_free(g->samples);
+    vec_del(g->pos);
+    vec_del(g->samples);
     str_del_n(&g->names[WHITE], &g->names[BLACK]);
 }
 
@@ -241,13 +241,17 @@ int game_play(Game *g, const GameOptions *go, const Engine engines[2], Deadline 
 
     assert(g->state != STATE_NONE);
 
-    const int result = g->state < STATE_SEPARATOR
+    // Signed result from white's pov: -1 (loss), 0 (draw), +1 (win)
+    const int wpov = g->state < STATE_SEPARATOR
+            ? (g->pos[g->ply].turn == WHITE ? -1 : +1)  // lost from turn's pov
+            : 0;  // draw
+
+    for (size_t i = 0; i < vec_size(g->samples); i++)
+        g->samples[i].result = g->samples[i].turn == WHITE ? wpov : -wpov;
+
+    return g->state < STATE_SEPARATOR
         ? (ei == 0 ? RESULT_LOSS : RESULT_WIN)  // engine on the move has lost (for any reason)
         : RESULT_DRAW;  // draw (of any kind)
-
-    // FIXME: loop across samples, and set sample.result (-1/0/+1 from turn's pov)
-
-    return result;
 }
 
 str_t game_decode_state(const Game *g, str_t *reason)
