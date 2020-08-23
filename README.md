@@ -64,7 +64,10 @@ Syntax:
 - `-option :value2` can you guess? good.
 
 List:
-- `cmd`: command to run each engine.
+- `cmd`: command to run each engine. The current working directory will be set automatically, if a
+  `/` is contained in the value string(s). For example, `../Engines/critter_1.6a`, will run
+  `./critter_1.6a` from `../Engines`. If no `/` is found, the command is executed as is. For example
+  `demolito` will simply run `demolito`, which only works if `demolito` is in `PATH`.
 - `name`: name override for each engine. By default the name is read from `id name` following the UCI
   protocol (and if that fails cmd value will be used as name).
 - `movetime`: time limit per move in seconds.
