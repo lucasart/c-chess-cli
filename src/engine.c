@@ -21,8 +21,10 @@
 #include <unistd.h>
 #include "engine.h"
 #include "util.h"
+#include "vec.h"
 
-static void engine_spawn(Engine *e, const char *cwd, const char *run, bool readStdErr)
+static void engine_spawn(Engine *e, const char *cwd, const char *run, char **argv,
+    bool readStdErr)
 {
     // Pipe diagram: Parent -> [1]into[0] -> Child -> [1]outof[0] -> Parent
     // 'into' and 'outof' are pipes, each with 2 ends: read=0, write=1
@@ -52,7 +54,7 @@ static void engine_spawn(Engine *e, const char *cwd, const char *run, bool readS
 
         // Set cwd as current directory, and execute run
         DIE_IF(e->threadId, chdir(cwd) < 0);
-        DIE_IF(e->threadId, execlp(run, run, NULL) < 0);
+        DIE_IF(e->threadId, execvp(run, argv) < 0);
     } else {
         assert(e->pid > 0);
 
@@ -76,26 +78,57 @@ Engine engine_new(str_t cmd, str_t name, str_t uciOptions, FILE *log, Deadline *
     e.log = log;
     e.name = str_dup(name.len ? name : cmd); // default value
 
-    // Split cmd into (cwd, run), because we want to run the engine with its own direcory as cwd.
-    // eg. with "/": cmd = "../Engines/stockfish" => cwd = "../Engines", run = "./stockfish"
-    // eg. without "/": cmd = "stockfish" => cwd = "./", run = "stockfish" (only works if in PATH)
-    scope(str_del) str_t cwd = str_dup_c("./"), run = str_dup(cmd);
-    const char *lastSlash = strrchr(cmd.buf, '/');
+    /* Shell parsing of cmd */
+
+    // Step 1: isolate the first token being the command to run. The space character is ambiguous,
+    // because it is allowed in file names. So we must use str_tok_esc().
+    scope(str_del) str_t token = {0};
+    const char *tail = cmd.buf;
+    tail = str_tok_esc(tail, &token, ' ', '\\');
+
+    // Step 2: now we have the command (without its arguments). This command could be:
+    // (a) an unqualified path, like "demolito" (which evecvp() will search in PATH)
+    // (b) a qualified path (absolute starting with "/", or relative starting with "./" or "../")
+    // For (b), we want to separate into executable and directory, so instead of running
+    // "../Engines/demolito" from the cwd, we execute run="./demolito" from cwd="../Engines"
+    scope(str_del) str_t cwd = str_dup_c("./"), run = str_dup(token);
+    const char *lastSlash = strrchr(token.buf, '/');
 
     if (lastSlash) {
-        str_ncpy(&cwd, cmd, (size_t)(lastSlash - cmd.buf));
+        str_ncpy(&cwd, token, (size_t)(lastSlash - token.buf));
         str_cpy_c(&run, "./");
         str_cat_c(&run, lastSlash + 1);
     }
 
-    // Spawn child process and plug pipes
-    engine_spawn(&e, cwd.buf, run.buf, log != NULL);
+    // Step 3: Collect the arguments into a vec of str_t, args[]
+    str_t *args = vec_new();
 
+    while ((tail = str_tok_esc(tail, &token, ' ', '\\')))
+        vec_push(args, str_dup(token));
+
+    // Step 4: Obviously, evecvp() doesn't deal in vec of str_t, so prepare a char **, whose
+    // elements point to the C-string buffers of the elements of args (with an extra NULL to signal
+    // the end of the argv array).
+    char **argv = calloc(vec_size(args) + 1, sizeof(char *));
+
+    for (size_t i = 0; i < vec_size(args); i++)
+        argv[i] = args[i].buf;
+
+    // Spawn child process and plug pipes
+    engine_spawn(&e, cwd.buf, run.buf, argv, log != NULL);
+
+    // Free memory for string elements in the vector, then for the vector itself. Note that this
+    // will not happen explicitely in the child process, but that's fine, because execvp() will
+    // reclaim the memory.
+    for (size_t i = 0; i < vec_size(args); i++)
+        str_del(&args[i]);
+
+    vec_del(args);
+
+    // Start the uci..uciok dialogue
     deadline_set(deadline, &e, system_msec() + 1000);
     engine_writeln(&e, "uci");
-
-    scope(str_del) str_t line = {0}, token = {0};
-    const char *tail;
+    scope(str_del) str_t line = {0};
 
     do {
         engine_readln(&e, &line);

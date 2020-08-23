@@ -126,8 +126,7 @@ Options options_new(int argc, const char **argv, GameOptions *go)
                 }
 
                 str_del_n(&tc[0], &tc[1]);
-            }
-            else if (!strcmp(argv[i - 1], "-sprt")) {
+            } else if (!strcmp(argv[i - 1], "-sprt")) {
                 o.sprt = true;
                 sscanf(argv[i], "%lf,%lf,%lf,%lf", &o.elo0, &o.elo1, &o.alpha, &o.beta);
             } else if (!strcmp(argv[i - 1], "-sample")) {
