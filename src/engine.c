@@ -140,10 +140,11 @@ Engine engine_new(str_t cmd, str_t name, str_t uciOptions, FILE *log, Deadline *
             str_cpy_c(&e.name, tail + strspn(tail, " "));
     } while (strcmp(line.buf, "uciok"));
 
-    // Parses uciOptions (eg. "Hash=16,Threads=8"), and set engine options accordingly
+    // Parses uciOptions (eg. "Hash=16,Threads=8"), and set engine options accordingly. Option names
+    // or values may contain ',' if escaped with a backshash.
     tail = uciOptions.buf;
 
-    while ((tail = str_tok(tail, &token, ","))) {
+    while ((tail = str_tok_esc(tail, &token, ',', '\\'))) {
         const char *c = strchr(token.buf, '=');
         assert(c);
 
