@@ -79,13 +79,13 @@ Engine engine_new(str_t cmd, str_t name, str_t uciOptions, FILE *log, Deadline *
     // Split cmd into (cwd, run), because we want to run the engine with its own direcory as cwd.
     // eg. with "/": cmd = "../Engines/stockfish" => cwd = "../Engines", run = "./stockfish"
     // eg. without "/": cmd = "stockfish" => cwd = "./", run = "stockfish" (only works if in PATH)
-    scope(str_del) str_t cwd = str_dup(str_ref("./")), run = str_dup(cmd);
+    scope(str_del) str_t cwd = str_dup_c("./"), run = str_dup(cmd);
     const char *lastSlash = strrchr(cmd.buf, '/');
 
     if (lastSlash) {
         str_ncpy(&cwd, cmd, (size_t)(lastSlash - cmd.buf));
-        str_cpy(&run, str_ref("./"));
-        str_cat(&run, str_ref(lastSlash + 1));
+        str_cpy_c(&run, "./");
+        str_cat_c(&run, lastSlash + 1);
     }
 
     // Spawn child process and plug pipes
@@ -104,7 +104,7 @@ Engine engine_new(str_t cmd, str_t name, str_t uciOptions, FILE *log, Deadline *
         // Set e.name, by parsing "id name %s", only if no name was provided (*name == '\0')
         if (!name.len && (tail = str_tok(tail, &token, " ")) && !strcmp(token.buf, "id")
                 && (tail = str_tok(tail, &token, " ")) && !strcmp(token.buf, "name") && tail)
-            str_cpy(&e.name, str_ref(tail + strspn(tail, " ")));
+            str_cpy_c(&e.name, tail + strspn(tail, " "));
     } while (strcmp(line.buf, "uciok"));
 
     // Parses uciOptions (eg. "Hash=16,Threads=8"), and set engine options accordingly
@@ -114,7 +114,7 @@ Engine engine_new(str_t cmd, str_t name, str_t uciOptions, FILE *log, Deadline *
         const char *c = strchr(token.buf, '=');
         assert(c);
 
-        str_cpy(&line, str_ref("setoption name "));
+        str_cpy_c(&line, "setoption name ");
         str_ncat(&line, token, (size_t)(c - token.buf));
         str_cat_fmt(&line, " value %s", c + 1);
 

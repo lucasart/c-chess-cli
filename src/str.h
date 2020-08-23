@@ -30,11 +30,12 @@ bool str_ok(str_t s);
 bool str_eq(str_t s1, str_t s2);
 
 // Make a string ref out of a C-string. This allows to use C-string as input to str_*() functions,
-// without any copying, and without duplicating all functions.
+// without any copying, and without duplicating all functions (just adding macros for convience).
 str_t str_ref(const char *src);
 
 // returns a string, copying its content from 'src'
 str_t str_dup(str_t src);
+#define str_dup_c(c_str) str_dup(str_ref(c_str))
 
 void str_del(str_t *s);
 #define scope(func) __attribute__ ((cleanup(func)))
@@ -47,6 +48,7 @@ void str_del(str_t *s);
 
 // copies 'src' into 'dest'
 str_t *str_cpy(str_t *dest, str_t src);
+#define str_cpy_c(dest, c_str) str_cpy(dest, str_ref(c_str))
 
 // copy at most n characters of 'src' into 'dest'
 str_t *str_ncpy(str_t *dest, str_t src, size_t n);
@@ -59,6 +61,7 @@ str_t *str_ncat(str_t *dest, str_t src, size_t n);
 
 // String concatenation
 str_t *str_cat(str_t *dest, str_t src);
+#define str_cat_c(dest, c_str) str_cat(dest, str_ref(c_str))
 
 // same as sprintf(), but appends, instead of replace, to valid string s1
 void str_cat_fmt(str_t *dest, const char *fmt, ...);

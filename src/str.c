@@ -169,18 +169,18 @@ void str_cat_fmt(str_t *dest, const char *fmt, ...)
         char buf[24];  // enough to fit a intmax_t with sign prefix '-' and '\0' terminator
 
         if (pct[1] == 's')
-            str_cat(dest, str_ref(va_arg(args, const char *restrict)));  // C-string
+            str_cat_c(dest, va_arg(args, const char *restrict));  // C-string
         else if (pct[1] == 'S')
             str_cat(dest, va_arg(args, str_t));  // string
         else if (pct[1] == 'i' || pct[1] == 'I') {  // int or intmax_t
             const intmax_t i = pct[1] == 'i' ? va_arg(args, int) : va_arg(args, intmax_t);
             char *s = do_fmt_u((uintmax_t)imaxabs(i), &buf[sizeof(buf) - 1]);
             if (i < 0) *--s = '-';
-            str_cat(dest, str_ref(s));
+            str_cat_c(dest, s);
         } else if (pct[1] == 'u')  // unsigned int
-            str_cat(dest, str_ref(do_fmt_u(va_arg(args, unsigned), &buf[sizeof(buf) - 1])));
+            str_cat_c(dest, do_fmt_u(va_arg(args, unsigned), &buf[sizeof(buf) - 1]));
         else if (pct[1] == 'U')  // uintmax_t
-            str_cat(dest, str_ref(do_fmt_u(va_arg(args, uintmax_t), &buf[sizeof(buf) - 1])));
+            str_cat_c(dest, do_fmt_u(va_arg(args, uintmax_t), &buf[sizeof(buf) - 1]));
         else
             assert(false);  // add your format specifier handler here
     }

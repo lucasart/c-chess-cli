@@ -249,7 +249,7 @@ bool pos_set(Position *pos, str_t fen)
 
     // En passant square: optional, default '-'
     if (!(tail = str_tok(tail, &token, " ")))
-        str_cpy(&token, str_ref("-"));
+        str_cpy_c(&token, "-");
 
     if (token.len > 2)
         return false;
@@ -349,7 +349,7 @@ str_t pos_get(const Position *pos)
     }
 
     // Turn of play
-    str_cat(&fen, str_ref(pos->turn == WHITE ? "w " : "b "));
+    str_cat_c(&fen, pos->turn == WHITE ? "w " : "b ");
 
     // Castling rights
     if (!pos->castleRooks)
@@ -532,7 +532,7 @@ str_t *pos_move_to_lan(const Position *pos, move_t m, str_t *out)
     int to = move_to(m);
 
     if (!(from | to | prom)) {
-        str_cat(out, str_ref("0000"));
+        str_cat_c(out, "0000");
         return out;
     }
 
@@ -542,7 +542,7 @@ str_t *pos_move_to_lan(const Position *pos, move_t m, str_t *out)
     char fromStr[3], toStr[3];
     square_to_string(from, fromStr);
     square_to_string(to, toStr);
-    str_cat(str_cat(out, str_ref(fromStr)), str_ref(toStr));
+    str_cat_c(str_cat_c(out, fromStr), toStr);
 
     if (prom < NB_PIECE)
         str_push(out, PieceLabel[BLACK][prom]);
@@ -588,7 +588,7 @@ str_t *pos_move_to_san(const Position *pos, move_t m, str_t *out)
             str_push(str_push(out, '='), PieceLabel[WHITE][prom]);
     } else if (piece == KING) {
         if (pos_move_is_castling(pos, m))
-            str_cat(out, str_ref(to > from ? "O-O" : "O-O-O"));
+            str_cat_c(out, to > from ? "O-O" : "O-O-O");
         else {
             str_push(out, 'K');
 
@@ -597,7 +597,7 @@ str_t *pos_move_to_san(const Position *pos, move_t m, str_t *out)
 
             char toStr[3];
             square_to_string(to, toStr);
-            str_cat(out, str_ref(toStr));
+            str_cat_c(out, toStr);
         }
     } else {
         str_push(out, PieceLabel[WHITE][piece]);
@@ -660,7 +660,7 @@ str_t *pos_move_to_san(const Position *pos, move_t m, str_t *out)
 
         char toStr[3];
         square_to_string(to, toStr);
-        str_cat(out, str_ref(toStr));
+        str_cat_c(out, toStr);
     }
 
     return out;
@@ -685,7 +685,7 @@ void pos_print(const Position *pos)
     scope(str_del) str_t fen = pos_get(pos);
     puts(fen.buf);
 
-    scope(str_del) str_t msg = str_dup(str_ref("Last move: "));
+    scope(str_del) str_t msg = str_dup_c("Last move: ");
     pos_move_to_lan(pos, pos->lastMove, &msg);
     puts(msg.buf);
 }

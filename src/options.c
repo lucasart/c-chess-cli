@@ -77,9 +77,9 @@ Options options_new(int argc, const char **argv, GameOptions *go)
             else if (!strcmp(argv[i - 1], "-games"))
                 o.games = atoi(argv[i]);
             else if (!strcmp(argv[i - 1], "-openings"))
-                str_cpy(&o.openings, str_ref(argv[i]));
+                str_cpy_c(&o.openings, argv[i]);
             else if (!strcmp(argv[i - 1], "-pgnout"))
-                str_cpy(&o.pgnOut, str_ref(argv[i]));
+                str_cpy_c(&o.pgnOut, argv[i]);
             else if (!strcmp(argv[i - 1], "-cmd"))
                 split_engine_option(argv[i], o.cmd);
             else if (!strcmp(argv[i - 1], "-name"))
@@ -143,7 +143,7 @@ Options options_new(int argc, const char **argv, GameOptions *go)
                 if ((tail = str_tok(tail, &token, ",")))
                     o.sampleFileName = str_dup(token);
                 else
-                    o.sampleFileName = str_dup(str_ref("sample.bin"));
+                    o.sampleFileName = str_dup_c("sample.bin");
             } else
                 assert(false);
 

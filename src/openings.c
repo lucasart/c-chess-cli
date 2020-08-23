@@ -79,7 +79,7 @@ int openings_next(Openings *o, str_t *fen, int threadId)
         const int next = ++o->next;
         pthread_mutex_unlock(&o->mtx);
 
-        str_cpy(fen, str_ref("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"));
+        str_cpy_c(fen, "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
         return next;
     }
 

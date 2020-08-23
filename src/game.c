@@ -25,12 +25,12 @@ static void uci_position_command(const Game *g, str_t *cmd)
     // Index of the starting FEN, where rule50 was last reset
     const int ply0 = max(g->ply - g->pos[g->ply].rule50, 0);
 
-    str_cpy(cmd, str_ref("position fen "));
+    str_cpy_c(cmd, "position fen ");
     scope(str_del) str_t fen = pos_get(&g->pos[ply0]);
     str_cat(cmd, fen);
 
     if (ply0 < g->ply) {
-        str_cat(cmd, str_ref(" moves"));
+        str_cat_c(cmd, " moves");
 
         for (int ply = ply0 + 1; ply <= g->ply; ply++) {
             str_push(cmd, ' ');
@@ -42,7 +42,7 @@ static void uci_position_command(const Game *g, str_t *cmd)
 static void uci_go_command(Game *g, const GameOptions *go, int ei, const int64_t timeLeft[2],
     str_t *cmd)
 {
-    str_cpy(cmd, str_ref("go"));
+    str_cpy_c(cmd, "go");
 
     if (go->nodes[ei])
         str_cat_fmt(cmd, " nodes %U", go->nodes[ei]);
@@ -259,35 +259,35 @@ str_t game_decode_state(const Game *g, str_t *reason)
     str_t result = {0};
 
     if (g->state == STATE_NONE) {
-        str_cpy(&result, str_ref("*"));
-        str_cpy(reason, str_ref("unterminated"));
+        str_cpy_c(&result, "*");
+        str_cpy_c(reason, "unterminated");
     } else if (g->state == STATE_CHECKMATE) {
-        str_cpy(&result, str_ref(g->pos[g->ply].turn == WHITE ? "0-1" : "1-0"));
-        str_cpy(reason, str_ref("checkmate"));
+        str_cpy_c(&result, g->pos[g->ply].turn == WHITE ? "0-1" : "1-0");
+        str_cpy_c(reason, "checkmate");
     } else if (g->state == STATE_STALEMATE) {
-        str_cpy(&result, str_ref("1/2-1/2"));
-        str_cpy(reason, str_ref("stalemate"));
+        str_cpy_c(&result, "1/2-1/2");
+        str_cpy_c(reason, "stalemate");
     } else if (g->state == STATE_THREEFOLD) {
-        str_cpy(&result, str_ref("1/2-1/2"));
-        str_cpy(reason, str_ref("3-fold repetition"));
+        str_cpy_c(&result, "1/2-1/2");
+        str_cpy_c(reason, "3-fold repetition");
     } else if (g->state == STATE_FIFTY_MOVES) {
-        str_cpy(&result, str_ref("1/2-1/2"));
-        str_cpy(reason, str_ref("50 moves rule"));
+        str_cpy_c(&result, "1/2-1/2");
+        str_cpy_c(reason, "50 moves rule");
     } else if (g->state ==STATE_INSUFFICIENT_MATERIAL) {
-        str_cpy(&result, str_ref("1/2-1/2"));
-        str_cpy(reason, str_ref("insufficient material"));
+        str_cpy_c(&result, "1/2-1/2");
+        str_cpy_c(reason, "insufficient material");
     } else if (g->state == STATE_ILLEGAL_MOVE) {
-        str_cpy(&result, str_ref(g->pos[g->ply].turn == WHITE ? "0-1" : "1-0"));
-        str_cpy(reason, str_ref("rules infraction"));
+        str_cpy_c(&result, g->pos[g->ply].turn == WHITE ? "0-1" : "1-0");
+        str_cpy_c(reason, "rules infraction");
     } else if (g->state == STATE_DRAW_ADJUDICATION) {
-        str_cpy(&result, str_ref("1/2-1/2"));
-        str_cpy(reason, str_ref("adjudication"));
+        str_cpy_c(&result, "1/2-1/2");
+        str_cpy_c(reason, "adjudication");
     } else if (g->state == STATE_RESIGN) {
-        str_cpy(&result, str_ref(g->pos[g->ply].turn == WHITE ? "0-1" : "1-0"));
-        str_cpy(reason, str_ref("adjudication"));
+        str_cpy_c(&result, g->pos[g->ply].turn == WHITE ? "0-1" : "1-0");
+        str_cpy_c(reason, "adjudication");
     } else if (g->state == STATE_TIME_LOSS) {
-        str_cpy(&result, str_ref(g->pos[g->ply].turn == WHITE ? "0-1" : "1-0"));
-        str_cpy(reason, str_ref("time forfeit"));
+        str_cpy_c(&result, g->pos[g->ply].turn == WHITE ? "0-1" : "1-0");
+        str_cpy_c(reason, "time forfeit");
     } else
         assert(false);
 
@@ -310,7 +310,7 @@ str_t game_pgn(const Game *g)
     str_cat_fmt(&pgn, "[FEN \"%S\"]\n", fen);
 
     if (g->pos[0].chess960)
-        str_cat(&pgn, str_ref("[Variant \"Chess960\"]\n"));
+        str_cat_c(&pgn, "[Variant \"Chess960\"]\n");
 
     str_cat_fmt(&pgn, "[PlyCount \"%i\"]\n\n", g->ply);
 
@@ -335,6 +335,6 @@ str_t game_pgn(const Game *g)
         str_push(&pgn, ply % 10 == 0 ? '\n' : ' ');
     }
 
-    str_cat(str_cat(&pgn, result), str_ref("\n\n"));
+    str_cat_c(str_cat(&pgn, result), "\n\n");
     return pgn;
 }
