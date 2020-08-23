@@ -18,11 +18,12 @@
 #include "options.h"
 #include "util.h"
 
-// Parse a value in="a:b" into out[]=(a, b), or (a,a) if ":" is missing.
+// Parse a value in="a:b" into out[]=(a, b), or (a,a) if ":" is missing. Note that a and b may
+// contain a ':', if escaped with a backslash, eg. in='foo\:bar:baz' => (a='foo:bar', b='baz').
 static void split_engine_option(const char *in, str_t out[2])
 {
-    in = str_tok(in, &out[0], ":");
-    in = str_tok(in, &out[1], ":");
+    in = str_tok_esc(in, &out[0], ':', '\\');
+    in = str_tok_esc(in, &out[1], ':', '\\');
 
     if (!in)
         str_cpy(&out[1], out[0]);

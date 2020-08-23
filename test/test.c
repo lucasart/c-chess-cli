@@ -311,6 +311,4 @@ int main(void)
 
     test_vec();
     puts("vec ok");
-
-    return 0;
 }

@@ -70,6 +70,10 @@ void str_cat_fmt(str_t *dest, const char *fmt, ...);
 // white spaces. returns tail pointer on success, otherwise NULL (no more tokens to read).
 const char *str_tok(const char *s, str_t *token, const char *delim);
 
+// Similar to str_tok(), but single delimiter, and using escape character. For example:
+// s = "alice\ bob charlie", delim=' ', esc='\' => token="alice bob", returns tail="charlie"
+const char *str_tok_esc(const char *s, str_t *token, char delim, char esc);
+
 // reads a line from file 'in', into valid string 'out', and return the number of characters read
 // (including the '\n' if any). The '\n' is discarded from the output, but still counted.
 size_t str_getline(str_t *out, FILE *in);

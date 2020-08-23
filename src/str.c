@@ -80,7 +80,7 @@ static str_t *do_str_cat(str_t *dest, const char *src, size_t n)
     return dest;
 }
 
-str_t str_dup(str_t src)
+str_t str_dup(const str_t src)
 {
     return *do_str_cat(&(str_t){0}, src.buf, src.len);
 }
@@ -91,13 +91,13 @@ void str_del(str_t *s)
     *s = (str_t){0};
 }
 
-str_t *str_cpy(str_t *dest, str_t src)
+str_t *str_cpy(str_t *dest, const str_t src)
 {
     str_resize(dest, 0);
     return do_str_cat(dest, src.buf, src.len);
 }
 
-str_t *str_ncpy(str_t *dest, str_t src, size_t n)
+str_t *str_ncpy(str_t *dest, const str_t src, size_t n)
 {
     n = min(n, src.len);
     str_resize(dest, 0);
@@ -112,13 +112,13 @@ str_t *str_push(str_t *dest, char c)
     return dest;
 }
 
-str_t *str_ncat(str_t *dest, str_t src, size_t n)
+str_t *str_ncat(str_t *dest, const str_t src, size_t n)
 {
     n = min(n, src.len);
     return do_str_cat(dest, src.buf, n);
 }
 
-str_t *str_cat(str_t *dest, str_t src)
+str_t *str_cat(str_t *dest, const str_t src)
 {
     return do_str_cat(dest, src.buf, src.len);
 }
@@ -210,6 +210,54 @@ const char *str_tok(const char *s, str_t *token, const char *delim)
     // return string tail or NULL if token empty
     assert(str_ok(*token));
     return token->len ? s : NULL;
+}
+
+// Read next character using escape character. Result in *out. Retuns tail pointer, and sets
+// escaped=true if escape character parsed.
+static const char *str_getc_esc(const char *s, char *out, bool *escaped, char esc)
+{
+    if (*s != esc) {
+        *escaped = false;
+        *out = *s;
+        return s + 1;
+    } else {
+        assert(*s && *s == esc);
+        *escaped = true;
+        *out = *(s + 1);
+        return s + 2;
+    }
+}
+
+const char *str_tok_esc(const char *s, str_t *token, char delim, char esc)
+{
+    assert(str_ok(*token) && delim && esc);
+
+    // empty tail: no-op
+    if (!s)
+        return NULL;
+
+    // clear token
+    str_resize(token, 0);
+
+    const char *tail = s;
+    char c;
+    bool escaped, accumulate = false;
+
+    while (*tail && (tail = str_getc_esc(tail, &c, &escaped, esc))) {
+        if (!accumulate && c != delim)
+            accumulate = true;
+
+        if (accumulate) {
+            if (c != delim || escaped)
+                str_push(token, c);
+            else
+                break;
+        }
+    }
+
+    // return string tail or NULL if token empty
+    assert(str_ok(*token));
+    return token->len ? tail : NULL;
 }
 
 size_t str_getline(str_t *out, FILE *in)
