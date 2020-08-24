@@ -46,6 +46,7 @@ void workers_delete()
     WorkersCount = 0;
 }
 
+// TODO: document this function...
 void workers_add_result(Worker *worker, int wld, int wldCount[3])
 {
     pthread_mutex_lock(&mtxWorkers);

@@ -78,36 +78,12 @@ List:
 
 ### Sampling
 
-This is only of interest for chess engine programmers. The intent of this feature is to the generate
-training data, which can be used to teach a neural network to evaluate chess positions.
+The purpose of this feature is to the generate training data, which can be used to fit the parameters of a
+chess engine evaluation, otherwise known as supervised learning.
 
 Using `-sample freq[,file]` will generate a binary file of samples, in this format:
 ```
-struct {
-    uint64_t byColor[NB_COLOR];  // bit #i is set if piece of color on square #i
-    uint64_t byPiece[NB_PIECE];  // bit #i is set if piece of type on square #i
-    int16_t score;  // score returned by the engine (in cp)
-    int8_t result;  // game result from turn's pov: -1 (loss), 0 (draw), +1 (win)
-    uint8_t turn;  // turn of play
-    uint8_t epSquare;  // en-passant square (NB_SQUARE if none)
-    uint8_t castleRooks[NB_COLOR];  // rooks available for castling; a file bitmask by color
-    uint8_t rule50; // ply counter for 50-move rule, from 0 to 99 (100 would be draw or mated)
-};
+fen,score,result
 ```
-Where color, piece, file, and square indexing are as follows:
-```
-enum {WHITE, BLACK, NB_COLOR};
-enum {KNIGHT, BISHOP, ROOK, QUEEN, KING, PAWN, NB_PIECE};
-enum {FILE_A, FILE_B, FILE_C, FILE_D, FILE_E, FILE_F, FILE_G, FILE_H, NB_FILE};
-enum {
-    A1, B1, C1, D1, E1, F1, G1, H1,
-    A2, B2, C2, D2, E2, F2, G2, H2,
-    A3, B3, C3, D3, E3, F3, G3, H3,
-    A4, B4, C4, D4, E4, F4, G4, H4,
-    A5, B5, C5, D5, E5, F5, G5, H5,
-    A6, B6, C6, D6, E6, F6, G6, H6,
-    A7, B7, C7, D7, E7, F7, G7, H7,
-    A8, B8, C8, D8, E8, F8, G8, H8,
-    NB_SQUARE
-};
-```
+where score is the search result (in cp), and result is the result of the game from the side to
+move's perspective (0=loss, 1=draw, 2=win).

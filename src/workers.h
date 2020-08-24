@@ -16,6 +16,14 @@
 #include <pthread.h>
 #include "engine.h"
 
+// Game results
+enum {
+    RESULT_LOSS,
+    RESULT_DRAW,
+    RESULT_WIN,
+    NB_RESULT
+};
+
 typedef struct {
     // Per engine, by index in engines[] array (not the same as color)
     int64_t movetime[2], time[2], increment[2];
@@ -34,7 +42,7 @@ typedef struct {
     FILE *sampleFile;
     const GameOptions *go;
     int id;  // starts at 1 (0 is for main thread)
-    int wldCount[3];  // counts wins, losses, and draws
+    int wldCount[NB_RESULT];  // counts wins, losses, and draws
 } Worker;
 
 extern Worker *Workers;

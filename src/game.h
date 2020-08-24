@@ -37,21 +37,10 @@ enum {
     STATE_DRAW_ADJUDICATION  // draw by adjudication
 };
 
-enum {
-    RESULT_WIN,
-    RESULT_LOSS,
-    RESULT_DRAW
-};
-
 typedef struct {
-    bitboard_t byColor[NB_COLOR];
-    bitboard_t byPiece[NB_PIECE];
-    int16_t score;  // score returned by the engine (in cp)
-    int8_t result;  // game result from turn's pov: -1 (loss), 0 (draw), +1 (win)
-    uint8_t turn;  // turn of play
-    uint8_t epSquare;  // en-passant square (NB_SQUARE if none)
-    uint8_t castleRooks[NB_COLOR];  // rooks available for castling; a file bitmask by color
-    uint8_t rule50; // ply counter for 50-move rule, from 0 to 99 (100 would be draw or mated)
+    Position pos;
+    int score;  // score returned by the engine (in cp)
+    int result;  // game result from pos.turn's pov
 } Sample;
 
 typedef struct {

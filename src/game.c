@@ -131,7 +131,7 @@ int game_play(Game *g, const GameOptions *go, const Engine engines[2], Deadline 
 // Play a game:
 // - engines[reverse] plays the first move (which does not mean white, that depends on the FEN)
 // - sets g->state value: see enum STATE_* codes
-// - returns {-1,0,1} score from engines[0] pov.
+// - returns RESULT_LOSS/DRAW/WIN from engines[0] pov
 {
     for (int color = WHITE; color <= BLACK; color++)
         str_cpy(&g->names[color], engines[color ^ g->pos[0].turn ^ reverse].name);
@@ -224,16 +224,11 @@ int game_play(Game *g, const GameOptions *go, const Engine engines[2], Deadline 
 
         // Write sample: position (compactly encoded) + score
         // FIXME: heed sampleFrequency
-        Sample sample;
-        memcpy(sample.byColor, g->pos[g->ply].byColor, sizeof(sample.byColor));
-        memcpy(sample.byPiece, g->pos[g->ply].byPiece, sizeof(sample.byPiece));
-        sample.score = score;
-        sample.turn = g->pos[g->ply].turn;
-        sample.result = 0;  // unknown yet
-        sample.epSquare = g->pos[g->ply].epSquare;
-        sample.castleRooks[WHITE] = (uint8_t)g->pos[g->ply].castleRooks;
-        sample.castleRooks[BLACK] = (uint8_t)(g->pos[g->ply].castleRooks >> A8);
-        sample.rule50 = g->pos[g->ply].rule50;
+        Sample sample = {
+            .pos = g->pos[g->ply],
+            .score = score,
+            .result = NB_RESULT // unknown yet (use invalid state for now)
+        };
         vec_push(g->samples, sample);
 
         vec_push(g->pos, (Position){0});
@@ -243,15 +238,15 @@ int game_play(Game *g, const GameOptions *go, const Engine engines[2], Deadline 
 
     // Signed result from white's pov: -1 (loss), 0 (draw), +1 (win)
     const int wpov = g->state < STATE_SEPARATOR
-            ? (g->pos[g->ply].turn == WHITE ? -1 : +1)  // lost from turn's pov
-            : 0;  // draw
+        ? (g->pos[g->ply].turn == WHITE ? RESULT_LOSS : RESULT_WIN)  // lost from turn's pov
+        : RESULT_DRAW;
 
     for (size_t i = 0; i < vec_size(g->samples); i++)
-        g->samples[i].result = g->samples[i].turn == WHITE ? wpov : -wpov;
+        g->samples[i].result = g->samples[i].pos.turn == WHITE ? wpov : 2 - wpov;
 
     return g->state < STATE_SEPARATOR
-        ? (ei == 0 ? RESULT_LOSS : RESULT_WIN)  // engine on the move has lost (for any reason)
-        : RESULT_DRAW;  // draw (of any kind)
+        ? (ei == 0 ? RESULT_LOSS : RESULT_WIN)  // engine on the move has lost
+        : RESULT_DRAW;
 }
 
 str_t game_decode_state(const Game *g, str_t *reason)
