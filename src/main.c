@@ -61,11 +61,15 @@ static void *thread_start(void *arg)
 
         // Write to Sample file
         if (worker->sampleFile) {
+            scope(str_del) str_t lines = {0};
+
             for (size_t i = 0; i < vec_size(game.samples); i++) {
-                scope(str_del) str_t line = pos_get(&game.samples[i].pos);
-                str_cat_fmt(&line, ",%i,%i\n", game.samples[i].score, game.samples[i].result);
-                DIE_IF(worker->id, fputs(line.buf, worker->sampleFile) < 0);
+                scope(str_del) str_t sampleFen = pos_get(&game.samples[i].pos);
+                str_cat_fmt(&lines, "%S,%i,%i\n", sampleFen, game.samples[i].score,
+                    game.samples[i].result);
             }
+
+            DIE_IF(worker->id, fputs(lines.buf, worker->sampleFile) < 0);
         }
 
         // Write to stdout a one line summary of the game
