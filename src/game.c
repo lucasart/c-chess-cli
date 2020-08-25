@@ -12,6 +12,7 @@
  * You should have received a copy of the GNU General Public License along with this program. If
  * not, see <http://www.gnu.org/licenses/>.
 */
+#include <float.h>
 #include "game.h"
 #include "gen.h"
 #include "str.h"
@@ -127,7 +128,7 @@ void game_delete(Game *g)
 }
 
 int game_play(Game *g, const GameOptions *go, const Engine engines[2], Deadline *deadline,
-    bool reverse)
+    bool reverse, uint64_t *seed)
 // Play a game:
 // - engines[reverse] plays the first move (which does not mean white, that depends on the FEN)
 // - sets g->state value: see enum STATE_* codes
@@ -223,13 +224,14 @@ int game_play(Game *g, const GameOptions *go, const Engine engines[2], Deadline 
             resignCount[ei] = 0;
 
         // Write sample: position (compactly encoded) + score
-        // FIXME: heed sampleFrequency
-        Sample sample = {
-            .pos = g->pos[g->ply],
-            .score = score,
-            .result = NB_RESULT // unknown yet (use invalid state for now)
-        };
-        vec_push(g->samples, sample);
+        if (prngf(seed) <= go->sampleFrequency) {
+            Sample sample = {
+                .pos = g->pos[g->ply],
+                .score = score,
+                .result = NB_RESULT // unknown yet (use invalid state for now)
+            };
+            vec_push(g->samples, sample);
+        }
 
         vec_push(g->pos, (Position){0});
     }

@@ -54,6 +54,6 @@ Game game_new(const str_t *fen);
 void game_delete(Game *g);
 
 int game_play(Game *g, const GameOptions *go, const Engine engines[2], Deadline *deadline,
-    bool reverse);
+    bool reverse, uint64_t *seed);
 str_t game_decode_state(const Game *g, str_t *reason);
 str_t game_pgn(const Game *g);

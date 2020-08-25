@@ -139,11 +139,11 @@ Options options_new(int argc, const char **argv, GameOptions *go)
                 if (go->sampleFrequency > 1.0 || go->sampleFrequency < 0.0)
                     DIE("Sample frequency '%f' must be between 0 and 1\n", go->sampleFrequency);
 
-                // Parse filename (default sample.bin if omitted)
+                // Parse filename (default sample.csv if omitted)
                 if ((tail = str_tok(tail, &token, ",")))
                     o.sampleFileName = str_dup(token);
                 else
-                    o.sampleFileName = str_dup_c("sample.bin");
+                    o.sampleFileName = str_dup_c("sample.csv");
             } else
                 assert(false);
 
@@ -159,10 +159,8 @@ Options options_new(int argc, const char **argv, GameOptions *go)
 
 void options_delete(Options *o)
 {
-    str_del_n(&o->openings, &o->pgnOut);
+    str_del_n(&o->openings, &o->pgnOut, &o->sampleFileName);
 
     for (int i = 0; i < 2; i++)
         str_del_n(&o->uciOptions[i], &o->cmd[i], &o->name[i]);
-
-    str_del(&o->sampleFileName);
 }

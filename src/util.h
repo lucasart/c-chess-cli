@@ -31,6 +31,7 @@
 })
 
 uint64_t prng(uint64_t *state);
+double prngf(uint64_t *state);
 
 int64_t system_msec(void);
 void system_sleep(int64_t msec);

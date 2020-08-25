@@ -41,6 +41,7 @@ typedef struct {
     FILE *pgnOut;
     FILE *sampleFile;
     const GameOptions *go;
+    uint64_t seed;  // seed for prng()
     int id;  // starts at 1 (0 is for main thread)
     int wldCount[NB_RESULT];  // counts wins, losses, and draws
 } Worker;

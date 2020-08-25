@@ -29,6 +29,7 @@ void workers_new(int count, FILE *pgnOut, FILE *sampleFile, const GameOptions *g
 
     for (int i = 0; i < count; i++) {
         pthread_mutex_init(&Workers[i].deadline.mtx, NULL);
+        Workers[i].seed = (uint64_t)i;
         Workers[i].id = i + 1;
         Workers[i].pgnOut = pgnOut;
         Workers[i].sampleFile = sampleFile;
