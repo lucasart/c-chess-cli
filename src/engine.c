@@ -92,7 +92,7 @@ Engine engine_new(str_t cmd, str_t name, str_t uciOptions, FILE *log, Deadline *
     // For (b), we want to separate into executable and directory, so instead of running
     // "../Engines/demolito" from the cwd, we execute run="./demolito" from cwd="../Engines"
     scope(str_del) str_t cwd = str_dup_c("./"), run = str_dup(token);
-    const char *lastSlash = strrchr(token.buf, '/');
+    const char *lastSlash = str_rchr(token, '/');
 
     if (lastSlash) {
         str_ncpy(&cwd, token, (size_t)(lastSlash - token.buf));
@@ -146,7 +146,7 @@ Engine engine_new(str_t cmd, str_t name, str_t uciOptions, FILE *log, Deadline *
     tail = uciOptions.buf;
 
     while ((tail = str_tok_esc(tail, &token, ',', '\\'))) {
-        const char *c = strchr(token.buf, '=');
+        const char *c = str_chr(token, '=');
         assert(c);
 
         str_cpy_c(&line, "setoption name ");

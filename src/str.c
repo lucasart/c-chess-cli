@@ -284,3 +284,15 @@ size_t str_getline(str_t *out, FILE *in)
     assert(str_ok(*out));
     return n;
 }
+
+char *str_chr(str_t s, int c)
+{
+    assert(str_ok(s));
+    return memchr(s.buf, c, s.len);
+}
+
+char *str_rchr(str_t s, int c)
+{
+    assert(str_ok(s));
+    return memchr(s.buf, c, s.len);
+}
