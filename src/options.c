@@ -116,7 +116,7 @@ Options options_new(int argc, const char **argv, GameOptions *go)
                 for (int j = 0; j < 2; j++) {
                     double time = 0, increment = 0;
 
-                    if (str_chr(tc[j], '/'))
+                    if (strchr(tc[j].buf, '/'))
                         sscanf(tc[j].buf, "%i/%lf+%lf", &go->movestogo[j], &time, &increment);
                     else
                         sscanf(tc[j].buf, "%lf+%lf", &time, &increment);

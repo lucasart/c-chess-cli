@@ -77,7 +77,3 @@ const char *str_tok_esc(const char *s, str_t *token, char delim, char esc);
 // reads a line from file 'in', into valid string 'out', and return the number of characters read
 // (including the '\n' if any). The '\n' is discarded from the output, but still counted.
 size_t str_getline(str_t *out, FILE *in);
-
-// find char in string (normal and reverse)
-char *str_chr(str_t s, int c);
-char *str_rchr(str_t s, int c);
