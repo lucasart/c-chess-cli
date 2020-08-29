@@ -49,7 +49,7 @@ void engine_writeln(const Engine *e, char *buf);
 
 void engine_sync(const Engine *e, Deadline *deadline);
 bool engine_bestmove(const Engine *e, int *score, int64_t *timeLeft, Deadline *deadline,
-    str_t *best);
+    str_t *best, str_t *pv);
 
 void deadline_set(Deadline *deadline, const Engine *engine, int64_t timeLimit);
 void deadline_clear(Deadline *deadline);

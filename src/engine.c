@@ -203,11 +203,12 @@ void engine_sync(const Engine *e, Deadline *deadline)
 }
 
 bool engine_bestmove(const Engine *e, int *score, int64_t *timeLeft, Deadline *deadline,
-    str_t *best)
+    str_t *best, str_t *pv)
 {
     int result = false;
     *score = 0;
     scope(str_del) str_t line = {0}, token = {0};
+    str_resize(pv, 0);
 
     const int64_t start = system_msec(), timeLimit = start + *timeLeft;
     deadline_set(deadline, e, timeLimit + 1000);
@@ -231,6 +232,10 @@ bool engine_bestmove(const Engine *e, int *score, int64_t *timeLeft, Deadline *d
                 else
                     DIE("illegal syntax after 'score' in '%s'\n", line.buf);
             }
+
+            // update last pv (if available)
+            if (tail && (tail = strstr(tail, "pv ")))
+                str_cpy_c(pv, tail + 3);
         } else if (!strcmp(token.buf, "bestmove") && str_tok(tail, &token, " ")) {
             str_cpy(best, token);
             result = true;

@@ -150,6 +150,7 @@ int game_play(Game *g, const GameOptions *go, const Engine engines[2], Deadline 
     int resignCount[NB_COLOR] = {0};
     int ei;  // engines[ei] has the move
     int64_t timeLeft[2] = {go->time[0], go->time[1]};
+    scope(str_del) str_t pv = {0};
 
     for (g->ply = 0; ; g->ply++) {
         if (played)
@@ -185,7 +186,7 @@ int game_play(Game *g, const GameOptions *go, const Engine engines[2], Deadline 
         engine_writeln(&engines[ei], goCmd.buf);
 
         int score = 0;
-        const bool ok = engine_bestmove(&engines[ei], &score, &timeLeft[ei], deadline, &best);
+        const bool ok = engine_bestmove(&engines[ei], &score, &timeLeft[ei], deadline, &best, &pv);
 
         if (!ok) {  // engine_bestmove() time out before parsing a bestmove
             g->state = STATE_TIME_LOSS;
