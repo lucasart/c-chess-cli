@@ -15,7 +15,9 @@ typedef struct {
 vec_t *vec_ptr(void *v);
 const vec_t *vec_cptr(const void *v);
 
-void *vec_new(void);
+void *vec_do_new(size_t capacity, size_t esize);
+#define vec_new(capacity, etype) vec_do_new(capacity, sizeof(etype))
+
 void vec_del(void *v);
 
 size_t vec_size(const void *v);
@@ -35,6 +37,3 @@ void *vec_do_grow(void *v, size_t esize, size_t n);
 
 #define vec_grow(v, n) \
     ((v) = vec_do_grow((v), sizeof(*(v)), n))
-
-#define vec_clear(v) \
-    (vec_ptr(v)->size = 0)

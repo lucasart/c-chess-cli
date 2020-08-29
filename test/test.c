@@ -285,7 +285,7 @@ void test_gen(void)
 
 static void test_vec(void)
 {
-    int *values = vec_new();
+    int *values = vec_do_new(10, sizeof(int));  // purposely < 100 to exercise vec_do_grow()
 
     for (int i = 0; i < 100; i++)
         vec_push(values, i);

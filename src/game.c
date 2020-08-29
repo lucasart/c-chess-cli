@@ -109,11 +109,11 @@ Game game_new(const str_t *fen)
     g.names[WHITE] = g.names[BLACK] = (str_t){0};
 
     g.ply = 0;
-    g.pos = vec_new();
+    g.pos = vec_new(128, Position);
     vec_push(g.pos, (Position){0});
     pos_set(&g.pos[0], *fen);
 
-    g.samples = vec_new();
+    g.samples = vec_new(0, Sample);
     g.state = STATE_NONE;
 
     return g;

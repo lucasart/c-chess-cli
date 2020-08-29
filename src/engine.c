@@ -101,7 +101,7 @@ Engine engine_new(str_t cmd, str_t name, str_t uciOptions, FILE *log, Deadline *
     }
 
     // Step 3: Collect the arguments into a vec of str_t, args[]
-    str_t *args = vec_new();
+    str_t *args = vec_new(1, str_t);
     vec_push(args, str_dup(run));  // argv[0] is the executed command
 
     while ((tail = str_tok_esc(tail, &token, ' ', '\\')))
