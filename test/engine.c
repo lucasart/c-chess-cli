@@ -51,8 +51,7 @@ static void parse_position(const char *tail, Position *pos, bool uciChess960)
     assert(tail);
 
     if (!strcmp(token.buf, "startpos")) {
-        pos_set(pos, str_ref("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"),
-            uciChess960);
+        pos_set(pos, "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", uciChess960);
         tail = str_tok(tail, &token, " ");
     } else if (!strcmp(token.buf, "fen")) {
         scope(str_del) str_t fen = {0};
@@ -60,7 +59,7 @@ static void parse_position(const char *tail, Position *pos, bool uciChess960)
         while ((tail = str_tok(tail, &token, " ")) && strcmp(token.buf, "moves"))
             str_push(str_cat(&fen, token), ' ');
 
-        pos_set(pos, fen, uciChess960);
+        pos_set(pos, fen.buf, uciChess960);
     } else
         assert(false);
 
@@ -70,7 +69,7 @@ static void parse_position(const char *tail, Position *pos, bool uciChess960)
         p[0] = *pos;
 
         while ((tail = str_tok(tail, &token, " "))) {
-            const move_t m = pos_lan_to_move(&p[idx], token);
+            const move_t m = pos_lan_to_move(&p[idx], token.buf);
             pos_move(&p[1 - idx], &p[idx], m);
             idx = 1 - idx;
         }

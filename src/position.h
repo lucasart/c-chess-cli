@@ -32,7 +32,7 @@ typedef struct {
     bool chess960;  // for move<->string conversions ("e1h1" if chess960 else "e1g1")
 } Position;
 
-bool pos_set(Position *pos, str_t fen, bool chess960);
+bool pos_set(Position *pos, const char *fen, bool chess960);
 str_t pos_get(const Position *pos);
 void pos_move(Position *pos, const Position *before, move_t m);
 
@@ -48,6 +48,6 @@ int pos_piece_on(const Position *pos, int square);
 bool pos_move_is_castling(const Position *pos, move_t m);
 str_t *pos_move_to_lan(const Position *pos, move_t m, str_t *out);
 str_t *pos_move_to_san(const Position *pos, move_t m, str_t *out);
-move_t pos_lan_to_move(const Position *pos, str_t lan);
+move_t pos_lan_to_move(const Position *pos, const char *lan);
 
 void pos_print(const Position *pos);

@@ -169,13 +169,13 @@ static bool pos_move_is_capture(const Position *pos, move_t m)
 // Set position from FEN string. chess960 is used only to force the value of pos.chess960:
 // chess960=false: pos.chess960 will be set based on auto-detection.
 // chess960=true: set pos.chess960=true, skipping auto-detection.
-bool pos_set(Position *pos, str_t fen, bool chess960)
+bool pos_set(Position *pos, const char *fen, bool chess960)
 {
     *pos = (Position){0};
     scope(str_del) str_t token = {0};
 
     // Piece placement
-    const char *tail = str_tok(fen.buf, &token, " ");
+    fen = str_tok(fen, &token, " ");
     int file = FILE_A, rank = RANK_8;
 
     for (const char *c = token.buf; *c; c++) {
@@ -201,7 +201,7 @@ bool pos_set(Position *pos, str_t fen, bool chess960)
         return false;
 
     // Turn of play
-    tail = str_tok(tail, &token, " ");
+    fen = str_tok(fen, &token, " ");
 
     if (token.len != 1)
         return false;
@@ -217,7 +217,7 @@ bool pos_set(Position *pos, str_t fen, bool chess960)
     }
 
     // Castling rights: optional, default '-'
-    if ((tail = str_tok(tail, &token, " "))) {
+    if ((fen = str_tok(fen, &token, " "))) {
         if (token.len > 4)
             return false;
 
@@ -251,7 +251,7 @@ bool pos_set(Position *pos, str_t fen, bool chess960)
     }
 
     // En passant square: optional, default '-'
-    if (!(tail = str_tok(tail, &token, " ")))
+    if (!(fen = str_tok(fen, &token, " ")))
         str_cpy_c(&token, "-");
 
     if (token.len > 2)
@@ -261,13 +261,13 @@ bool pos_set(Position *pos, str_t fen, bool chess960)
     pos->key ^= ZobristEnPassant[pos->epSquare];
 
     // 50 move counter (in plies, starts at 0): optional, default 0
-    pos->rule50 = (tail = str_tok(tail, &token, " ")) ? (uint8_t)atoi(token.buf) : 0;
+    pos->rule50 = (fen = str_tok(fen, &token, " ")) ? (uint8_t)atoi(token.buf) : 0;
 
     if (pos->rule50 >= 100)
         return false;
 
     // Full move counter (in moves, starts at 1): optional, default 1
-    pos->fullMove = str_tok(tail, &token, " ") ? (uint16_t)atoi(token.buf) : 1;
+    pos->fullMove = str_tok(fen, &token, " ") ? (uint16_t)atoi(token.buf) : 1;
 
     // Verify piece counts
     for (int color = WHITE; color <= BLACK; color++)
@@ -553,13 +553,13 @@ str_t *pos_move_to_lan(const Position *pos, move_t m, str_t *out)
     return out;
 }
 
-move_t pos_lan_to_move(const Position *pos, str_t lan)
+move_t pos_lan_to_move(const Position *pos, const char *lan)
 {
-    const int prom = lan.buf[4]
-        ? (int)(strchr(PieceLabel[BLACK], lan.buf[4]) - PieceLabel[BLACK])
+    const int prom = lan[4]
+        ? (int)(strchr(PieceLabel[BLACK], lan[4]) - PieceLabel[BLACK])
         : NB_PIECE;
-    const int from = square_from(lan.buf[1] - '1', lan.buf[0] - 'a');
-    int to = square_from(lan.buf[3] - '1', lan.buf[2] - 'a');
+    const int from = square_from(lan[1] - '1', lan[0] - 'a');
+    int to = square_from(lan[3] - '1', lan[2] - 'a');
 
     if (!pos->chess960 && pos_piece_on(pos, from) == KING) {
         if (to == from + 2)  // e1g1 -> e1h1

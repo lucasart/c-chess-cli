@@ -1,6 +1,6 @@
 ## c-chess-cli
 
-c-chess-cli is a command line interface for UCI chess engines written in C. Free from [Dependency hell](https://en.wikipedia.org/wiki/Dependency_hell), it only uses the C standard library, and POSIX. For Windows, you must run it in a POSIX enviroment, such as an [msys2](https://www.msys2.org/).
+c-chess-cli is a command line interface for UCI chess engines written in C. Free from [dependency hell](https://en.wikipedia.org/wiki/Dependency_hell), it only uses the C standard library, and POSIX. Primarily developped on Linux, it should work on all POSIX operating systems, including MacOS and Android. Windows is not supported, because it is not POSIX compliant.
 
 ## How to compile ?
 

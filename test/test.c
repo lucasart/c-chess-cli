@@ -167,13 +167,12 @@ static void test_position(void)
 
     for (size_t i = 0; fens[i]; i++) {
         Position pos;
-        const str_t inFen = str_ref(fens[i]);
-        pos_set(&pos, inFen, false);
+        pos_set(&pos, fens[i], false);
 
         hash_blocks(&pos, sizeof(pos), &hash);
 
         scope(str_del) str_t outFen = pos_get(&pos);
-        TEST(strncmp(inFen.buf, outFen.buf, inFen.len) == 0);
+        TEST(strncmp(fens[i], outFen.buf, strlen(fens[i])) == 0);
     }
 
     TEST(hash == 0x71fed4f490a61094);
@@ -181,8 +180,7 @@ static void test_position(void)
     // Validate: pos_lan_to_move(), pos_move_to_lan(), pos_move(), pos_move_to_san(), and exercise
     // string code
     Position pos[2];
-    const str_t fen = str_ref(fens[1]);
-    pos_set(&pos[0], fen, false);
+    pos_set(&pos[0], fens[1], false);
     const char *moves = "e1g1 e8c8 a2a3 c7c6 g2g4 f6g4 c3a4 f7f5 a3b4 f5e4 d5c6 c8b8 g1h1 g7h6 "
         "d2h6 h8h6 f3e4 d8f8 e4g6 ";
 
@@ -192,7 +190,7 @@ static void test_position(void)
     hash = 0;
 
     while ((tail = str_tok(tail, &token, " "))) {
-        move_t m = pos_lan_to_move(&pos[ply % 2], token);
+        move_t m = pos_lan_to_move(&pos[ply % 2], token.buf);
         pos_move(&pos[(ply + 1) % 2], &pos[ply % 2], m);
         hash_blocks(&pos[(ply + 1) % 2], sizeof(Position), &hash);
 
@@ -266,8 +264,7 @@ void test_gen(void)
 
     for (size_t i = 0; i < sizeof(tests) / sizeof(Test); i++) {
         Position pos;
-        const str_t fen = str_ref(tests[i].fen);
-        pos_set(&pos, fen, false);
+        pos_set(&pos, tests[i].fen, false);
 
         const size_t leaves = test_gen_leaves(&pos, tests[i].depth, 0);
 

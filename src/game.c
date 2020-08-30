@@ -111,7 +111,7 @@ static void validate_pv(const Position *pos, str_t pv, FILE *log)
     int idx = 0;
 
     while ((tail = str_tok(tail, &token, " "))) {
-        const move_t m = pos_lan_to_move(&p[idx], token);
+        const move_t m = pos_lan_to_move(&p[idx], token.buf);
 
         move_t moves[MAX_MOVES];
         const move_t *end = gen_all_moves(&p[idx], moves);
@@ -140,7 +140,7 @@ Game game_new(const str_t *fen)
     g.ply = 0;
     g.pos = vec_new(128, Position);
     vec_push(g.pos, (Position){0});
-    pos_set(&g.pos[0], *fen, false);
+    pos_set(&g.pos[0], fen->buf, false);
 
     g.samples = vec_new(0, Sample);
     g.state = STATE_NONE;
@@ -225,7 +225,7 @@ int game_play(Game *g, const GameOptions *go, const Engine engines[2], Deadline 
             break;
         }
 
-        played = pos_lan_to_move(&g->pos[g->ply], best);
+        played = pos_lan_to_move(&g->pos[g->ply], best.buf);
 
         if (illegal_move(played, moves, end)) {
             g->state = STATE_ILLEGAL_MOVE;
