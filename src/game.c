@@ -101,6 +101,35 @@ static bool illegal_move(move_t move, const move_t *begin, const move_t *end)
     return true;
 }
 
+static void validate_pv(const Position *pos, str_t pv, FILE *log)
+{
+    scope(str_del) str_t token = {0};
+    const char *tail = pv.buf;
+
+    Position p[2];
+    p[0] = *pos;
+    int idx = 0;
+
+    while ((tail = str_tok(tail, &token, " "))) {
+        const move_t m = pos_lan_to_move(&p[idx], token);
+
+        move_t moves[MAX_MOVES];
+        const move_t *end = gen_all_moves(&p[idx], moves);
+
+        if (illegal_move(m, moves, end)) {
+            fprintf(log, "WARNING: invalid PV\n");
+            scope(str_del) str_t fen = pos_get(pos);
+            fprintf(log, "\tfen: '%s'\n", fen.buf);
+            fprintf(log, "\tpv: '%s'\n", pv.buf);
+            fprintf(log, "\t'%s%s' starts with an illegal move\n", token.buf, tail);
+            break;
+        }
+
+        pos_move(&p[(idx + 1) % 2], &p[idx], m);
+        idx = (idx + 1) % 2;
+    }
+}
+
 Game game_new(const str_t *fen)
 {
     assert(fen->len);
@@ -111,7 +140,7 @@ Game game_new(const str_t *fen)
     g.ply = 0;
     g.pos = vec_new(128, Position);
     vec_push(g.pos, (Position){0});
-    pos_set(&g.pos[0], *fen);
+    pos_set(&g.pos[0], *fen, false);
 
     g.samples = vec_new(0, Sample);
     g.state = STATE_NONE;
@@ -187,6 +216,9 @@ int game_play(Game *g, const GameOptions *go, const Engine engines[2], Deadline 
 
         int score = 0;
         const bool ok = engine_bestmove(&engines[ei], &score, &timeLeft[ei], deadline, &best, &pv);
+
+        // Validate the last PV sent. An invalid PV is not fatal, but simply logs a warning
+        validate_pv(&g->pos[g->ply], pv, engines[ei].log);
 
         if (!ok) {  // engine_bestmove() time out before parsing a bestmove
             g->state = STATE_TIME_LOSS;

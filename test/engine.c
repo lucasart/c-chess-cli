@@ -33,14 +33,26 @@ static void parse_go(const char *tail, Go *go)
         go->depth = atoi(token.buf);
 }
 
-static void parse_position(const char *tail, Position *pos)
+static void parse_option(const char *tail, bool *uciChess960)
+{
+    scope(str_del) str_t token = {0};
+
+    if ((tail = str_tok(tail, &token, " ")) && !strcmp(token.buf, "name")
+            && (tail = str_tok(tail, &token, " ")) && !strcmp(token.buf, "UCI_Chess960")
+            && (tail = str_tok(tail, &token, " ")) && !strcmp(token.buf, "value")
+            && (tail = str_tok(tail, &token, " ")))
+        *uciChess960 = !strcmp(token.buf, "true");
+}
+
+static void parse_position(const char *tail, Position *pos, bool uciChess960)
 {
     scope(str_del) str_t token = {0};
     tail = str_tok(tail, &token, " ");
     assert(tail);
 
     if (!strcmp(token.buf, "startpos")) {
-        pos_set(pos, str_ref("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"));
+        pos_set(pos, str_ref("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"),
+            uciChess960);
         tail = str_tok(tail, &token, " ");
     } else if (!strcmp(token.buf, "fen")) {
         scope(str_del) str_t fen = {0};
@@ -48,7 +60,7 @@ static void parse_position(const char *tail, Position *pos)
         while ((tail = str_tok(tail, &token, " ")) && strcmp(token.buf, "moves"))
             str_push(str_cat(&fen, token), ' ');
 
-        pos_set(pos, fen);
+        pos_set(pos, fen, uciChess960);
     } else
         assert(false);
 
@@ -107,6 +119,7 @@ int main(void)
     Position pos = {0};
     Go go = {0};
     uint64_t seed = 0;
+    bool uciChess960 = false;
 
     scope(str_del) str_t line = {0}, token = {0};
 
@@ -115,12 +128,15 @@ int main(void)
 
         if (!strcmp(token.buf, "uci")) {
             uci_puts("id name engine");
-            uci_puts("option name UCI_Chess960 type check default false");
+            uci_printf("option name UCI_Chess960 type check default %s\n",
+                uciChess960 ? "true" : "false");
             uci_puts("uciok");
         } else if (!strcmp(token.buf, "isready"))
             uci_puts("readyok");
+        else if (!strcmp(token.buf, "setoption"))
+            parse_option(tail, &uciChess960);
         else if (!strcmp(token.buf, "position"))
-            parse_position(tail, &pos);
+            parse_position(tail, &pos, uciChess960);
         else if (!strcmp(token.buf, "go")) {
             parse_go(tail, &go);
             run_go(&pos, &go, &seed);
