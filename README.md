@@ -48,7 +48,7 @@ List of `option value`:
 Syntax: `-flag`.
 
 List:
-- `debug`: write all I/O communication with engines to file(s). This produces `c-chess-cli.id.log`,
+- `log`: write all I/O communication with engines to file(s). This produces `c-chess-cli.id.log`,
 where `id` is the thread id (range `1..concurrency`). Note that all communications (including
 error messages) starting with `[id]` mean within the context of thread number `id`, which tells you
 which log file to inspect (id = 0 is the main thread).

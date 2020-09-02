@@ -22,7 +22,7 @@ typedef struct {
     double elo0, elo1, alpha, beta;
     GameOptions go;
     int concurrency, games;
-    bool debug, random, repeat, sprt;
+    bool log, random, repeat, sprt;
     char pad[4];
 } Options;
 

@@ -36,7 +36,7 @@ static void *thread_start(void *arg)
     scope(str_del) str_t logName = {0};
     str_cat_fmt(&logName, "c-chess-cli.%i.log", worker->id);
 
-    if (options.debug)
+    if (options.log)
         DIE_IF(worker->id, !(log = fopen(logName.buf, "w")));
 
     // Prepare engines[]

@@ -63,8 +63,8 @@ Options options_new(int argc, const char **argv, GameOptions *go)
                     o.random = true;
                 else if (!strcmp(argv[i], "-repeat"))
                     o.repeat = true;
-                else if (!strcmp(argv[i], "-debug"))
-                    o.debug = true;
+                else if (!strcmp(argv[i], "-log"))
+                    o.log = true;
                 else
                     DIE("invalid tag '%s'\n", argv[i]);
             }
