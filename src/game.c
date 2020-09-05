@@ -101,10 +101,14 @@ static bool illegal_move(move_t move, const move_t *begin, const move_t *end)
     return true;
 }
 
-static void validate_pv(const Position *pos, str_t pv, FILE *log)
+static Position resolve_pv(const Position *pos, str_t pv, FILE *log)
 {
     scope(str_del) str_t token = {0};
     const char *tail = pv.buf;
+
+    // Start with current position. We can't guarantee that the resolved position won't be in check,
+    // but a valid one must be returned.
+    Position resolved = *pos;
 
     Position p[2];
     p[0] = *pos;
@@ -127,7 +131,12 @@ static void validate_pv(const Position *pos, str_t pv, FILE *log)
 
         pos_move(&p[(idx + 1) % 2], &p[idx], m);
         idx = (idx + 1) % 2;
+
+        if (!p[idx].checkers)
+            resolved = p[idx];
     }
+
+    return resolved;
 }
 
 Game game_new(const str_t *fen)
@@ -217,8 +226,10 @@ int game_play(Game *g, const GameOptions *go, const Engine engines[2], Deadline 
         int score = 0;
         const bool ok = engine_bestmove(&engines[ei], &score, &timeLeft[ei], deadline, &best, &pv);
 
-        // Validate the last PV sent. An invalid PV is not fatal, but simply logs a warning
-        validate_pv(&g->pos[g->ply], pv, engines[ei].log);
+        // Parses the last PV sent. An invalid PV is not fatal, but logs some warnings. Keep track
+        // of the resolved position, which is the last in the PV that is not in check (or the
+        // current one if that's impossible).
+        Position resolved = resolve_pv(&g->pos[g->ply], pv, engines[ei].log);
 
         if (!ok) {  // engine_bestmove() time out before parsing a bestmove
             g->state = STATE_TIME_LOSS;
@@ -258,11 +269,15 @@ int game_play(Game *g, const GameOptions *go, const Engine engines[2], Deadline 
         // Write sample: position (compactly encoded) + score
         if (prngf(seed) <= go->sampleFrequency) {
             Sample sample = {
-                .pos = g->pos[g->ply],
+                .pos = go->sampleResolvePv ? resolved : g->pos[g->ply],
                 .score = score,
                 .result = NB_RESULT // unknown yet (use invalid state for now)
             };
-            vec_push(g->samples, sample);
+
+            // Record sample, except if resolvePv=true and the position is in check (becuase PV
+            // resolution couldn't avoid it), in which case the sample is discarded.
+            if (!go->sampleResolvePv || !sample.pos.checkers)
+                vec_push(g->samples, sample);
         }
 
         vec_push(g->pos, (Position){0});

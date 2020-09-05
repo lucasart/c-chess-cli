@@ -31,9 +31,9 @@ List of `option value`:
   for it.
 - `pgnout file`: output file, in PGN format, where games are written.
 - `resign n,s`: resign when score <= -`s` (in cp) for `n` consecutive moves, for the losing side.
-- `sample freq[,file]`: collects sample of position and search score. `freq` is the frequency (between
-  0 and 1), and `file` is the output file (if omitted, defaults to `sample.csv`). More details in
-  Sample section below.
+- `sample freq[,resolvePv[,file]]`: collects sample of position and search score. `freq` is the frequency (between
+  0 and 1), `resolvePv` is either `y` or `n`, and `file` is the output file (if omitted, defaults to `sample.csv`).
+  More details in Sample section below.
 - `sprt elo0,elo1,alpha,beta`: performs a [Sequential Probability Ratio Test](https://en.wikipedia.org/wiki/Sequential_probability_ratio_test)
   for `H1: elo=elo1` vs `H0: elo=elo0`, where `alpha` is the type I error probability (false positive),
   and `beta` is type II error probability (false negative). It uses the GSPRT approximation of the LLR
@@ -81,9 +81,15 @@ List:
 The purpose of this feature is to the generate training data, which can be used to fit the parameters of a
 chess engine evaluation, otherwise known as supervised learning.
 
-Using `-sample freq[,file]` will generate a csv file of samples, in this format:
+Using `-sample freq[,resolvePv[,file]]` will generate a csv file of samples, in this format:
 ```
 fen,score,result
 ```
 where score is the search result (in cp), and result is the result of the game from the side to
 move's perspective (0=loss, 1=draw, 2=win).
+
+Using `resolvePv=y` does two things:
+- First, it resolves the PV, which means that it plays the PV and reocords the position at the end
+  (leaf node), instea of the current position (root node).
+- Second, it guarantees that the recorded fen is not in check (by recording the last PV position
+  that is not in check, if that is possible, else discarding the sample).

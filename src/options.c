@@ -139,6 +139,10 @@ Options options_new(int argc, const char **argv, GameOptions *go)
                 if (go->sampleFrequency > 1.0 || go->sampleFrequency < 0.0)
                     DIE("Sample frequency '%f' must be between 0 and 1\n", go->sampleFrequency);
 
+                // Parse resolve flag
+                if ((tail = str_tok(tail, &token, ",")))
+                    go->sampleResolvePv = !strcmp(token.buf, "y");
+
                 // Parse filename (default sample.csv if omitted)
                 if ((tail = str_tok(tail, &token, ",")))
                     o.sampleFileName = str_dup(token);

@@ -33,6 +33,8 @@ typedef struct {
     int depth[2];
     int resignCount, resignScore;
     int drawCount, drawScore;
+    bool sampleResolvePv;
+    char pad[7];
 } GameOptions;
 
 // Per thread data
