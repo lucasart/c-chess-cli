@@ -15,6 +15,7 @@
 // Stand alone program: minimal UCI engine (random mover) used for testing and benchmarking
 #include "gen.h"
 #include "util.h"
+#include "vec.h"
 
 #define uci_printf(...) printf(__VA_ARGS__), fflush(stdout)
 #define uci_puts(str) puts(str), fflush(stdout)
@@ -83,11 +84,12 @@ static void random_pv(const Position *pos, uint64_t *seed, int len, str_t *pv)
     str_resize(pv, 0);
     Position p[2];
     p[0] = *pos;
+    move_t *moves = vec_new(64, move_t);
 
     for (int ply = 0; ply < len; ply++) {
         // Generate and count legal moves
-        move_t moves[MAX_MOVES];
-        const uint64_t n = (uint64_t)(gen_all_moves(&p[ply % 2], moves) - moves);
+        moves = gen_all_moves(&p[ply % 2], moves);
+        const uint64_t n = (uint64_t)vec_size(moves);
         if (n == 0)
             break;
 
@@ -96,6 +98,8 @@ static void random_pv(const Position *pos, uint64_t *seed, int len, str_t *pv)
         str_push(pos_move_to_lan(&p[ply % 2], m, pv), ' ');
         pos_move(&p[(ply + 1) % 2], &p[ply % 2], m);
     }
+
+    vec_del(moves);
 }
 
 static void run_go(const Position *pos, const Go *go, uint64_t *seed)

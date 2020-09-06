@@ -23,17 +23,16 @@ void vec_del(void *v);
 size_t vec_size(const void *v);
 size_t vec_capacity(const void *v);
 
-void *vec_do_grow(void *v, size_t esize, size_t n);
+void vec_clear(void *v);
 
-#define vec_push(v, e) \
-    do { \
-        if (vec_capacity((v)) == vec_size((v))) \
-            (v) = vec_do_grow(v, sizeof(*(v)), !vec_capacity((v)) ? 1 : vec_capacity((v))); \
-        (v)[vec_ptr((v))->size++] = (e); \
-    } while (0)
+void *vec_do_realloc(void *v, size_t esize, size_t n);
+
+#define vec_push(v, e) ({ \
+    const vec_t *p = vec_cptr(v); \
+    if (p->capacity == p->size) \
+        v = vec_do_realloc(v, sizeof(*v), p->capacity ? 2 * p->capacity : 1); \
+    (v)[vec_ptr(v)->size++] = (e); \
+})
 
 #define vec_pop(v) \
     ((v)[--vec_ptr(v)->size])
-
-#define vec_grow(v, n) \
-    ((v) = vec_do_grow((v), sizeof(*(v)), n))

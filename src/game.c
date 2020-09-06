@@ -66,14 +66,14 @@ static void uci_go_command(Game *g, const GameOptions *go, int ei, const int64_t
             go->movestogo[ei] - ((g->ply / 2) % go->movestogo[ei]));
 }
 
-static int game_apply_chess_rules(const Game *g, move_t *begin, move_t **end)
+static int game_apply_chess_rules(const Game *g, move_t **moves)
 // Applies chess rules to generate legal moves, and determine the state of the game
 {
     const Position *pos = &g->pos[g->ply];
 
-    *end = gen_all_moves(pos, begin);
+    *moves = gen_all_moves(pos, *moves);
 
-    if (*end == begin)
+    if (!vec_size(*moves))
         return pos->checkers ? STATE_CHECKMATE : STATE_STALEMATE;
     else if (pos->rule50 >= 100) {
         assert(pos->rule50 == 100);
@@ -92,10 +92,10 @@ static int game_apply_chess_rules(const Game *g, move_t *begin, move_t **end)
     return STATE_NONE;
 }
 
-static bool illegal_move(move_t move, const move_t *begin, const move_t *end)
+static bool illegal_move(move_t move, const move_t *moves)
 {
-    for (const move_t *m = begin; m != end; m++)
-        if (*m == move)
+    for (size_t i = 0; i < vec_size(moves); i++)
+        if (moves[i] == move)
             return false;
 
     return true;
@@ -113,14 +113,13 @@ static Position resolve_pv(const Position *pos, str_t pv, FILE *log)
     Position p[2];
     p[0] = *pos;
     int idx = 0;
+    move_t *moves = vec_new(64, move_t);
 
     while ((tail = str_tok(tail, &token, " "))) {
         const move_t m = pos_lan_to_move(&p[idx], token.buf);
+        moves = gen_all_moves(&p[idx], moves);
 
-        move_t moves[MAX_MOVES];
-        const move_t *end = gen_all_moves(&p[idx], moves);
-
-        if (illegal_move(m, moves, end)) {
+        if (illegal_move(m, moves)) {
             fprintf(log, "WARNING: invalid PV\n");
             scope(str_del) str_t fen = pos_get(pos);
             fprintf(log, "\tfen: '%s'\n", fen.buf);
@@ -136,6 +135,7 @@ static Position resolve_pv(const Position *pos, str_t pv, FILE *log)
             resolved = p[idx];
     }
 
+    vec_del(moves);
     return resolved;
 }
 
@@ -189,6 +189,7 @@ int game_play(Game *g, const GameOptions *go, const Engine engines[2], Deadline 
     int ei;  // engines[ei] has the move
     int64_t timeLeft[2] = {go->time[0], go->time[1]};
     scope(str_del) str_t pv = {0};
+    move_t *moves = vec_new(64, move_t);
 
     for (g->ply = 0; ; g->ply++) {
         if (played)
@@ -196,9 +197,7 @@ int game_play(Game *g, const GameOptions *go, const Engine engines[2], Deadline 
 
         ei = (g->ply % 2) ^ reverse;  // engine[ei] has the move
 
-        move_t moves[MAX_MOVES], *end;
-
-        if ((g->state = game_apply_chess_rules(g, moves, &end)))
+        if ((g->state = game_apply_chess_rules(g, &moves)))
             break;
 
         uci_position_command(g, &posCmd);
@@ -238,7 +237,7 @@ int game_play(Game *g, const GameOptions *go, const Engine engines[2], Deadline 
 
         played = pos_lan_to_move(&g->pos[g->ply], best.buf);
 
-        if (illegal_move(played, moves, end)) {
+        if (illegal_move(played, moves)) {
             g->state = STATE_ILLEGAL_MOVE;
             break;
         }
@@ -284,6 +283,7 @@ int game_play(Game *g, const GameOptions *go, const Engine engines[2], Deadline 
     }
 
     assert(g->state != STATE_NONE);
+    vec_del(moves);
 
     // Signed result from white's pov: -1 (loss), 0 (draw), +1 (win)
     const int wpov = g->state < STATE_SEPARATOR

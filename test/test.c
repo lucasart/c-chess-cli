@@ -212,27 +212,25 @@ static size_t test_gen_leaves(const Position *pos, int depth, int ply)
         return 1;
     }
 
-    move_t mList[MAX_MOVES];
-
-    move_t *end = gen_all_moves(pos, mList);
+    move_t *moves = vec_new(64, move_t);
+    moves = gen_all_moves(pos, moves);
     size_t result = 0;
 
     // Bulk counting
-    if (depth == 1 && ply > 0)
-        return (size_t)(end - mList);
-
-    for (move_t *m = mList; m != end; m++) {
-        Position after;
-        pos_move(&after, pos, *m);
-        const size_t subTree = test_gen_leaves(&after, depth - 1, ply + 1);
-        result += subTree;
-
-        /*if (!ply) {
-            scope(str_del) str_t lan = pos_move_to_lan(pos, *m);
-            printf("%s\t%" PRIu64 "\n", lan.buf, subTree);
-        }*/
+    if (depth == 1 && ply > 0) {
+        result = vec_size(moves);
+        vec_del(moves);
+        return result;
     }
 
+    for (size_t i = 0; i < vec_size(moves); i++) {
+        Position after;
+        pos_move(&after, pos, moves[i]);
+        const size_t subTree = test_gen_leaves(&after, depth - 1, ply + 1);
+        result += subTree;
+    }
+
+    vec_del(moves);
     return result;
 }
 
@@ -267,15 +265,6 @@ void test_gen(void)
         pos_set(&pos, tests[i].fen, false);
 
         const size_t leaves = test_gen_leaves(&pos, tests[i].depth, 0);
-
-        /*
-        pos_print(&pos);
-
-        if (leaves != tests[i].leaves)
-            printf("FAILED: fen '%s', depth %i, expected %" PRIu64 ", found %" PRIu64 "\n",
-                tests[i].fen, tests[i].depth, tests[i].leaves, leaves);
-        */
-
         TEST(leaves == tests[i].leaves);
     }
 }
