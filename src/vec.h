@@ -34,5 +34,6 @@ void *vec_do_realloc(void *v, size_t esize, size_t n);
     (v)[vec_ptr(v)->size++] = (e); \
 })
 
-#define vec_pop(v) \
-    ((v)[--vec_ptr(v)->size])
+#define vec_pop(v) ({ \
+    (v)[--vec_ptr(v)->size]; \
+})

@@ -15,6 +15,7 @@
 // Stand alone program, running unit tests for c-chess-cli
 #include <stdio.h>
 #include "gen.h"
+#include "openings.h"
 #include "util.h"
 #include "vec.h"
 
@@ -269,19 +270,16 @@ void test_gen(void)
     }
 }
 
-static void test_vec(void)
+static void test_openings(void)
 {
-    int *values = vec_do_new(10, sizeof(int));  // purposely < 100 to exercise vec_do_grow()
+    Openings o = openings_new(str_ref("test/chess960.epd"), false, true, 1);
+    scope(str_del) str_t fen = {0};
 
-    for (int i = 0; i < 100; i++)
-        vec_push(values, i);
+    for (int i = 0; i < 2 * 970; i++)
+        openings_next(&o, &fen, 1);
 
-    int sum = 0;
-    for (int i = 0; i < 100; i++)
-        sum += vec_pop(values);
-
-    vec_del(values);
-    TEST(sum == 99 * 50);
+    TEST(!strcmp(fen.buf, "qnnbbrkr/pppppppp/8/8/8/8/PPPPPPPP/QNNBBRKR w KQkq - 0 1"));
+    openings_delete(&o, 1);
 }
 
 int main(void)
@@ -295,6 +293,6 @@ int main(void)
     test_gen();
     puts("gen ok");
 
-    test_vec();
-    puts("vec ok");
+    test_openings();
+    puts("openings ok");
 }

@@ -30,6 +30,12 @@
     _x > _y ? _x : _y; \
 })
 
+#define swap(x, y) ({ \
+    typeof(x) _x = x; \
+    x = y; \
+    y = _x; \
+})
+
 uint64_t prng(uint64_t *state);
 double prngf(uint64_t *state);
 

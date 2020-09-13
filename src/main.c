@@ -121,7 +121,7 @@ int main(int argc, const char **argv)
     GameOptions go = {0};
     options = options_new(argc, argv, &go);
 
-    openings = openings_new(&options.openings, options.random, options.repeat, -1);
+    openings = openings_new(options.openings, options.random, options.repeat, -1);
 
     FILE *pgnOut = NULL;
     if (options.pgnOut.len)

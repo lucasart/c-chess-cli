@@ -16,7 +16,7 @@ if args.program == 'main':
     sources += ' src/engine.c src/game.c src/main.c src/openings.c src/options.c src/sprt.c src/workers.c'
     if args.output == '': args.output = './c-chess-cli'
 elif args.program == 'test':
-    sources += ' test/test.c'
+    sources += ' src/openings.c test/test.c'
     if args.output == '': args.output = './test/test'
 elif args.program == 'engine':
     sources += ' test/engine.c'

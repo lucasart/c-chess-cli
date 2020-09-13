@@ -15,50 +15,44 @@
 #include <assert.h>
 #include "openings.h"
 #include "util.h"
+#include "vec.h"
 
-static void read_infinite(FILE *in, str_t *line, int threadId)
-// Read from an infinite file (wrap around EOF)
+Openings openings_new(str_t fileName, bool random, bool repeat, int threadId)
 {
-    if (!str_getline(line, in)) {
-        // Failed once: maybe EOF ?
-        rewind(in);
+    Openings o = {0};
 
-        // Try again after rewind, now failure is fatal
-        if (!str_getline(line, in))
-            DIE("[%d] cannot read from openings\n", threadId);
-    }
-}
-
-Openings openings_new(const str_t *fileName, bool random, int repeat, int threadId)
-{
-    Openings o;
-
-    if (fileName->len)
-        DIE_IF(threadId, !(o.file = fopen(fileName->buf, "r")));
+    if (fileName.len)
+        DIE_IF(threadId, !(o.file = fopen(fileName.buf, "r")));
     else
         o.file = NULL;
 
-    if (o.file && random) {
-        // Establish file size
-        long size;
-        DIE_IF(threadId, fseek(o.file, 0, SEEK_END) < 0);
-        DIE_IF(threadId, (size = ftell(o.file)) < 0);
-
-        if (!size)
-            DIE("openings_create(): file size = 0");
-
-        uint64_t seed = (uint64_t)system_msec();
-        DIE_IF(threadId, fseek(o.file, (long)(prng(&seed) % (uint64_t)size), SEEK_SET) < 0);
-
-        // Consume current line, likely broken, as we're somewhere in the middle of it
+    if (o.file) {
+        // Builds o.index[] to record file offsets for each lines
+        o.index = vec_new(1, size_t);
         scope(str_del) str_t line = {0};
-        read_infinite(o.file, &line, threadId);
+
+        do {
+            vec_push(o.index, ftell(o.file));
+        } while (str_getline(&line, o.file));
+
+        vec_pop(o.index);  // EOF offset must be removed
+
+        if (random) {
+            // Shuffle o.index[], which will be read sequentially from the beginning. This allows
+            // consistent treatment of random and !random, and guarantees no repetition N-cycles in
+            // the random case, rather than sqrt(N) (birthday paradox) if random seek each time.
+            const size_t n = vec_size(o.index);
+            uint64_t seed = (uint64_t)system_msec();
+
+            for (size_t i = n - 1; i > 0; i--) {
+                const size_t j = prng(&seed) % (i + 1);
+                swap(o.index[i], o.index[j]);
+            }
+        }
     }
 
     pthread_mutex_init(&o.mtx, NULL);
-    o.lastFen = (str_t){0};
     o.repeat = repeat;
-    o.next = 0;
 
     return o;
 }
@@ -69,36 +63,33 @@ void openings_delete(Openings *o, int threadId)
         DIE_IF(threadId, fclose(o->file) < 0);
 
     pthread_mutex_destroy(&o->mtx);
-    str_del(&o->lastFen);
+    vec_del(o->index);
 }
 
 int openings_next(Openings *o, str_t *fen, int threadId)
 {
     if (!o->file) {
         pthread_mutex_lock(&o->mtx);
-        const int next = ++o->next;
+        const size_t count = ++o->count;
         pthread_mutex_unlock(&o->mtx);
 
         str_cpy_c(fen, "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
-        return next;
+        return count;
     }
 
     pthread_mutex_lock(&o->mtx);
 
-    if (o->repeat && o->next % 2 == 1) {
-        // Repeat last opening
-        assert(o->lastFen.len);
-        str_cpy(fen, o->lastFen);
-    } else {
-        // Read 'fen' from file, and save in 'o->lastFen'
-        scope(str_del) str_t line = {0};
-        read_infinite(o->file, &line, threadId);
-        str_tok(line.buf, fen, ";");
-        str_cpy(&o->lastFen, *fen);
-    }
+    // Read 'fen' from file
+    scope(str_del) str_t line = {0};
+    DIE_IF(threadId, fseek(o->file, o->index[o->pos], SEEK_SET) < 0);
+    DIE_IF(threadId, !str_getline(&line, o->file));
+    str_tok(line.buf, fen, ";");
 
-    const int next = ++o->next;
+    const size_t count = ++o->count;
+
+    if (!o->repeat || count % 2 == 0)
+        o->pos = (o->pos + 1) % vec_size(o->index);
 
     pthread_mutex_unlock(&o->mtx);
-    return next;
+    return count;
 }
