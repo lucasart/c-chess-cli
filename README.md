@@ -52,7 +52,7 @@ List:
 where `id` is the thread id (range `1..concurrency`). Note that all communications (including
 error messages) starting with `[id]` mean within the context of thread number `id`, which tells you
 which log file to inspect (id = 0 is the main thread).
-- `random`: start from a random opening in the EPD file. Proceed sequentially afterwards.
+- `random`: shuffle the opening set (play shuffled set sequentially, no repetitions).
 - `repeat`: repeat each opening twice, with each engine playing both sides.
 
 ### Engine options

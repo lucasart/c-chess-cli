@@ -121,7 +121,7 @@ int main(int argc, const char **argv)
     GameOptions go = {0};
     options = options_new(argc, argv, &go);
 
-    openings = openings_new(options.openings, options.random, options.repeat, -1);
+    openings = openings_new(options.openings, options.random, options.repeat, 0);
 
     FILE *pgnOut = NULL;
     if (options.pgnOut.len)
@@ -161,7 +161,7 @@ int main(int argc, const char **argv)
     if (sampleFile)
         DIE_IF(0, fclose(sampleFile) < 0);
 
-    openings_delete(&openings, -1);
+    openings_delete(&openings, 0);
     options_delete(&options);
     return 0;
 }
