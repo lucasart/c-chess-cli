@@ -125,11 +125,11 @@ int main(int argc, const char **argv)
 
     FILE *pgnOut = NULL;
     if (options.pgnOut.len)
-        DIE_IF(0, !(pgnOut = fopen(options.pgnOut.buf, "w")));
+        DIE_IF(0, !(pgnOut = fopen(options.pgnOut.buf, "a")));
 
     FILE *sampleFile = NULL;
     if (options.sampleFileName.len)
-        DIE_IF(0, !(sampleFile = fopen(options.sampleFileName.buf, "wb+")));
+        DIE_IF(0, !(sampleFile = fopen(options.sampleFileName.buf, "ab")));
 
     pthread_t threads[options.concurrency];
     workers_new(options.concurrency, pgnOut, sampleFile, &go);
