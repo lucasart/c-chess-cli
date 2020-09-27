@@ -29,12 +29,11 @@ static void split_engine_option(const char *in, str_t out[2])
         str_cpy(&out[1], out[0]);
 }
 
-Options options_new(int argc, const char **argv, GameOptions *go)
+Options options_new(int argc, const char **argv, GameOptions *go, EngineOptions eo[2])
 {
     // List options that expect a value
-    static const char *options[] = {"-concurrency", "-games", "-openings", "-pgnout", "-cmd",
-        "-name", "-options", "-nodes", "-depth", "-draw", "-resign", "-movetime", "-tc", "-sprt",
-        "-sample"};
+    static const char *options[] = {"-concurrency", "-games", "-openings", "-pgnout", "-nodes",
+        "-depth", "-draw", "-resign", "-movetime", "-tc", "-sprt", "-sample"};
 
     // Set default values
     Options o = {0};
@@ -43,6 +42,7 @@ Options options_new(int argc, const char **argv, GameOptions *go)
     o.alpha = o.beta = 0.05;
 
     int i;
+    int eoIdx = 0;
     bool expectValue = false;  // pattern: '-tag [value]'. should next arg be a value or tag ?
 
     for (i = 1; i < argc; i++) {
@@ -59,7 +59,29 @@ Options options_new(int argc, const char **argv, GameOptions *go)
 
             if (!expectValue) {
                 // process tag without value (bool)
-                if (!strcmp(argv[i], "-random"))
+                if (!strcmp(argv[i], "-engine")) {
+                    for (int j = i + 1; j < argc && argv[j][0] != '-'; j++) {
+                        scope(str_del) str_t key = {0}, value = {0};
+                        str_tok_esc(str_tok(argv[j], &key, ":"), &value, ':', '\\');
+                        assert(key.len);
+
+                        if (!value.len)
+                            DIE("expected value after '%s:'\n", key.buf);
+
+                        if (!strcmp(key.buf, "cmd"))
+                            eo[eoIdx].cmd = str_dup(value);
+                        else if (!strcmp(key.buf, "name"))
+                            eo[eoIdx].name = str_dup(value);
+                        else if (!strcmp(key.buf, "options"))
+                            eo[eoIdx].uciOptions = str_dup(value);
+                        else
+                            DIE("illegal key '%s'\n", key.buf);
+
+                        i++;
+                    }
+
+                    eoIdx++;
+                } else if (!strcmp(argv[i], "-random"))
                     o.random = true;
                 else if (!strcmp(argv[i], "-repeat"))
                     o.repeat = true;
@@ -81,12 +103,6 @@ Options options_new(int argc, const char **argv, GameOptions *go)
                 str_cpy_c(&o.openings, argv[i]);
             else if (!strcmp(argv[i - 1], "-pgnout"))
                 str_cpy_c(&o.pgnOut, argv[i]);
-            else if (!strcmp(argv[i - 1], "-cmd"))
-                split_engine_option(argv[i], o.cmd);
-            else if (!strcmp(argv[i - 1], "-name"))
-                split_engine_option(argv[i], o.name);
-            else if (!strcmp(argv[i - 1], "-options"))
-                split_engine_option(argv[i], o.uciOptions);
             else if (!strcmp(argv[i - 1], "-nodes")) {
                 str_t nodes[2] = {{0}, {0}};
                 split_engine_option(argv[i], nodes);
@@ -164,7 +180,4 @@ Options options_new(int argc, const char **argv, GameOptions *go)
 void options_delete(Options *o)
 {
     str_del_n(&o->openings, &o->pgnOut, &o->sampleFileName);
-
-    for (int i = 0; i < 2; i++)
-        str_del_n(&o->uciOptions[i], &o->cmd[i], &o->name[i]);
 }

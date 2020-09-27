@@ -18,13 +18,16 @@
 #include "str.h"
 
 typedef struct {
-    str_t openings, pgnOut, cmd[2], name[2], uciOptions[2], sampleFileName;
+    str_t cmd, name, uciOptions;
+} EngineOptions;
+
+typedef struct {
+    str_t openings, pgnOut, sampleFileName;
     double elo0, elo1, alpha, beta;
-    GameOptions go;
     int concurrency, games;
     bool log, random, repeat, sprt;
     char pad[4];
 } Options;
 
-Options options_new(int argc, const char **argv, GameOptions *go);
+Options options_new(int argc, const char **argv, GameOptions *go, EngineOptions eo[2]);
 void options_delete(Options *o);

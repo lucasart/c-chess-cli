@@ -244,7 +244,7 @@ const char *str_tok_esc(const char *s, str_t *token, char delim, char esc)
     bool escaped, accumulate = false;
 
     while (*tail && (tail = str_getc_esc(tail, &c, &escaped, esc))) {
-        if (!accumulate && c != delim)
+        if (!accumulate && (c != delim || escaped))
             accumulate = true;
 
         if (accumulate) {

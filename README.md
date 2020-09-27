@@ -13,7 +13,7 @@ See `make.py --help` for more options.
 ### Example
 
 ```
-./c-chess-cli -cmd demolito:../Engines/critter_1.6a -options Hash=8,Threads=2:Threads=1 \
+./c-chess-cli -engine cmd:demolito options:Hash=8,Threads=2 -engine cmd:../Engines/critter_1.6a options:Threads=1 \
     -games 8 -concurrency 4 -openings test/chess960.epd -repeat -tc 2+0.02 -depth 10 \
     -resign 3,700 -draw 8,10 -pgnout out.pgn
 ```
@@ -42,6 +42,8 @@ List of `option value`:
 - `tc X/Y+Z`: set time control to `X` moves in `Y` sec (repeating) + `Z` sec increment per move. For
   example, `X/Y` corresponds to a tournament time control, `Y+Z` corresponds to an increment time
   control, and just `Y` corresponds to a sudden death time control.
+- `movetime t`: time limit per move in seconds.
+- `nodes n`: node limit per move.
 
 ### Flags
 
@@ -57,24 +59,18 @@ which log file to inspect (id = 0 is the main thread).
 
 ### Engine options
 
-Syntax:
-- `-option value1` gives `value1` to both engines.
-- `-option value1:value2` gives `value1` to the first engine, and `value2` to the second.
-- `-option value1:` gives `value1` to the first engine, and nothing to the second.
-- `-option :value2` can you guess? good.
+Syntax: `engine key1:value1 ... keyN:valueN`
 
-List:
+Keys:
 - `cmd`: command to run each engine. The current working directory will be set automatically, if a
-  `/` is contained in the value string(s). For example, `../Engines/critter_1.6a`, will run
-  `./critter_1.6a` from `../Engines`. If no `/` is found, the command is executed as is. For example
-  `demolito` will simply run `demolito`, which only works if `demolito` is in `PATH`.
+  `/` is contained in the value string(s). For example, `cmd:../Engines/critter_1.6a`, will run
+  `./critter_1.6a` from `../Engines`. If no `/` is found, the command is executed as is. Without `/`,
+  for example `cmd:demolito` will run `demolito`, which only works if `demolito` is in `PATH`.
 - `name`: name override for each engine. By default the name is read from `id name` following the UCI
   protocol (and if that fails cmd value will be used as name).
-- `movetime`: time limit per move in seconds.
-- `nodes`: node limit per move.
-- `options`: UCI options per engine. In this context, `value1` and `value2`, must be comma
-  separated, like so: `-options Hash=2,Threads=1:Book=true,Hash=4`. Special characters, like space,
-  should be escaped using the appropriate shell syntax. For example `-options Time\ Buffer=50`, or `-options "Time Buffer=50"`.
+- `options`: UCI options per engine. In this context, `value` must be comma separated, like so:
+  `options:Hash=2,Threads=1`. Special characters, like space, should be escaped using the
+  appropriate shell syntax. For example `options:Time\ Buffer=50`, or `"options:Time Buffer=50"`.
 
 ### Sampling
 

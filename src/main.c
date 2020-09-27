@@ -23,6 +23,7 @@
 #include "workers.h"
 
 static Options options;
+static EngineOptions eo[2];
 static Openings openings;
 
 static void *thread_start(void *arg)
@@ -41,7 +42,7 @@ static void *thread_start(void *arg)
 
     // Prepare engines[]
     for (int i = 0; i < 2; i++)
-        engines[i] = engine_new(options.cmd[i], options.name[i], options.uciOptions[i], log,
+        engines[i] = engine_new(eo[i].cmd, eo[i].name, eo[i].uciOptions, log,
             &worker->deadline, worker->id);
 
     int next;
@@ -119,7 +120,7 @@ static void *thread_start(void *arg)
 int main(int argc, const char **argv)
 {
     GameOptions go = {0};
-    options = options_new(argc, argv, &go);
+    options = options_new(argc, argv, &go, eo);
 
     openings = openings_new(options.openings, options.random, options.repeat, 0);
 
