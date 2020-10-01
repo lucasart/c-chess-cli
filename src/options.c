@@ -17,6 +17,7 @@
 #include <limits.h>
 #include "options.h"
 #include "util.h"
+#include "vec.h"
 
 // Parse a value in="a:b" into out[]=(a, b), or (a,a) if ":" is missing. Note that a and b may
 // contain a ':', if escaped with a backslash, eg. in='foo\:bar:baz' => (a='foo:bar', b='baz').
@@ -98,7 +99,7 @@ static void options_parse_movetime(const char *s, GameOptions *go)
     str_del_n(&movetime[0], &movetime[1]);
 }
 
-void options_parse(int argc, const char **argv, Options *o, GameOptions *go, EngineOptions eo[2])
+void options_parse(int argc, const char **argv, Options *o, GameOptions *go, EngineOptions **eo)
 {
     // List options that expect a value
     static const char *options[] = {"-concurrency", "-games", "-openings", "-pgnout", "-nodes",
@@ -112,7 +113,6 @@ void options_parse(int argc, const char **argv, Options *o, GameOptions *go, Eng
     o->alpha = o->beta = 0.05;
 
     int i;
-    int eoIdx = 0;
     bool expectValue = false;  // pattern: '-tag [value]'. should next arg be a value or tag ?
 
     for (i = 1; i < argc; i++) {
@@ -130,6 +130,8 @@ void options_parse(int argc, const char **argv, Options *o, GameOptions *go, Eng
             if (!expectValue) {
                 // process tag without value (bool)
                 if (!strcmp(argv[i], "-engine")) {
+                    EngineOptions new = {0};
+
                     for (int j = i + 1; j < argc && argv[j][0] != '-'; j++) {
                         scope(str_del) str_t key = {0}, value = {0};
                         str_tok_esc(str_tok(argv[j], &key, ":"), &value, ':', '\\');
@@ -139,18 +141,18 @@ void options_parse(int argc, const char **argv, Options *o, GameOptions *go, Eng
                             DIE("expected value after '%s:'\n", key.buf);
 
                         if (!strcmp(key.buf, "cmd"))
-                            eo[eoIdx].cmd = str_dup(value);
+                            new.cmd = str_dup(value);
                         else if (!strcmp(key.buf, "name"))
-                            eo[eoIdx].name = str_dup(value);
+                            new.name = str_dup(value);
                         else if (!strcmp(key.buf, "options"))
-                            eo[eoIdx].uciOptions = str_dup(value);
+                            new.uciOptions = str_dup(value);
                         else
                             DIE("illegal key '%s'\n", key.buf);
 
                         i++;
                     }
 
-                    eoIdx++;
+                    vec_push(*eo, new);
                 } else if (!strcmp(argv[i], "-random"))
                     o->random = true;
                 else if (!strcmp(argv[i], "-repeat"))
@@ -201,10 +203,12 @@ void options_parse(int argc, const char **argv, Options *o, GameOptions *go, Eng
         DIE("value expected after '%s'\n", argv[i - 1]);
 }
 
-void options_delete(Options *o, EngineOptions eo[2])
+void options_delete(Options *o, EngineOptions *eo)
 {
     str_del_n(&o->openings, &o->pgnOut, &o->sampleFileName);
 
-    for (int i = 0; i < 2; i++)
+    for (size_t i = 0; i < vec_size(eo); i++)
         str_del_n(&eo[i].cmd, &eo[i].name, &eo[i].uciOptions);
+
+    vec_del(eo);
 }

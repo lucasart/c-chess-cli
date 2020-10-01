@@ -23,7 +23,7 @@
 #include "workers.h"
 
 static Options options;
-static EngineOptions eo[2];
+static EngineOptions *eo;
 static Openings openings;
 
 static void *thread_start(void *arg)
@@ -120,7 +120,8 @@ static void *thread_start(void *arg)
 int main(int argc, const char **argv)
 {
     GameOptions go;
-    options_parse(argc, argv, &options, &go, eo);
+    eo = vec_new(2, EngineOptions);
+    options_parse(argc, argv, &options, &go, &eo);
 
     openings = openings_new(options.openings, options.random, options.repeat, 0);
 
