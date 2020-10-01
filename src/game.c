@@ -39,19 +39,19 @@ static void uci_position_command(const Game *g, str_t *cmd)
     }
 }
 
-static void uci_go_command(Game *g, const GameOptions *go, int ei, const int64_t timeLeft[2],
-    str_t *cmd)
+static void uci_go_command(Game *g, const GameOptions *go, const EngineOptions *eo[2], int ei,
+    const int64_t timeLeft[2], str_t *cmd)
 {
     str_cpy_c(cmd, "go");
 
-    if (go->nodes[ei])
-        str_cat_fmt(cmd, " nodes %U", go->nodes[ei]);
+    if (eo[ei]->nodes)
+        str_cat_fmt(cmd, " nodes %I", eo[ei]->nodes);
 
-    if (go->depth[ei])
-        str_cat_fmt(cmd, " depth %i", go->depth[ei]);
+    if (eo[ei]->depth)
+        str_cat_fmt(cmd, " depth %i", eo[ei]->depth);
 
-    if (go->movetime[ei])
-        str_cat_fmt(cmd, " movetime %I", go->movetime[ei]);
+    if (eo[ei]->movetime)
+        str_cat_fmt(cmd, " movetime %I", eo[ei]->movetime);
 
     if (go->time[ei]) {
         const int color = g->pos[g->ply].turn;
@@ -167,8 +167,8 @@ void game_delete(Game *g)
     str_del_n(&g->names[WHITE], &g->names[BLACK]);
 }
 
-int game_play(Game *g, const GameOptions *go, const Engine engines[2], Deadline *deadline,
-    bool reverse, uint64_t *seed)
+int game_play(Game *g, const GameOptions *go, const Engine engines[2], const EngineOptions *eo[2],
+    Deadline *deadline, bool reverse, uint64_t *seed)
 // Play a game:
 // - engines[reverse] plays the first move (which does not mean white, that depends on the FEN)
 // - sets g->state value: see enum STATE_* codes
@@ -208,9 +208,9 @@ int game_play(Game *g, const GameOptions *go, const Engine engines[2], Deadline 
         engine_sync(&engines[ei], deadline);
 
         // Prepare timeLeft[ei]
-        if (go->movetime[ei])
+        if (eo[ei]->movetime)
             // movetime is special: discard movestogo, time, increment
-            timeLeft[ei] = go->movetime[ei];
+            timeLeft[ei] = eo[ei]->movetime;
         else if (go->time[ei]) {
             // Always apply increment (can be zero)
             timeLeft[ei] += go->increment[ei];
@@ -222,7 +222,7 @@ int game_play(Game *g, const GameOptions *go, const Engine engines[2], Deadline 
             // Only depth and/or nodes limit
             timeLeft[ei] = INT64_MAX / 2;  // HACK: system_msec() + timeLeft must not overflow
 
-        uci_go_command(g, go, ei, timeLeft, &goCmd);
+        uci_go_command(g, go, eo, ei, timeLeft, &goCmd);
         engine_writeln(&engines[ei], goCmd.buf);
 
         int score = 0;
@@ -245,7 +245,7 @@ int game_play(Game *g, const GameOptions *go, const Engine engines[2], Deadline 
             break;
         }
 
-        if ((go->time[ei] || go->movetime[ei]) && timeLeft[ei] < 0) {
+        if ((go->time[ei] || eo[ei]->movetime) && timeLeft[ei] < 0) {
             g->state = STATE_TIME_LOSS;
             break;
         }

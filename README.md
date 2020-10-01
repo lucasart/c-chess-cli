@@ -13,8 +13,9 @@ See `make.py --help` for more options.
 ### Example
 
 ```
-./c-chess-cli -engine cmd:demolito options:Hash=8,Threads=2 -engine cmd:../Engines/critter_1.6a options:Threads=1 \
-    -games 8 -concurrency 4 -openings test/chess960.epd -repeat -tc 2+0.02 -depth 10 \
+./c-chess-cli -engine cmd:demolito options:Hash=8,Threads=2 movetime:0.5 nodes:100000 \
+    -engine cmd:../Engines/critter_1.6a options:Threads=1 depth:10 \
+    -games 8 -concurrency 4 -openings test/chess960.epd -random -repeat -tc 2+0.02 \
     -resign 3,700 -draw 8,10 -pgnout out.pgn
 ```
 
@@ -42,9 +43,6 @@ List of `option value`:
 - `tc X/Y+Z`: set time control to `X` moves in `Y` sec (repeating) + `Z` sec increment per move. For
   example, `X/Y` corresponds to a tournament time control, `Y+Z` corresponds to an increment time
   control, and just `Y` corresponds to a sudden death time control.
-- `depth d`: depth limit per move.
-- `movetime t`: time limit per move, in seconds (can be fractional like `-movetime 0.123`).
-- `nodes n`: node limit per move.
 
 ### Flags
 
@@ -72,6 +70,9 @@ Keys:
 - `options`: UCI options per engine. In this context, `value` must be comma separated, like so:
   `options:Hash=2,Threads=1`. Special characters, like space, should be escaped using the
   appropriate shell syntax. For example `options:Time\ Buffer=50`, or `"options:Time Buffer=50"`.
+- `depth`: depth limit per move.
+- `movetime`: time limit per move, in seconds (can be fractional like `movetime:0.123`).
+- `nodes`: node limit per move.
 
 ### Sampling
 

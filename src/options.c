@@ -72,33 +72,6 @@ static void options_parse_tc(const char *s, GameOptions *go)
     str_del_n(&tc[0], &tc[1]);
 }
 
-static void options_parse_nodes(const char *s, GameOptions *go)
-{
-    str_t nodes[2] = {{0}, {0}};
-    split_engine_option(s, nodes);
-    go->nodes[0] = (uint64_t)atoll(nodes[0].buf);
-    go->nodes[1] = (uint64_t)atoll(nodes[1].buf);
-    str_del_n(&nodes[0], &nodes[1]);
-}
-
-static void options_parse_depth(const char *s, GameOptions *go)
-{
-    str_t depth[2] = {{0}, {0}};
-    split_engine_option(s, depth);
-    go->depth[0] = atoi(depth[0].buf);
-    go->depth[1] = atoi(depth[1].buf);
-    str_del_n(&depth[0], &depth[1]);
-}
-
-static void options_parse_movetime(const char *s, GameOptions *go)
-{
-    str_t movetime[2] = {{0}, {0}};
-    split_engine_option(s, movetime);
-    go->movetime[0] = (int64_t)(atof(movetime[0].buf) * 1000);
-    go->movetime[1] = (int64_t)(atof(movetime[1].buf) * 1000);
-    str_del_n(&movetime[0], &movetime[1]);
-}
-
 void options_parse(int argc, const char **argv, Options *o, GameOptions *go, EngineOptions **eo)
 {
     // List options that expect a value
@@ -146,6 +119,12 @@ void options_parse(int argc, const char **argv, Options *o, GameOptions *go, Eng
                             new.name = str_dup(value);
                         else if (!strcmp(key.buf, "options"))
                             new.uciOptions = str_dup(value);
+                        else if (!strcmp(key.buf, "depth"))
+                            new.depth = atoi(value.buf);
+                        else if (!strcmp(key.buf, "nodes"))
+                            new.nodes = atoll(value.buf);
+                        else if (!strcmp(key.buf, "movetime"))
+                            new.movetime = (int64_t)(atof(value.buf) * 1000);
                         else
                             DIE("illegal key '%s'\n", key.buf);
 
@@ -175,12 +154,6 @@ void options_parse(int argc, const char **argv, Options *o, GameOptions *go, Eng
                 str_cpy_c(&o->openings, argv[i]);
             else if (!strcmp(argv[i - 1], "-pgnout"))
                 str_cpy_c(&o->pgnOut, argv[i]);
-            else if (!strcmp(argv[i - 1], "-nodes"))
-                options_parse_nodes(argv[i], go);
-            else if (!strcmp(argv[i - 1], "-depth"))
-                options_parse_depth(argv[i], go);
-            else if (!strcmp(argv[i - 1], "-movetime"))
-                options_parse_movetime(argv[i], go);
             else if (!strcmp(argv[i - 1], "-resign"))
                 sscanf(argv[i], "%i,%i", &go->resignCount, &go->resignScore);
             else if (!strcmp(argv[i - 1], "-draw"))

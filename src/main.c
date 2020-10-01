@@ -51,8 +51,9 @@ static void *thread_start(void *arg)
     while ((next = openings_next(&openings, &fen, worker->id)) <= options.games) {
         // Play 1 game
         Game game = game_new(&fen);
-        const int wld = game_play(&game, worker->go, engines, &worker->deadline, next % 2 == 0,
-            &worker->seed);
+        const EngineOptions *eoPair[2] = {&eo[0], &eo[1]};
+        const int wld = game_play(&game, worker->go, engines, eoPair, &worker->deadline,
+            next % 2 == 0, &worker->seed);
 
         // Write to PGN file
         if (worker->pgnOut) {

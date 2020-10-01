@@ -18,10 +18,6 @@
 #include "str.h"
 
 typedef struct {
-    str_t cmd, name, uciOptions;
-} EngineOptions;
-
-typedef struct {
     str_t openings, pgnOut, sampleFileName;
     double elo0, elo1, alpha, beta;
     int concurrency, games;
