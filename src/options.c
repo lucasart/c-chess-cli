@@ -29,6 +29,75 @@ static void split_engine_option(const char *in, str_t out[2])
         str_cpy(&out[1], out[0]);
 }
 
+static void options_parse_sample(const char *s, Options *o, GameOptions *go)
+{
+    scope(str_del) str_t token = {0};
+    const char *tail = str_tok(s, &token, ",");
+    assert(tail);
+
+    // Parse sample frequency (and check range)
+    go->sampleFrequency = atof(token.buf);
+    if (go->sampleFrequency > 1.0 || go->sampleFrequency < 0.0)
+        DIE("Sample frequency '%f' must be between 0 and 1\n", go->sampleFrequency);
+
+    // Parse resolve flag
+    if ((tail = str_tok(tail, &token, ",")))
+        go->sampleResolvePv = !strcmp(token.buf, "y");
+
+    // Parse filename (default sample.csv if omitted)
+    if ((tail = str_tok(tail, &token, ",")))
+        o->sampleFileName = str_dup(token);
+    else
+        o->sampleFileName = str_dup_c("sample.csv");
+}
+
+static void options_parse_tc(const char *s, GameOptions *go)
+{
+    str_t tc[2] = {{0}, {0}};
+    split_engine_option(s, tc);
+
+    for (int j = 0; j < 2; j++) {
+        double time = 0, increment = 0;
+
+        if (strchr(tc[j].buf, '/'))
+            sscanf(tc[j].buf, "%i/%lf+%lf", &go->movestogo[j], &time, &increment);
+        else
+            sscanf(tc[j].buf, "%lf+%lf", &time, &increment);
+
+        go->time[j] = (int64_t)(time * 1000);
+        go->increment[j] = (int64_t)(increment * 1000);
+    }
+
+    str_del_n(&tc[0], &tc[1]);
+}
+
+static void options_parse_nodes(const char *s, GameOptions *go)
+{
+    str_t nodes[2] = {{0}, {0}};
+    split_engine_option(s, nodes);
+    go->nodes[0] = (uint64_t)atoll(nodes[0].buf);
+    go->nodes[1] = (uint64_t)atoll(nodes[1].buf);
+    str_del_n(&nodes[0], &nodes[1]);
+}
+
+static void options_parse_depth(const char *s, GameOptions *go)
+{
+    str_t depth[2] = {{0}, {0}};
+    split_engine_option(s, depth);
+    go->depth[0] = atoi(depth[0].buf);
+    go->depth[1] = atoi(depth[1].buf);
+    str_del_n(&depth[0], &depth[1]);
+}
+
+static void options_parse_movetime(const char *s, GameOptions *go)
+{
+    str_t movetime[2] = {{0}, {0}};
+    split_engine_option(s, movetime);
+    go->movetime[0] = (int64_t)(atof(movetime[0].buf) * 1000);
+    go->movetime[1] = (int64_t)(atof(movetime[1].buf) * 1000);
+    str_del_n(&movetime[0], &movetime[1]);
+}
+
 void options_parse(int argc, const char **argv, Options *o, GameOptions *go, EngineOptions eo[2])
 {
     // List options that expect a value
@@ -104,68 +173,24 @@ void options_parse(int argc, const char **argv, Options *o, GameOptions *go, Eng
                 str_cpy_c(&o->openings, argv[i]);
             else if (!strcmp(argv[i - 1], "-pgnout"))
                 str_cpy_c(&o->pgnOut, argv[i]);
-            else if (!strcmp(argv[i - 1], "-nodes")) {
-                str_t nodes[2] = {{0}, {0}};
-                split_engine_option(argv[i], nodes);
-                go->nodes[0] = (uint64_t)atoll(nodes[0].buf);
-                go->nodes[1] = (uint64_t)atoll(nodes[1].buf);
-                str_del_n(&nodes[0], &nodes[1]);
-            } else if (!strcmp(argv[i - 1], "-depth")) {
-                str_t depth[2] = {{0}, {0}};
-                split_engine_option(argv[i], depth);
-                go->depth[0] = atoi(depth[0].buf);
-                go->depth[1] = atoi(depth[1].buf);
-                str_del_n(&depth[0], &depth[1]);
-            } else if (!strcmp(argv[i - 1], "-movetime")) {
-                str_t movetime[2] = {{0}, {0}};
-                split_engine_option(argv[i], movetime);
-                go->movetime[0] = (int64_t)(atof(movetime[0].buf) * 1000);
-                go->movetime[1] = (int64_t)(atof(movetime[1].buf) * 1000);
-                str_del_n(&movetime[0], &movetime[1]);
-            } else if (!strcmp(argv[i - 1], "-resign"))
+            else if (!strcmp(argv[i - 1], "-nodes"))
+                options_parse_nodes(argv[i], go);
+            else if (!strcmp(argv[i - 1], "-depth"))
+                options_parse_depth(argv[i], go);
+            else if (!strcmp(argv[i - 1], "-movetime"))
+                options_parse_movetime(argv[i], go);
+            else if (!strcmp(argv[i - 1], "-resign"))
                 sscanf(argv[i], "%i,%i", &go->resignCount, &go->resignScore);
             else if (!strcmp(argv[i - 1], "-draw"))
                 sscanf(argv[i], "%i,%i", &go->drawCount, &go->drawScore);
-            else if (!strcmp(argv[i - 1], "-tc")) {
-                str_t tc[2] = {{0}, {0}};
-                split_engine_option(argv[i], tc);
-
-                for (int j = 0; j < 2; j++) {
-                    double time = 0, increment = 0;
-
-                    if (strchr(tc[j].buf, '/'))
-                        sscanf(tc[j].buf, "%i/%lf+%lf", &go->movestogo[j], &time, &increment);
-                    else
-                        sscanf(tc[j].buf, "%lf+%lf", &time, &increment);
-
-                    go->time[j] = (int64_t)(time * 1000);
-                    go->increment[j] = (int64_t)(increment * 1000);
-                }
-
-                str_del_n(&tc[0], &tc[1]);
-            } else if (!strcmp(argv[i - 1], "-sprt")) {
+            else if (!strcmp(argv[i - 1], "-tc"))
+                options_parse_tc(argv[i], go);
+            else if (!strcmp(argv[i - 1], "-sprt")) {
                 o->sprt = true;
                 sscanf(argv[i], "%lf,%lf,%lf,%lf", &o->elo0, &o->elo1, &o->alpha, &o->beta);
-            } else if (!strcmp(argv[i - 1], "-sample")) {
-                scope(str_del) str_t token = {0};
-                const char *tail = str_tok(argv[i], &token, ",");
-                assert(tail);
-
-                // Parse sample frequency (and check range)
-                go->sampleFrequency = atof(token.buf);
-                if (go->sampleFrequency > 1.0 || go->sampleFrequency < 0.0)
-                    DIE("Sample frequency '%f' must be between 0 and 1\n", go->sampleFrequency);
-
-                // Parse resolve flag
-                if ((tail = str_tok(tail, &token, ",")))
-                    go->sampleResolvePv = !strcmp(token.buf, "y");
-
-                // Parse filename (default sample.csv if omitted)
-                if ((tail = str_tok(tail, &token, ",")))
-                    o->sampleFileName = str_dup(token);
-                else
-                    o->sampleFileName = str_dup_c("sample.csv");
-            } else
+            } else if (!strcmp(argv[i - 1], "-sample"))
+                options_parse_sample(argv[i], o, go);
+            else
                 assert(false);
 
             expectValue = false;
