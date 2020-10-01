@@ -29,5 +29,5 @@ typedef struct {
     char pad[4];
 } Options;
 
-Options options_new(int argc, const char **argv, GameOptions *go, EngineOptions eo[2]);
-void options_delete(Options *o);
+void options_parse(int argc, const char **argv, Options *o, GameOptions *go, EngineOptions eo[2]);
+void options_delete(Options *o, EngineOptions eo[2]);

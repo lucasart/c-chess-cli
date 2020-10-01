@@ -29,17 +29,18 @@ static void split_engine_option(const char *in, str_t out[2])
         str_cpy(&out[1], out[0]);
 }
 
-Options options_new(int argc, const char **argv, GameOptions *go, EngineOptions eo[2])
+void options_parse(int argc, const char **argv, Options *o, GameOptions *go, EngineOptions eo[2])
 {
     // List options that expect a value
     static const char *options[] = {"-concurrency", "-games", "-openings", "-pgnout", "-nodes",
         "-depth", "-draw", "-resign", "-movetime", "-tc", "-sprt", "-sample"};
 
     // Set default values
-    Options o = {0};
-    o.concurrency = 1;
-    o.games = 1;
-    o.alpha = o.beta = 0.05;
+    *go = (GameOptions){0};
+    *o = (Options){0};
+    o->concurrency = 1;
+    o->games = 1;
+    o->alpha = o->beta = 0.05;
 
     int i;
     int eoIdx = 0;
@@ -82,11 +83,11 @@ Options options_new(int argc, const char **argv, GameOptions *go, EngineOptions 
 
                     eoIdx++;
                 } else if (!strcmp(argv[i], "-random"))
-                    o.random = true;
+                    o->random = true;
                 else if (!strcmp(argv[i], "-repeat"))
-                    o.repeat = true;
+                    o->repeat = true;
                 else if (!strcmp(argv[i], "-log"))
-                    o.log = true;
+                    o->log = true;
                 else
                     DIE("invalid tag '%s'\n", argv[i]);
             }
@@ -96,13 +97,13 @@ Options options_new(int argc, const char **argv, GameOptions *go, EngineOptions 
                 DIE("tag expected after '%s'. found value '%s' instead.\n", argv[i - 1], argv[i]);
 
             if (!strcmp(argv[i - 1], "-concurrency"))
-                o.concurrency = atoi(argv[i]);
+                o->concurrency = atoi(argv[i]);
             else if (!strcmp(argv[i - 1], "-games"))
-                o.games = atoi(argv[i]);
+                o->games = atoi(argv[i]);
             else if (!strcmp(argv[i - 1], "-openings"))
-                str_cpy_c(&o.openings, argv[i]);
+                str_cpy_c(&o->openings, argv[i]);
             else if (!strcmp(argv[i - 1], "-pgnout"))
-                str_cpy_c(&o.pgnOut, argv[i]);
+                str_cpy_c(&o->pgnOut, argv[i]);
             else if (!strcmp(argv[i - 1], "-nodes")) {
                 str_t nodes[2] = {{0}, {0}};
                 split_engine_option(argv[i], nodes);
@@ -143,8 +144,8 @@ Options options_new(int argc, const char **argv, GameOptions *go, EngineOptions 
 
                 str_del_n(&tc[0], &tc[1]);
             } else if (!strcmp(argv[i - 1], "-sprt")) {
-                o.sprt = true;
-                sscanf(argv[i], "%lf,%lf,%lf,%lf", &o.elo0, &o.elo1, &o.alpha, &o.beta);
+                o->sprt = true;
+                sscanf(argv[i], "%lf,%lf,%lf,%lf", &o->elo0, &o->elo1, &o->alpha, &o->beta);
             } else if (!strcmp(argv[i - 1], "-sample")) {
                 scope(str_del) str_t token = {0};
                 const char *tail = str_tok(argv[i], &token, ",");
@@ -161,9 +162,9 @@ Options options_new(int argc, const char **argv, GameOptions *go, EngineOptions 
 
                 // Parse filename (default sample.csv if omitted)
                 if ((tail = str_tok(tail, &token, ",")))
-                    o.sampleFileName = str_dup(token);
+                    o->sampleFileName = str_dup(token);
                 else
-                    o.sampleFileName = str_dup_c("sample.csv");
+                    o->sampleFileName = str_dup_c("sample.csv");
             } else
                 assert(false);
 
@@ -173,11 +174,12 @@ Options options_new(int argc, const char **argv, GameOptions *go, EngineOptions 
 
     if (expectValue)
         DIE("value expected after '%s'\n", argv[i - 1]);
-
-   return o;
 }
 
-void options_delete(Options *o)
+void options_delete(Options *o, EngineOptions eo[2])
 {
     str_del_n(&o->openings, &o->pgnOut, &o->sampleFileName);
+
+    for (int i = 0; i < 2; i++)
+        str_del_n(&eo[i].cmd, &eo[i].name, &eo[i].uciOptions);
 }

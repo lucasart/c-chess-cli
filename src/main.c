@@ -119,8 +119,8 @@ static void *thread_start(void *arg)
 
 int main(int argc, const char **argv)
 {
-    GameOptions go = {0};
-    options = options_new(argc, argv, &go, eo);
+    GameOptions go;
+    options_parse(argc, argv, &options, &go, eo);
 
     openings = openings_new(options.openings, options.random, options.repeat, 0);
 
@@ -162,8 +162,7 @@ int main(int argc, const char **argv)
     if (sampleFile)
         DIE_IF(0, fclose(sampleFile) < 0);
 
-    // FIXME: free eo[] strings
     openings_delete(&openings, 0);
-    options_delete(&options);
+    options_delete(&options, eo);
     return 0;
 }
