@@ -162,6 +162,7 @@ int main(int argc, const char **argv)
     if (sampleFile)
         DIE_IF(0, fclose(sampleFile) < 0);
 
+    // FIXME: free eo[] strings
     openings_delete(&openings, 0);
     options_delete(&options);
     return 0;

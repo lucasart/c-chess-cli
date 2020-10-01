@@ -42,7 +42,8 @@ List of `option value`:
 - `tc X/Y+Z`: set time control to `X` moves in `Y` sec (repeating) + `Z` sec increment per move. For
   example, `X/Y` corresponds to a tournament time control, `Y+Z` corresponds to an increment time
   control, and just `Y` corresponds to a sudden death time control.
-- `movetime t`: time limit per move in seconds.
+- `depth d`: depth limit per move.
+- `movetime t`: time limit per move, in seconds (can be fractional like `-movetime 0.123`).
 - `nodes n`: node limit per move.
 
 ### Flags

@@ -48,12 +48,12 @@ void workers_delete()
 }
 
 // TODO: document this function...
-void workers_add_result(Worker *worker, int wld, int wldCount[3])
+void workers_add_result(Worker *worker, int result, int wldCount[3])
 {
     pthread_mutex_lock(&mtxWorkers);
 
     // Add wld result to specificied worker
-    worker->wldCount[wld]++;
+    worker->wldCount[result]++;
 
     // Refresh totals (across workers)
     wldCount[0] = wldCount[1] = wldCount[2] = 0;
