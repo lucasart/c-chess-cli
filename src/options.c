@@ -19,17 +19,6 @@
 #include "util.h"
 #include "vec.h"
 
-// Parse a value in="a:b" into out[]=(a, b), or (a,a) if ":" is missing. Note that a and b may
-// contain a ':', if escaped with a backslash, eg. in='foo\:bar:baz' => (a='foo:bar', b='baz').
-static void split_engine_option(const char *in, str_t out[2])
-{
-    in = str_tok_esc(in, &out[0], ':', '\\');
-    in = str_tok_esc(in, &out[1], ':', '\\');
-
-    if (!in)
-        str_cpy(&out[1], out[0]);
-}
-
 static void options_parse_sample(const char *s, Options *o, GameOptions *go)
 {
     scope(str_del) str_t token = {0};
@@ -52,24 +41,24 @@ static void options_parse_sample(const char *s, Options *o, GameOptions *go)
         o->sampleFileName = str_dup_c("sample.csv");
 }
 
-static void options_parse_tc(const char *s, GameOptions *go)
+// Parse time control. Expects 'mtg/time+inc' or 'time+inc'. Note that time and inc are provided by
+// the user in seconds, instead of msec.
+static void options_parse_tc(const char *s, EngineOptions *eo)
 {
-    str_t tc[2] = {{0}, {0}};
-    split_engine_option(s, tc);
+    double time = 0, increment = 0;
 
-    for (int j = 0; j < 2; j++) {
-        double time = 0, increment = 0;
+    if (strchr(s, '/')) {
+        if (sscanf(s, "%i/%lf+%lf", &eo->movestogo, &time, &increment) < 2)
+            DIE("Cannot parse 'tc:%s'\n", s);
+    } else {
+        eo->movestogo = 0;
 
-        if (strchr(tc[j].buf, '/'))
-            sscanf(tc[j].buf, "%i/%lf+%lf", &go->movestogo[j], &time, &increment);
-        else
-            sscanf(tc[j].buf, "%lf+%lf", &time, &increment);
-
-        go->time[j] = (int64_t)(time * 1000);
-        go->increment[j] = (int64_t)(increment * 1000);
+        if (sscanf(s, "%lf+%lf", &time, &increment) < 1)
+            DIE("Cannot parse 'tc:%s'\n", s);
     }
 
-    str_del_n(&tc[0], &tc[1]);
+    eo->time = (int64_t)(time * 1000);
+    eo->increment = (int64_t)(increment * 1000);
 }
 
 void options_parse(int argc, const char **argv, Options *o, GameOptions *go, EngineOptions **eo)
@@ -125,6 +114,8 @@ void options_parse(int argc, const char **argv, Options *o, GameOptions *go, Eng
                             new.nodes = atoll(value.buf);
                         else if (!strcmp(key.buf, "movetime"))
                             new.movetime = (int64_t)(atof(value.buf) * 1000);
+                        else if (!strcmp(key.buf, "tc"))
+                            options_parse_tc(value.buf, &new);
                         else
                             DIE("illegal key '%s'\n", key.buf);
 
@@ -158,8 +149,6 @@ void options_parse(int argc, const char **argv, Options *o, GameOptions *go, Eng
                 sscanf(argv[i], "%i,%i", &go->resignCount, &go->resignScore);
             else if (!strcmp(argv[i - 1], "-draw"))
                 sscanf(argv[i], "%i,%i", &go->drawCount, &go->drawScore);
-            else if (!strcmp(argv[i - 1], "-tc"))
-                options_parse_tc(argv[i], go);
             else if (!strcmp(argv[i - 1], "-sprt")) {
                 o->sprt = true;
                 sscanf(argv[i], "%lf,%lf,%lf,%lf", &o->elo0, &o->elo1, &o->alpha, &o->beta);

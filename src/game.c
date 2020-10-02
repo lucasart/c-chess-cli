@@ -39,8 +39,8 @@ static void uci_position_command(const Game *g, str_t *cmd)
     }
 }
 
-static void uci_go_command(Game *g, const GameOptions *go, const EngineOptions *eo[2], int ei,
-    const int64_t timeLeft[2], str_t *cmd)
+static void uci_go_command(Game *g, const EngineOptions *eo[2], int ei, const int64_t timeLeft[2],
+    str_t *cmd)
 {
     str_cpy_c(cmd, "go");
 
@@ -53,17 +53,17 @@ static void uci_go_command(Game *g, const GameOptions *go, const EngineOptions *
     if (eo[ei]->movetime)
         str_cat_fmt(cmd, " movetime %I", eo[ei]->movetime);
 
-    if (go->time[ei]) {
+    if (eo[ei]->time) {
         const int color = g->pos[g->ply].turn;
 
         str_cat_fmt(cmd, " wtime %I winc %I btime %I binc %I",
-            timeLeft[ei ^ color], go->increment[ei ^ color],
-            timeLeft[ei ^ color ^ BLACK], go->increment[ei ^ color ^ BLACK]);
+            timeLeft[ei ^ color], eo[ei ^ color]->increment,
+            timeLeft[ei ^ color ^ BLACK], eo[ei ^ color ^ BLACK]->increment);
     }
 
-    if (go->movestogo[ei])
+    if (eo[ei]->movestogo)
         str_cat_fmt(cmd, " movestogo %i",
-            go->movestogo[ei] - ((g->ply / 2) % go->movestogo[ei]));
+            eo[ei]->movestogo - ((g->ply / 2) % eo[ei]->movestogo));
 }
 
 static int game_apply_chess_rules(const Game *g, move_t **moves)
@@ -190,7 +190,7 @@ int game_play(Game *g, const GameOptions *go, const Engine engines[2], const Eng
     int drawPlyCount = 0;
     int resignCount[NB_COLOR] = {0};
     int ei;  // engines[ei] has the move
-    int64_t timeLeft[2] = {go->time[0], go->time[1]};
+    int64_t timeLeft[2] = {eo[0]->time, eo[1]->time};
     scope(str_del) str_t pv = {0};
     move_t *moves = vec_new(64, move_t);
 
@@ -211,18 +211,18 @@ int game_play(Game *g, const GameOptions *go, const Engine engines[2], const Eng
         if (eo[ei]->movetime)
             // movetime is special: discard movestogo, time, increment
             timeLeft[ei] = eo[ei]->movetime;
-        else if (go->time[ei]) {
+        else if (eo[ei]->time) {
             // Always apply increment (can be zero)
-            timeLeft[ei] += go->increment[ei];
+            timeLeft[ei] += eo[ei]->increment;
 
             // movestogo specific clock reset event
-            if (go->movestogo[ei] && g->ply > 1 && ((g->ply / 2) % go->movestogo[ei]) == 0)
-                timeLeft[ei] += go->time[ei];
+            if (eo[ei]->movestogo && g->ply > 1 && ((g->ply / 2) % eo[ei]->movestogo) == 0)
+                timeLeft[ei] += eo[ei]->time;
         } else
             // Only depth and/or nodes limit
             timeLeft[ei] = INT64_MAX / 2;  // HACK: system_msec() + timeLeft must not overflow
 
-        uci_go_command(g, go, eo, ei, timeLeft, &goCmd);
+        uci_go_command(g, eo, ei, timeLeft, &goCmd);
         engine_writeln(&engines[ei], goCmd.buf);
 
         int score = 0;
@@ -245,7 +245,7 @@ int game_play(Game *g, const GameOptions *go, const Engine engines[2], const Eng
             break;
         }
 
-        if ((go->time[ei] || eo[ei]->movetime) && timeLeft[ei] < 0) {
+        if ((eo[ei]->time || eo[ei]->movetime) && timeLeft[ei] < 0) {
             g->state = STATE_TIME_LOSS;
             break;
         }

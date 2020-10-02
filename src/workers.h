@@ -26,16 +26,13 @@ enum {
 
 typedef struct {
     str_t cmd, name, uciOptions;
-    int64_t movetime, nodes;
-    int depth;
-    char pad[4];
+    int64_t time, increment, movetime, nodes;
+    int depth, movestogo;
 } EngineOptions;
 
 typedef struct {
     // Per engine, by index in engines[] array (not the same as color)
-    int64_t time[2], increment[2];
     double sampleFrequency;
-    int movestogo[2];
     int resignCount, resignScore;
     int drawCount, drawScore;
     bool sampleResolvePv;
