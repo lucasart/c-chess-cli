@@ -148,8 +148,18 @@ int main(int argc, const char **argv)
         for (int i = 0; i < options.concurrency; i++) {
             const Engine *deadEngine = deadline_overdue(&Workers[i].deadline);
 
-            if (deadEngine)
-                DIE("[%d] engine %s is unresponsive\n", i, deadEngine->name.buf);
+            if (deadEngine) {
+                // Store dead engine name since we will be freeing that buffer
+                str_t engine_name;
+                str_cpy(&engine_name, deadEngine->name);
+                // Delete all worker engines to prevent hanging processes
+                for (int j = 0; j < options.concurrency; j++) {
+                    Engine *engine = Workers[j].deadline.engine;
+                    engine_del(engine);
+                }
+
+                DIE("[%d] engine %s is unresponsive\n", i, engine_name.buf);
+            }
         }
     } while (WorkersBusy > 0);
 
