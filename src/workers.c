@@ -22,6 +22,11 @@ static pthread_mutex_t mtxWorkers = PTHREAD_MUTEX_INITIALIZER;
 
 _Atomic(int) WorkersBusy = 0;
 
+void engine_options_del(EngineOptions *eo)
+{
+    str_del_n(&eo->cmd, &eo->name, &eo->uciOptions);
+}
+
 void workers_new(int count, FILE *pgnOut, FILE *sampleFile, const GameOptions *go)
 {
     WorkersCount = count;

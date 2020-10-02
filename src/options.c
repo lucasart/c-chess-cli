@@ -168,9 +168,5 @@ void options_parse(int argc, const char **argv, Options *o, GameOptions *go, Eng
 void options_delete(Options *o, EngineOptions *eo)
 {
     str_del_n(&o->openings, &o->pgnOut, &o->sampleFileName);
-
-    for (size_t i = 0; i < vec_size(eo); i++)
-        str_del_n(&eo[i].cmd, &eo[i].name, &eo[i].uciOptions);
-
-    vec_del(eo);
+    vec_del_rec(eo, engine_options_del);
 }

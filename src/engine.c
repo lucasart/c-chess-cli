@@ -118,13 +118,8 @@ Engine engine_new(str_t cmd, str_t name, str_t uciOptions, FILE *log, Deadline *
     // Spawn child process and plug pipes
     engine_spawn(&e, cwd.buf, run.buf, argv, log != NULL);
 
-    // Free memory for string elements in the vector, then for the vector itself. Note that this
-    // will not happen explicitely in the child process, but that's fine, because execvp() will
-    // reclaim the memory.
-    for (size_t i = 0; i < vec_size(args); i++)
-        str_del(&args[i]);
-
-    vec_del(args);
+    // Free memory for string elements in the vector, then for the vector itself
+    vec_del_rec(args, str_del);
 
     // Start the uci..uciok dialogue
     deadline_set(deadline, &e, system_msec() + 1000);

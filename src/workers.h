@@ -30,6 +30,8 @@ typedef struct {
     int depth, movestogo;
 } EngineOptions;
 
+void engine_options_del(EngineOptions *eo);
+
 typedef struct {
     // Per engine, by index in engines[] array (not the same as color)
     double sampleFrequency;

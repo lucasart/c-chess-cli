@@ -20,6 +20,13 @@ void *vec_do_new(size_t capacity, size_t esize);
 
 void vec_del(void *v);
 
+// delete elements using dtor(&elt), then delete vector
+#define vec_del_rec(v, dtor) ({ \
+    for (size_t _i = 0; _i < vec_size(v); _i++) \
+        dtor(&v[_i]); \
+    vec_del(v); \
+})
+
 size_t vec_size(const void *v);
 size_t vec_capacity(const void *v);
 
