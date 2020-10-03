@@ -122,7 +122,7 @@ Engine engine_new(str_t cmd, str_t name, str_t uciOptions, FILE *log, Deadline *
     vec_del_rec(args, str_del);
 
     // Start the uci..uciok dialogue
-    deadline_set(deadline, &e, system_msec() + 1000);
+    deadline_set(deadline, &e, system_msec() + 2000);
     engine_writeln(&e, "uci");
     scope(str_del) str_t line = {0};
 
