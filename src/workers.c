@@ -17,6 +17,7 @@
 #include "util.h"
 
 Worker *Workers;
+_Thread_local Worker *W = NULL;
 static int WorkersCount = 0;
 static pthread_mutex_t mtxWorkers = PTHREAD_MUTEX_INITIALIZER;
 

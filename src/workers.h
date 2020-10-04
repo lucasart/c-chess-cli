@@ -53,6 +53,7 @@ typedef struct {
 } Worker;
 
 extern Worker *Workers;
+extern _Thread_local Worker *W;
 extern _Atomic(int) WorkersBusy;  // how many workers are busy
 
 void workers_new(int count, FILE *pgnOut, FILE *sampleFile, const GameOptions *go);

@@ -121,11 +121,12 @@ static Position resolve_pv(const Position *pos, str_t pv, FILE *log)
 
         if (illegal_move(m, moves)) {
             if (log) {
-                fprintf(log, "WARNING: invalid PV\n");
+                DIE_IF(W->id, fprintf(log, "WARNING: invalid PV\n") < 0);
                 scope(str_del) str_t fen = pos_get(pos);
-                fprintf(log, "\tfen: '%s'\n", fen.buf);
-                fprintf(log, "\tpv: '%s'\n", pv.buf);
-                fprintf(log, "\t'%s%s' starts with an illegal move\n", token.buf, tail);
+                DIE_IF(W->id, fprintf(log, "\tfen: '%s'\n", fen.buf) < 0);
+                DIE_IF(W->id, fprintf(log, "\tpv: '%s'\n", pv.buf) < 0);
+                DIE_IF(W->id, fprintf(log, "\t'%s%s' starts with an illegal move\n", token.buf,
+                    tail) < 0);
             }
 
             break;

@@ -28,41 +28,41 @@ static Openings openings;
 
 static void *thread_start(void *arg)
 {
-    Worker *worker = arg;
+    W = (Worker *)arg;
     Engine engines[2];
 
     // Prepare log file
     FILE *log = NULL;
 
     scope(str_del) str_t logName = {0};
-    str_cat_fmt(&logName, "c-chess-cli.%i.log", worker->id);
+    str_cat_fmt(&logName, "c-chess-cli.%i.log", W->id);
 
     if (options.log)
-        DIE_IF(worker->id, !(log = fopen(logName.buf, "w")));
+        DIE_IF(W->id, !(log = fopen(logName.buf, "w")));
 
     // Prepare engines[]
     for (int i = 0; i < 2; i++)
         engines[i] = engine_new(eo[i].cmd, eo[i].name, eo[i].uciOptions, log,
-            &worker->deadline, worker->id);
+            &W->deadline);
 
     int next;
     scope(str_del) str_t fen = {0};
 
-    while ((next = openings_next(&openings, &fen, worker->id)) <= options.games) {
+    while ((next = openings_next(&openings, &fen, W->id)) <= options.games) {
         // Play 1 game
         Game game = game_new(&fen);
         const EngineOptions *eoPair[2] = {&eo[0], &eo[1]};
-        const int wld = game_play(&game, worker->go, engines, eoPair, &worker->deadline,
-            next % 2 == 0, &worker->seed);
+        const int wld = game_play(&game, W->go, engines, eoPair, &W->deadline,
+            next % 2 == 0, &W->seed);
 
         // Write to PGN file
-        if (worker->pgnOut) {
+        if (W->pgnOut) {
             scope(str_del) str_t pgn = game_pgn(&game);
-            DIE_IF(worker->id, fputs(pgn.buf, worker->pgnOut) < 0);
+            DIE_IF(W->id, fputs(pgn.buf, W->pgnOut) < 0);
         }
 
         // Write to Sample file
-        if (worker->sampleFile) {
+        if (W->sampleFile) {
             scope(str_del) str_t lines = {0};
 
             for (size_t i = 0; i < vec_size(game.samples); i++) {
@@ -71,17 +71,17 @@ static void *thread_start(void *arg)
                     game.samples[i].result);
             }
 
-            DIE_IF(worker->id, fputs(lines.buf, worker->sampleFile) < 0);
+            DIE_IF(W->id, fputs(lines.buf, W->sampleFile) < 0);
         }
 
         // Write to stdout a one line summary of the game
         scope(str_del) str_t reason = {0}, result = game_decode_state(&game, &reason);
-        printf("[%i] %s vs %s: %s (%s)\n", worker->id, game.names[WHITE].buf,
+        printf("[%i] %s vs %s: %s (%s)\n", W->id, game.names[WHITE].buf,
             game.names[BLACK].buf, result.buf, reason.buf);
 
         // Update on global score (across workers)
         int wldCount[3];
-        workers_add_result(worker, wld, wldCount);
+        workers_add_result(W, wld, wldCount);
 
         const int n = wldCount[RESULT_WIN] + wldCount[RESULT_LOSS] + wldCount[RESULT_DRAW];
 
@@ -112,7 +112,7 @@ static void *thread_start(void *arg)
         engine_del(&engines[i]);
 
     if (log)
-        DIE_IF(worker->id, fclose(log) < 0);
+        DIE_IF(W->id, fclose(log) < 0);
 
     WorkersBusy--;
     return NULL;

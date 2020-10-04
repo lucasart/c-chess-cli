@@ -22,6 +22,7 @@
 #include "engine.h"
 #include "util.h"
 #include "vec.h"
+#include "workers.h"
 
 static void engine_spawn(Engine *e, const char *cwd, const char *run, char **argv,
     bool readStdErr)
@@ -32,49 +33,47 @@ static void engine_spawn(Engine *e, const char *cwd, const char *run, char **arg
 
     e->in = e->out = NULL;  // silence bogus compiler warning
 
-    DIE_IF(e->threadId, pipe(outof) < 0);
-    DIE_IF(e->threadId, pipe(into) < 0);
-    DIE_IF(e->threadId, (e->pid = fork()) < 0);
+    DIE_IF(W->id, pipe(outof) < 0);
+    DIE_IF(W->id, pipe(into) < 0);
+    DIE_IF(W->id, (e->pid = fork()) < 0);
 
     if (e->pid == 0) {
         // in the child process
-        DIE_IF(e->threadId, close(into[1]) < 0);
-        DIE_IF(e->threadId, close(outof[0]) < 0);
+        DIE_IF(W->id, close(into[1]) < 0);
+        DIE_IF(W->id, close(outof[0]) < 0);
 
-        DIE_IF(e->threadId, dup2(into[0], STDIN_FILENO) < 0);
-        DIE_IF(e->threadId, dup2(outof[1], STDOUT_FILENO) < 0);
+        DIE_IF(W->id, dup2(into[0], STDIN_FILENO) < 0);
+        DIE_IF(W->id, dup2(outof[1], STDOUT_FILENO) < 0);
 
         // When readStdErr, dump stderr into stdout, like doing '2>&1' in bash
         if (readStdErr)
-            DIE_IF(e->threadId, dup2(outof[1], STDERR_FILENO) < 0);
+            DIE_IF(W->id, dup2(outof[1], STDERR_FILENO) < 0);
 
         // Close file descriptors that won't be needed anymore
-        DIE_IF(e->threadId, close(into[0]) < 0);
-        DIE_IF(e->threadId, close(outof[1]) > 0);
+        DIE_IF(W->id, close(into[0]) < 0);
+        DIE_IF(W->id, close(outof[1]) > 0);
 
         // Set cwd as current directory, and execute run
-        DIE_IF(e->threadId, chdir(cwd) < 0);
-        DIE_IF(e->threadId, execvp(run, argv) < 0);
+        DIE_IF(W->id, chdir(cwd) < 0);
+        DIE_IF(W->id, execvp(run, argv) < 0);
     } else {
         assert(e->pid > 0);
 
         // in the parent process
-        DIE_IF(e->threadId, close(into[0]) < 0);
-        DIE_IF(e->threadId, close(outof[1]) < 0);
+        DIE_IF(W->id, close(into[0]) < 0);
+        DIE_IF(W->id, close(outof[1]) < 0);
 
-        DIE_IF(e->threadId, !(e->in = fdopen(outof[0], "r")));
-        DIE_IF(e->threadId, !(e->out = fdopen(into[1], "w")));
+        DIE_IF(W->id, !(e->in = fdopen(outof[0], "r")));
+        DIE_IF(W->id, !(e->out = fdopen(into[1], "w")));
     }
 }
 
-Engine engine_new(str_t cmd, str_t name, str_t uciOptions, FILE *log, Deadline *deadline,
-    int threadId)
+Engine engine_new(str_t cmd, str_t name, str_t uciOptions, FILE *log, Deadline *deadline)
 {
     if (!cmd.len)
-        DIE("[%d] missing command to start engine.\n", threadId);
+        DIE("[%d] missing command to start engine.\n", W->id);
 
     Engine e;
-    e.threadId = threadId;
     e.log = log;
     e.name = str_dup(name.len ? name : cmd); // default value
 
@@ -158,29 +157,29 @@ Engine engine_new(str_t cmd, str_t name, str_t uciOptions, FILE *log, Deadline *
 void engine_del(Engine *e)
 {
     str_del(&e->name);
-    DIE_IF(e->threadId, fclose(e->in) == EOF);
-    DIE_IF(e->threadId, fclose(e->out) == EOF);
-    DIE_IF(e->threadId, kill(e->pid, SIGTERM) < 0);
+    DIE_IF(W->id, fclose(e->in) < 0);
+    DIE_IF(W->id, fclose(e->out) < 0);
+    DIE_IF(W->id, kill(e->pid, SIGTERM) < 0);
 }
 
 void engine_readln(const Engine *e, str_t *line)
 {
     if (!str_getline(line, e->in))
-        DIE("[%d] could not read from %s\n", e->threadId, e->name.buf);
+        DIE("[%d] could not read from %s\n", W->id, e->name.buf);
 
     if (e->log)
-        DIE_IF(e->threadId, fprintf(e->log, "%s -> %s\n", e->name.buf, line->buf) < 0);
+        DIE_IF(W->id, fprintf(e->log, "%s -> %s\n", e->name.buf, line->buf) < 0);
 }
 
 void engine_writeln(const Engine *e, char *buf)
 {
-    DIE_IF(e->threadId, fputs(buf, e->out) < 0);
-    DIE_IF(e->threadId, fputc('\n', e->out) < 0);
-    DIE_IF(e->threadId, fflush(e->out) == EOF);
+    DIE_IF(W->id, fputs(buf, e->out) < 0);
+    DIE_IF(W->id, fputc('\n', e->out) < 0);
+    DIE_IF(W->id, fflush(e->out) < 0);
 
     if (e->log) {
-        DIE_IF(e->threadId, fprintf(e->log, "%s <- %s\n", e->name.buf, buf) < 0);
-        DIE_IF(e->threadId, fflush(e->log) < 0);
+        DIE_IF(W->id, fprintf(e->log, "%s <- %s\n", e->name.buf, buf) < 0);
+        DIE_IF(W->id, fflush(e->log) < 0);
     }
 }
 
@@ -260,7 +259,7 @@ void deadline_set(Deadline *deadline, const Engine *e, int64_t timeLimit)
     deadline->timeLimit = timeLimit;
 
     if (e && e->log)
-        DIE_IF(e->threadId, fprintf(e->log, "deadline set: %s must respond by %" PRId64 "\n",
+        DIE_IF(W->id, fprintf(e->log, "deadline set: %s must respond by %" PRId64 "\n",
             e->name.buf, timeLimit) < 0);
 
     pthread_mutex_unlock(&deadline->mtx);
@@ -271,7 +270,7 @@ void deadline_clear(Deadline *deadline)
     assert(deadline);
 
     if (deadline->engine && deadline->engine->log)
-        DIE_IF(deadline->engine->threadId, fprintf(deadline->engine->log, "deadline cleared: %s"
+        DIE_IF(W->id, fprintf(deadline->engine->log, "deadline cleared: %s"
             " has no more deadline (was %" PRId64 " previously).\n", deadline->engine->name.buf,
             deadline->timeLimit) < 0);
 
@@ -291,13 +290,13 @@ const Engine *deadline_overdue(Deadline *deadline)
 
     if (e && time > timeLimit) {
         if (e->log)
-            DIE_IF(e->threadId, fprintf(e->log, "deadline failed: %s responded at %" PRId64 ", %"
+            DIE_IF(W->id, fprintf(e->log, "deadline failed: %s responded at %" PRId64 ", %"
                 PRId64 "ms after the deadline.\n", e->name.buf, time, time - timeLimit) < 0);
 
         return e;
     } else {
         if (e && e->log)
-            DIE_IF(e->threadId, fprintf(e->log, "deadline ok: %s responded at %" PRId64 ", %"
+            DIE_IF(W->id, fprintf(e->log, "deadline ok: %s responded at %" PRId64 ", %"
                 PRId64 "ms before the deadline.\n", e->name.buf, time, timeLimit - time) < 0);
 
         return NULL;
