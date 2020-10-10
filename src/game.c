@@ -153,7 +153,9 @@ Game game_new(const str_t *fen)
     g.ply = 0;
     g.pos = vec_new(128, Position);
     vec_push(g.pos, (Position){0});
-    pos_set(&g.pos[0], fen->buf, false);
+
+    if (!pos_set(&g.pos[0], fen->buf, false))
+        DIE("[%d] illegal FEN '%s'\n", W->id, fen->buf);
 
     g.samples = vec_new(0, Sample);
     g.state = STATE_NONE;

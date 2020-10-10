@@ -60,7 +60,8 @@ static void parse_position(const char *tail, Position *pos, bool uciChess960)
         while ((tail = str_tok(tail, &token, " ")) && strcmp(token.buf, "moves"))
             str_push(str_cat(&fen, token), ' ');
 
-        pos_set(pos, fen.buf, uciChess960);
+        if (!pos_set(pos, fen.buf, uciChess960))
+            DIE("Illegal FEN '%s'\n", fen.buf);
     } else
         assert(false);
 
