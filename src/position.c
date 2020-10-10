@@ -223,12 +223,13 @@ bool pos_set(Position *pos, const char *fen, bool chess960)
 
         for (const char *c = token.buf; *c; c++) {
             rank = isupper((unsigned char)*c) ? RANK_1 : RANK_8;
+            const bitboard_t ourRooks = pos_pieces_cp(pos, rank / RANK_8, ROOK);
             char uc = (char)toupper(*c);
 
             if (uc == 'K')
-                bb_set(&pos->castleRooks, bb_msb(Rank[rank] & pos->byPiece[ROOK]));
+                bb_set(&pos->castleRooks, bb_msb(Rank[rank] & ourRooks));
             else if (uc == 'Q')
-                bb_set(&pos->castleRooks, bb_lsb(Rank[rank] & pos->byPiece[ROOK]));
+                bb_set(&pos->castleRooks, bb_lsb(Rank[rank] & ourRooks));
             else if ('A' <= uc && uc <= 'H')
                 bb_set(&pos->castleRooks, square_from(rank, uc - 'A'));
             else if (*c != '-' || pos->castleRooks || c[1] != '\0')
