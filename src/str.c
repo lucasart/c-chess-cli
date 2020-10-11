@@ -134,15 +134,12 @@ static char *do_fmt_u(uintmax_t n, char *s)
     return s + 1;
 }
 
-void str_cat_fmt(str_t *dest, const char *fmt, ...)
+static void do_str_cat_fmt(str_t *dest, const char *fmt, va_list args)
 // Supported formats
 // - Integers: %i (int), %I (intmax_t), %u (unsigned), %U (uintmax_t)
 // - Strings: %s (const char *), %S (str_t)
 {
     assert(str_ok(*dest) && fmt);
-
-    va_list args;
-    va_start(args, fmt);
 
     size_t bytesLeft = strlen(fmt);
 
@@ -185,8 +182,24 @@ void str_cat_fmt(str_t *dest, const char *fmt, ...)
             assert(false);  // add your format specifier handler here
     }
 
-    va_end(args);
     assert(str_ok(*dest));
+}
+
+void str_cpy_fmt(str_t *dest, const char *fmt, ...)
+{
+    va_list args;
+    va_start(args, fmt);
+    str_resize(dest, 0);
+    do_str_cat_fmt(dest, fmt, args);
+    va_end(args);
+}
+
+void str_cat_fmt(str_t *dest, const char *fmt, ...)
+{
+    va_list args;
+    va_start(args, fmt);
+    do_str_cat_fmt(dest, fmt, args);
+    va_end(args);
 }
 
 const char *str_tok(const char *s, str_t *token, const char *delim)

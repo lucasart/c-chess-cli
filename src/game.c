@@ -25,9 +25,8 @@ static void uci_position_command(const Game *g, str_t *cmd)
     // Index of the starting FEN, where rule50 was last reset
     const int ply0 = max(g->ply - g->pos[g->ply].rule50, 0);
 
-    str_cpy_c(cmd, "position fen ");
     scope(str_del) str_t fen = pos_get(&g->pos[ply0]);
-    str_cat(cmd, fen);
+    str_cpy_fmt(cmd, "position fen %S", fen);
 
     if (ply0 < g->ply) {
         str_cat_c(cmd, " moves");

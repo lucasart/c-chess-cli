@@ -63,7 +63,8 @@ str_t *str_ncat(str_t *dest, str_t src, size_t n);
 str_t *str_cat(str_t *dest, str_t src);
 #define str_cat_c(dest, c_str) str_cat(dest, str_ref(c_str))
 
-// same as sprintf(), but appends, instead of replace, to valid string s1
+// same as sprintf(), but provides both replace (cpy) and append (cat) versions
+void str_cpy_fmt(str_t *dest, const char *fmt, ...);
 void str_cat_fmt(str_t *dest, const char *fmt, ...);
 
 // reads a token into valid string 'token', from s, using delim characters as a generalisation for
