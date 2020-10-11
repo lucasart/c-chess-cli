@@ -42,7 +42,7 @@ static void *thread_start(void *arg)
 
     // Prepare engines[]
     for (int i = 0; i < 2; i++)
-        engines[i] = engine_new(eo[i].cmd, eo[i].name, eo[i].uciOptions, log,
+        engines[i] = engine_new(eo[i].cmd, eo[i].name, eo[i].options, log,
             &W->deadline);
 
     int next;

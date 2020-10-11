@@ -106,9 +106,14 @@ void options_parse(int argc, const char **argv, Options *o, GameOptions *go, Eng
                             new.cmd = str_dup(value);
                         else if (!strcmp(key.buf, "name"))
                             new.name = str_dup(value);
-                        else if (!strcmp(key.buf, "options"))
-                            new.uciOptions = str_dup(value);
-                        else if (!strcmp(key.buf, "depth"))
+                        else if (!strcmp(key.buf, "options")) {
+                            new.options = vec_new(1, str_t);
+                            const char *tail = value.buf;
+                            scope(str_del) str_t token = {0};
+
+                            while ((tail = str_tok(tail, &token, ",")))
+                                vec_push(new.options, str_dup(token));
+                        } else if (!strcmp(key.buf, "depth"))
                             new.depth = atoi(value.buf);
                         else if (!strcmp(key.buf, "nodes"))
                             new.nodes = atoll(value.buf);

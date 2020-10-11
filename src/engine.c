@@ -68,7 +68,7 @@ static void engine_spawn(Engine *e, const char *cwd, const char *run, char **arg
     }
 }
 
-Engine engine_new(str_t cmd, str_t name, str_t uciOptions, FILE *log, Deadline *deadline)
+Engine engine_new(str_t cmd, str_t name, str_t *options, FILE *log, Deadline *deadline)
 {
     if (!cmd.len)
         DIE("[%d] missing command to start engine.\n", W->id);
@@ -135,18 +135,12 @@ Engine engine_new(str_t cmd, str_t name, str_t uciOptions, FILE *log, Deadline *
             str_cpy_c(&e.name, tail + strspn(tail, " "));
     } while (strcmp(line.buf, "uciok"));
 
-    // Parses uciOptions (eg. "Hash=16,Threads=8"), and set engine options accordingly. Option names
-    // or values may contain ',' if escaped with a backshash.
-    tail = uciOptions.buf;
-
-    while ((tail = str_tok_esc(tail, &token, ',', '\\'))) {
-        const char *c = strchr(token.buf, '=');
-        assert(c);
-
+    // Parses options vector elements of the form "name=value", and send to engine
+    for (size_t i = 0; i < vec_size(options); i++) {
+        scope(str_del) str_t optionName = {0}, optionValue = {0};
+        str_tok_esc(str_tok_esc(options[i].buf, &optionName, '=', '\\'), &optionValue, '=', '\\');
         str_cpy_c(&line, "setoption name ");
-        str_ncat(&line, token, (size_t)(c - token.buf));
-        str_cat_fmt(&line, " value %s", c + 1);
-
+        str_cat_fmt(&line, "%S value %S", optionName, optionValue);
         engine_writeln(&e, line.buf);
     }
 

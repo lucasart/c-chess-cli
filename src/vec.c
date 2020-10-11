@@ -24,12 +24,13 @@ void *vec_do_new(size_t capacity, size_t esize)
 
 void vec_del(void *v)
 {
-    free(vec_ptr(v));
+    if (v)
+        free(vec_ptr(v));
 }
 
 size_t vec_size(const void *v)
 {
-    return vec_cptr(v)->size;
+    return v ? vec_cptr(v)->size : 0;
 }
 
 size_t vec_capacity(const void *v)

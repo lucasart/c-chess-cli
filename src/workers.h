@@ -25,7 +25,7 @@ enum {
 };
 
 typedef struct {
-    str_t cmd, name, uciOptions;
+    str_t cmd, name, *options;
     int64_t time, increment, movetime, nodes;
     int depth, movestogo;
 } EngineOptions;

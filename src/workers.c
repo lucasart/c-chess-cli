@@ -15,6 +15,7 @@
 #include <stdlib.h>
 #include "workers.h"
 #include "util.h"
+#include "vec.h"
 
 Worker *Workers;
 _Thread_local Worker *W = NULL;
@@ -25,7 +26,8 @@ _Atomic(int) WorkersBusy = 0;
 
 void engine_options_del(EngineOptions *eo)
 {
-    str_del_n(&eo->cmd, &eo->name, &eo->uciOptions);
+    str_del_n(&eo->cmd, &eo->name);
+    vec_del_rec(eo->options, str_del);
 }
 
 void workers_new(int count, FILE *pgnOut, FILE *sampleFile, const GameOptions *go)
