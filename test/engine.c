@@ -96,7 +96,8 @@ static void random_pv(const Position *pos, uint64_t *seed, int len, str_t *pv)
 
         // Choose a random one
         const move_t m = moves[prng(seed) % n];
-        str_push(pos_move_to_lan(&p[ply % 2], m, pv), ' ');
+        scope(str_del) str_t lan = pos_move_to_lan(&p[ply % 2], m);
+        str_push(str_cat(pv, lan), ' ');
         pos_move(&p[(ply + 1) % 2], &p[ply % 2], m);
     }
 

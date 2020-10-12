@@ -32,8 +32,8 @@ static void uci_position_command(const Game *g, str_t *cmd)
         str_cat_c(cmd, " moves");
 
         for (int ply = ply0 + 1; ply <= g->ply; ply++) {
-            str_push(cmd, ' ');
-            pos_move_to_lan(&g->pos[ply - 1], g->pos[ply].lastMove, cmd);
+            scope(str_del) str_t lan = pos_move_to_lan(&g->pos[ply - 1], g->pos[ply].lastMove);
+            str_cat(str_push(cmd, ' '), lan);
         }
     }
 }
@@ -370,7 +370,8 @@ str_t game_pgn(const Game *g)
                 g->pos[ply - 1].fullMove);
 
         // Append SAN move
-        pos_move_to_san(&g->pos[ply - 1], g->pos[ply].lastMove, &pgn);
+        scope(str_del) str_t san = pos_move_to_san(&g->pos[ply - 1], g->pos[ply].lastMove);
+        str_cat(&pgn, san);
 
         // Append check marker
         if (g->pos[ply].checkers) {

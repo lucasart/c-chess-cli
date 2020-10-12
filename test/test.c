@@ -195,8 +195,11 @@ static void test_position(void)
         pos_move(&pos[(ply + 1) % 2], &pos[ply % 2], m);
         hash_blocks(&pos[(ply + 1) % 2], sizeof(Position), &hash);
 
-        str_push(pos_move_to_lan(&pos[ply % 2], m, &lanMoves), ' ');
-        str_push(pos_move_to_san(&pos[ply % 2], m, &sanMoves), ' ');
+        scope(str_del) str_t lan = pos_move_to_lan(&pos[ply % 2], m);
+        str_push(str_cat(&lanMoves, lan), ' ');
+
+        scope(str_del) str_t san = pos_move_to_san(&pos[ply % 2], m);
+        str_push(str_cat(&sanMoves, san), ' ');
         ply++;
     }
 

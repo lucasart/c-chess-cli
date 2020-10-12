@@ -530,13 +530,14 @@ bool pos_move_is_castling(const Position *pos, move_t m)
     return bb_test(pos->byColor[pos->turn], move_to(m));
 }
 
-str_t *pos_move_to_lan(const Position *pos, move_t m, str_t *out)
+str_t pos_move_to_lan(const Position *pos, move_t m)
 {
+    str_t out = {0};
     const int from = move_from(m), prom = move_prom(m);
     int to = move_to(m);
 
     if (!(from | to | prom)) {
-        str_cat_c(out, "0000");
+        str_cat_c(&out, "0000");
         return out;
     }
 
@@ -546,10 +547,10 @@ str_t *pos_move_to_lan(const Position *pos, move_t m, str_t *out)
     char fromStr[3], toStr[3];
     square_to_string(from, fromStr);
     square_to_string(to, toStr);
-    str_cat_c(str_cat_c(out, fromStr), toStr);
+    str_cat_c(str_cat_c(&out, fromStr), toStr);
 
     if (prom < NB_PIECE)
-        str_push(out, PieceLabel[BLACK][prom]);
+        str_push(&out, PieceLabel[BLACK][prom]);
 
     return out;
 }
@@ -572,39 +573,40 @@ move_t pos_lan_to_move(const Position *pos, const char *lan)
     return move_build(from, to, prom);
 }
 
-str_t *pos_move_to_san(const Position *pos, move_t m, str_t *out)
+str_t pos_move_to_san(const Position *pos, move_t m)
 // Converts a move to Standard Algebraic Notation. Note that the '+' (check) or '#' (checkmate)
 // suffixes are not generated here.
 {
     const int us = pos->turn;
     const int from = move_from(m), to = move_to(m), prom = move_prom(m);
     const int piece = pos_piece_on(pos, from);
+    str_t out = {0};
 
     if (piece == PAWN) {
-        str_push(out, (char)file_of(from) + 'a');
+        str_push(&out, (char)file_of(from) + 'a');
 
         if (pos_move_is_capture(pos, m) || to == pos->epSquare)
-            str_push(str_push(out, 'x'), (char)file_of(to) + 'a');
+            str_push(str_push(&out, 'x'), (char)file_of(to) + 'a');
 
-        str_push(out, (char)rank_of(to) + '1');
+        str_push(&out, (char)rank_of(to) + '1');
 
         if (prom < NB_PIECE)
-            str_push(str_push(out, '='), PieceLabel[WHITE][prom]);
+            str_push(str_push(&out, '='), PieceLabel[WHITE][prom]);
     } else if (piece == KING) {
         if (pos_move_is_castling(pos, m))
-            str_cat_c(out, to > from ? "O-O" : "O-O-O");
+            str_cat_c(&out, to > from ? "O-O" : "O-O-O");
         else {
-            str_push(out, 'K');
+            str_push(&out, 'K');
 
             if (pos_move_is_capture(pos, m))
-                str_push(out, 'x');
+                str_push(&out, 'x');
 
             char toStr[3];
             square_to_string(to, toStr);
-            str_cat_c(out, toStr);
+            str_cat_c(&out, toStr);
         }
     } else {
-        str_push(out, PieceLabel[WHITE][piece]);
+        str_push(&out, PieceLabel[WHITE][piece]);
 
         // ** SAN disambiguation **
 
@@ -649,22 +651,22 @@ str_t *pos_move_to_san(const Position *pos, move_t m, str_t *out)
             if (bb_rook_attacks(from, 0) & contesters) {
                 // 2.1.1. Contested rank. Use file to disambiguate
                 if (Rank[rank_of(from)] & contesters)
-                    str_push(out, (char)file_of(from) + 'a');
+                    str_push(&out, (char)file_of(from) + 'a');
 
                 // 2.1.2. Contested file. Use rank to disambiguate
                 if (File[file_of(from)] & contesters)
-                    str_push(out, (char)rank_of(from) + '1');
+                    str_push(&out, (char)rank_of(from) + '1');
             } else
                 // 2.2. No file or rank in common, use file to disambiguate.
-                str_push(out, (char)file_of(from) + 'a');
+                str_push(&out, (char)file_of(from) + 'a');
         }
 
         if (pos_move_is_capture(pos, m))
-            str_push(out, 'x');
+            str_push(&out, 'x');
 
         char toStr[3];
         square_to_string(to, toStr);
-        str_cat_c(out, toStr);
+        str_cat_c(&out, toStr);
     }
 
     return out;
@@ -689,7 +691,6 @@ void pos_print(const Position *pos)
     scope(str_del) str_t fen = pos_get(pos);
     puts(fen.buf);
 
-    scope(str_del) str_t msg = str_dup_c("Last move: ");
-    pos_move_to_lan(pos, pos->lastMove, &msg);
-    puts(msg.buf);
+    scope(str_del) str_t lan = pos_move_to_lan(pos, pos->lastMove);
+    printf("Last move: %s\n", lan.buf);
 }
