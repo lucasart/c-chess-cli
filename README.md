@@ -13,8 +13,8 @@ See `make.py --help` for more options.
 ### Example
 
 ```
-./c-chess-cli -engine cmd:demolito options:Hash=8,Threads=2 movetime:0.5 nodes:100000 \
-    -engine cmd:../Engines/critter_1.6a options:Threads=1 depth:10 tc:2+0.02 \
+./c-chess-cli -engine cmd=demolito option.Hash=8 option.Threads=2 movetime=0.5 nodes=100000 \
+    -engine cmd=../Engines/critter_1.6a option.Threads=1 depth=10 tc=2+0.02 \
     -games 8 -concurrency 4 -openings test/chess960.epd -random -repeat \
     -resign 3,700 -draw 8,10 -pgnout out.pgn
 ```
@@ -55,20 +55,20 @@ which log file to inspect (id = 0 is the main thread).
 
 ### Engine options
 
-Syntax: `engine key1:value1 ... keyN:valueN`
+Syntax: `engine key1=value1 ... keyN=valueN`
 
 Keys:
  * `cmd`: command to run each engine. The current working directory will be set automatically, if a
-  `/` is contained in the value string(s). For example, `cmd:../Engines/critter_1.6a`, will run
+  `/` is contained in the value string(s). For example, `cmd=../Engines/critter_1.6a`, will run
   `./critter_1.6a` from `../Engines`. If no `/` is found, the command is executed as is. Without `/`,
-  for example `cmd:demolito` will run `demolito`, which only works if `demolito` is in `PATH`.
+  for example `cmd=demolito` will run `demolito`, which only works if `demolito` is in `PATH`.
  * `name`: name override for each engine. By default the name is read from `id name` following the UCI
   protocol (and if that fails cmd value will be used as name).
- * `options`: UCI options per engine. In this context, `value` must be comma separated, like so:
-  `options:Hash=2,Threads=1`. Special characters, like space, should be escaped using the
-  appropriate shell syntax. For example `options:Time\ Buffer=50`, or `"options:Time Buffer=50"`.
+ * `option.name`: UCI option for engine. Several can be specified, for example `option.Hash=2 option.Threads=1`.
+  Special characters, like space, should be escaped using the appropriate shell syntax. For example
+  `option.Time\ Buffer=50`, or `"option.Time Buffer=50"`.
  * `depth`: depth limit per move.
- * `movetime`: time limit per move, in seconds (can be fractional like `movetime:0.123`).
+ * `movetime`: time limit per move, in seconds (can be fractional like `movetime=0.123`).
  * `nodes`: node limit per move.
  * `tc`: expects value of the form `[mtg/]time[+inc]`. For example:
    * `40/10` corresponds to a tournament time control with 10s for every 40 moves

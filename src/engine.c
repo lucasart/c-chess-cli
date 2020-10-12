@@ -137,9 +137,7 @@ Engine engine_new(str_t cmd, str_t name, str_t *options, FILE *log, Deadline *de
 
     // Parses options vector elements of the form "name=value", and send to engine
     for (size_t i = 0; i < vec_size(options); i++) {
-        scope(str_del) str_t optionName = {0}, optionValue = {0};
-        str_tok_esc(str_tok_esc(options[i].buf, &optionName, '=', '\\'), &optionValue, '=', '\\');
-        str_cpy_fmt(&line, "setoption name %S value %S", optionName, optionValue);
+        str_cpy_fmt(&line, "setoption name %S", options[i]);
         engine_writeln(&e, line.buf);
     }
 

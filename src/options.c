@@ -93,26 +93,24 @@ void options_parse(int argc, const char **argv, Options *o, GameOptions *go, Eng
                 // process tag without value (bool)
                 if (!strcmp(argv[i], "-engine")) {
                     EngineOptions new = {0};
+                    new.options = vec_new(1, str_t);
 
                     for (int j = i + 1; j < argc && argv[j][0] != '-'; j++) {
                         scope(str_del) str_t key = {0}, value = {0};
-                        str_tok_esc(str_tok(argv[j], &key, ":"), &value, ':', '\\');
+                        str_tok_esc(str_tok(argv[j], &key, "="), &value, '=', '\\');
                         assert(key.len);
 
                         if (!value.len)
-                            DIE("expected value after '%s:'\n", key.buf);
+                            DIE("invalid syntax '%s'\n", key.buf);
 
                         if (!strcmp(key.buf, "cmd"))
                             new.cmd = str_dup(value);
                         else if (!strcmp(key.buf, "name"))
                             new.name = str_dup(value);
-                        else if (!strcmp(key.buf, "options")) {
-                            new.options = vec_new(1, str_t);
-                            const char *tail = value.buf;
-                            scope(str_del) str_t token = {0};
-
-                            while ((tail = str_tok(tail, &token, ",")))
-                                vec_push(new.options, str_dup(token));
+                        else if (!strncmp(key.buf, "option.", strlen("option."))) {
+                            str_t s = {0};
+                            str_cat_fmt(&s, "%s value %S", key.buf + strlen("option."), value);
+                            vec_push(new.options, s);  // moved ownership (no str_del(s) here)
                         } else if (!strcmp(key.buf, "depth"))
                             new.depth = atoi(value.buf);
                         else if (!strcmp(key.buf, "nodes"))
