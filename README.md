@@ -13,9 +13,10 @@ See `make.py --help` for more options.
 ### Example
 
 ```
-./c-chess-cli -engine cmd=demolito option.Hash=8 option.Threads=2 movetime=0.5 nodes=100000 \
-    -engine cmd=../Engines/critter_1.6a option.Threads=1 depth=10 tc=2+0.02 \
-    -games 8 -concurrency 4 -openings test/chess960.epd -random -repeat \
+./c-chess-cli -each tc=4+0.04 option.Hash=8 option.Threads=1 \
+    -engine cmd=demolito "option.Time Buffer=80" nodes=200000 \
+    -engine cmd=../Engines/critter_1.6a depth=11 \
+    -games 1920 -concurrency 8 -openings test/chess960.epd -random -repeat \
     -resign 3,700 -draw 8,10 -pgnout out.pgn
 ```
 
