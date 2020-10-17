@@ -61,13 +61,51 @@ static void options_parse_tc(const char *s, EngineOptions *eo)
     eo->increment = (int64_t)(increment * 1000);
 }
 
+EngineOptions options_parse_eo(int argc, const char **argv, int *i)
+{
+    EngineOptions eo = {0};
+    eo.options = vec_new(1, str_t);
+
+    for (int j = *i + 1; j < argc && argv[j][0] != '-'; j++) {
+        scope(str_del) str_t key = {0}, value = {0};
+        str_tok_esc(str_tok(argv[j], &key, "="), &value, '=', '\\');
+        assert(key.len);
+
+        if (!value.len)
+            DIE("invalid syntax '%s'\n", key.buf);
+
+        if (!strcmp(key.buf, "cmd"))
+            eo.cmd = str_dup(value);
+        else if (!strcmp(key.buf, "name"))
+            eo.name = str_dup(value);
+        else if (!strncmp(key.buf, "option.", strlen("option."))) {
+            str_t s = {0};
+            str_cat_fmt(&s, "%s value %S", key.buf + strlen("option."), value);
+            vec_push(eo.options, s);
+        } else if (!strcmp(key.buf, "depth"))
+            eo.depth = atoi(value.buf);
+        else if (!strcmp(key.buf, "nodes"))
+            eo.nodes = atoll(value.buf);
+        else if (!strcmp(key.buf, "movetime"))
+            eo.movetime = (int64_t)(atof(value.buf) * 1000);
+        else if (!strcmp(key.buf, "tc"))
+            options_parse_tc(value.buf, &eo);
+        else
+            DIE("illegal key '%s'\n", key.buf);
+
+        (*i)++;
+    }
+
+    return eo;
+}
+
 void options_parse(int argc, const char **argv, Options *o, GameOptions *go, EngineOptions **eo)
 {
     // List options that expect a value
     static const char *options[] = {"-concurrency", "-games", "-openings", "-pgnout", "-nodes",
         "-depth", "-draw", "-resign", "-movetime", "-tc", "-sprt", "-sample"};
 
-    // Set default values
+    // Default values
     *go = (GameOptions){0};
     *o = (Options){0};
     o->concurrency = 1;
@@ -91,42 +129,9 @@ void options_parse(int argc, const char **argv, Options *o, GameOptions *go, Eng
 
             if (!expectValue) {
                 // process tag without value (bool)
-                if (!strcmp(argv[i], "-engine")) {
-                    EngineOptions new = {0};
-                    new.options = vec_new(1, str_t);
-
-                    for (int j = i + 1; j < argc && argv[j][0] != '-'; j++) {
-                        scope(str_del) str_t key = {0}, value = {0};
-                        str_tok_esc(str_tok(argv[j], &key, "="), &value, '=', '\\');
-                        assert(key.len);
-
-                        if (!value.len)
-                            DIE("invalid syntax '%s'\n", key.buf);
-
-                        if (!strcmp(key.buf, "cmd"))
-                            new.cmd = str_dup(value);
-                        else if (!strcmp(key.buf, "name"))
-                            new.name = str_dup(value);
-                        else if (!strncmp(key.buf, "option.", strlen("option."))) {
-                            str_t s = {0};
-                            str_cat_fmt(&s, "%s value %S", key.buf + strlen("option."), value);
-                            vec_push(new.options, s);  // moved ownership (no str_del(s) here)
-                        } else if (!strcmp(key.buf, "depth"))
-                            new.depth = atoi(value.buf);
-                        else if (!strcmp(key.buf, "nodes"))
-                            new.nodes = atoll(value.buf);
-                        else if (!strcmp(key.buf, "movetime"))
-                            new.movetime = (int64_t)(atof(value.buf) * 1000);
-                        else if (!strcmp(key.buf, "tc"))
-                            options_parse_tc(value.buf, &new);
-                        else
-                            DIE("illegal key '%s'\n", key.buf);
-
-                        i++;
-                    }
-
-                    vec_push(*eo, new);
-                } else if (!strcmp(argv[i], "-random"))
+                if (!strcmp(argv[i], "-engine"))
+                    vec_push(*eo, options_parse_eo(argc, argv, &i));
+                else if (!strcmp(argv[i], "-random"))
                     o->random = true;
                 else if (!strcmp(argv[i], "-repeat"))
                     o->repeat = true;
