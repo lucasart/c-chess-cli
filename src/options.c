@@ -184,7 +184,8 @@ void options_parse(int argc, const char **argv, Options *o, GameOptions *go, Eng
             if (each.name.len)
                 str_cpy(&(*eo)[i].name, each.name);
 
-            // TODO: append each.options to (*eo)[i].options
+            for (size_t j = 0; j < vec_size(each.options); j++)
+                vec_push((*eo)[i].options, each.options[j]);
 
             if (each.time)
                 (*eo)[i].time = each.time;
