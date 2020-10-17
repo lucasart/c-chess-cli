@@ -111,11 +111,12 @@ void options_parse(int argc, const char **argv, Options *o, GameOptions *go, Eng
     o->concurrency = 1;
     o->games = 1;
     o->alpha = o->beta = 0.05;
+    EngineOptions each;
+    bool eachSet = false;
 
-    int i;
     bool expectValue = false;  // pattern: '-tag [value]'. should next arg be a value or tag ?
 
-    for (i = 1; i < argc; i++) {
+    for (int i = 1; i < argc; i++) {
         if (argv[i][0] == '-' && isalpha((unsigned char)argv[i][1])) {
             // process tag
             if (expectValue)
@@ -131,7 +132,10 @@ void options_parse(int argc, const char **argv, Options *o, GameOptions *go, Eng
                 // process tag without value (bool)
                 if (!strcmp(argv[i], "-engine"))
                     vec_push(*eo, options_parse_eo(argc, argv, &i));
-                else if (!strcmp(argv[i], "-random"))
+                else if (!strcmp(argv[i], "-each")) {
+                    each = options_parse_eo(argc, argv, &i);
+                    eachSet = true;
+                } else if (!strcmp(argv[i], "-random"))
                     o->random = true;
                 else if (!strcmp(argv[i], "-repeat"))
                     o->repeat = true;
@@ -167,10 +171,40 @@ void options_parse(int argc, const char **argv, Options *o, GameOptions *go, Eng
 
             expectValue = false;
         }
+
+        if (expectValue && i == argc - 1)
+            DIE("value expected after '%s'\n", argv[i]);
     }
 
-    if (expectValue)
-        DIE("value expected after '%s'\n", argv[i - 1]);
+    if (eachSet) {
+        for (size_t i = 0; i < vec_size(*eo); i++) {
+            if (each.cmd.len)
+                str_cpy(&(*eo)[i].cmd, each.cmd);
+
+            if (each.name.len)
+                str_cpy(&(*eo)[i].name, each.name);
+
+            // TODO: append each.options to (*eo)[i].options
+
+            if (each.time)
+                (*eo)[i].time = each.time;
+
+            if (each.increment)
+                (*eo)[i].increment = each.increment;
+
+            if (each.movetime)
+                (*eo)[i].movetime = each.movetime;
+
+            if (each.nodes)
+                (*eo)[i].nodes = each.nodes;
+
+            if (each.depth)
+                (*eo)[i].depth = each.depth;
+
+            if (each.movestogo)
+                (*eo)[i].movestogo = each.movestogo;
+        }
+    }
 }
 
 void options_delete(Options *o, EngineOptions *eo)
