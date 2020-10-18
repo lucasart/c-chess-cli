@@ -86,7 +86,7 @@ EngineOptions options_parse_eo(int argc, const char **argv, int *i)
             eo.depth = atoi(value.buf);
         else if (!strcmp(key.buf, "nodes"))
             eo.nodes = atoll(value.buf);
-        else if (!strcmp(key.buf, "movetime"))
+        else if (!strcmp(key.buf, "st"))
             eo.movetime = (int64_t)(atof(value.buf) * 1000);
         else if (!strcmp(key.buf, "tc"))
             options_parse_tc(value.buf, &eo);
@@ -103,7 +103,7 @@ void options_parse(int argc, const char **argv, Options *o, GameOptions *go, Eng
 {
     // List options that expect a value
     static const char *options[] = {"-concurrency", "-games", "-openings", "-pgnout", "-nodes",
-        "-depth", "-draw", "-resign", "-movetime", "-tc", "-sprt", "-sample"};
+        "-depth", "-draw", "-resign", "-st", "-tc", "-sprt", "-sample"};
 
     // Default values
     *go = (GameOptions){0};

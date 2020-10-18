@@ -69,7 +69,7 @@ Keys:
   Special characters, like space, should be escaped using the appropriate shell syntax. For example
   `option.Time\ Buffer=50`, or `"option.Time Buffer=50"`.
  * `depth`: depth limit per move.
- * `movetime`: time limit per move, in seconds (can be fractional like `movetime=0.123`).
+ * `st`: time limit per move, in seconds (can be fractional like `st=0.123`).
  * `nodes`: node limit per move.
  * `tc`: expects value of the form `[mtg/]time[+inc]`. For example:
    * `40/10` corresponds to a tournament time control with 10s for every 40 moves
