@@ -111,7 +111,8 @@ void options_parse(int argc, const char **argv, Options *o, GameOptions *go, Eng
     o->concurrency = 1;
     o->games = 1;
     o->alpha = o->beta = 0.05;
-    EngineOptions each;
+
+    scope(engine_options_del) EngineOptions each = {0};
     bool eachSet = false;
 
     bool expectValue = false;  // pattern: '-tag [value]'. should next arg be a value or tag ?
@@ -185,7 +186,7 @@ void options_parse(int argc, const char **argv, Options *o, GameOptions *go, Eng
                 str_cpy(&(*eo)[i].name, each.name);
 
             for (size_t j = 0; j < vec_size(each.options); j++)
-                vec_push((*eo)[i].options, each.options[j]);
+                vec_push((*eo)[i].options, str_dup(each.options[j]));
 
             if (each.time)
                 (*eo)[i].time = each.time;
