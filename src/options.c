@@ -61,10 +61,9 @@ static void options_parse_tc(const char *s, EngineOptions *eo)
     eo->increment = (int64_t)(increment * 1000);
 }
 
-EngineOptions options_parse_eo(int argc, const char **argv, int *i)
+void options_parse_eo(int argc, const char **argv, int *i, EngineOptions *eo)
 {
-    EngineOptions eo = {0};
-    eo.options = vec_new(1, str_t);
+    eo->options = vec_new(1, str_t);
 
     for (int j = *i + 1; j < argc && argv[j][0] != '-'; j++) {
         scope(str_del) str_t key = {0}, value = {0};
@@ -75,28 +74,26 @@ EngineOptions options_parse_eo(int argc, const char **argv, int *i)
             DIE("invalid syntax '%s'\n", key.buf);
 
         if (!strcmp(key.buf, "cmd"))
-            eo.cmd = str_dup(value);
+            eo->cmd = str_dup(value);
         else if (!strcmp(key.buf, "name"))
-            eo.name = str_dup(value);
+            eo->name = str_dup(value);
         else if (!strncmp(key.buf, "option.", strlen("option."))) {
             str_t s = {0};
             str_cat_fmt(&s, "%s value %S", key.buf + strlen("option."), value);
-            vec_push(eo.options, s);
+            vec_push(eo->options, s);  // not calling str_del(&s) is intentional: s is moved
         } else if (!strcmp(key.buf, "depth"))
-            eo.depth = atoi(value.buf);
+            eo->depth = atoi(value.buf);
         else if (!strcmp(key.buf, "nodes"))
-            eo.nodes = atoll(value.buf);
+            eo->nodes = atoll(value.buf);
         else if (!strcmp(key.buf, "st"))
-            eo.movetime = (int64_t)(atof(value.buf) * 1000);
+            eo->movetime = (int64_t)(atof(value.buf) * 1000);
         else if (!strcmp(key.buf, "tc"))
-            options_parse_tc(value.buf, &eo);
+            options_parse_tc(value.buf, eo);
         else
             DIE("illegal key '%s'\n", key.buf);
 
         (*i)++;
     }
-
-    return eo;
 }
 
 void options_parse(int argc, const char **argv, Options *o, GameOptions *go, EngineOptions **eo)
@@ -131,10 +128,12 @@ void options_parse(int argc, const char **argv, Options *o, GameOptions *go, Eng
 
             if (!expectValue) {
                 // process tag without value (bool)
-                if (!strcmp(argv[i], "-engine"))
-                    vec_push(*eo, options_parse_eo(argc, argv, &i));
-                else if (!strcmp(argv[i], "-each")) {
-                    each = options_parse_eo(argc, argv, &i);
+                if (!strcmp(argv[i], "-engine")) {
+                    EngineOptions new = {0};
+                    options_parse_eo(argc, argv, &i, &new);
+                    vec_push(*eo, new);  // new is moved here (engine_options_del(&new) not called)
+                } else if (!strcmp(argv[i], "-each")) {
+                    options_parse_eo(argc, argv, &i, &each);
                     eachSet = true;
                 } else if (!strcmp(argv[i], "-random"))
                     o->random = true;
