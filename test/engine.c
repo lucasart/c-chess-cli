@@ -86,6 +86,7 @@ static void random_pv(const Position *pos, uint64_t *seed, int len, str_t *pv)
     Position p[2];
     p[0] = *pos;
     move_t *moves = vec_new(64, move_t);
+    scope(str_del) str_t lan = {0};
 
     for (int ply = 0; ply < len; ply++) {
         // Generate and count legal moves
@@ -96,7 +97,7 @@ static void random_pv(const Position *pos, uint64_t *seed, int len, str_t *pv)
 
         // Choose a random one
         const move_t m = moves[prng(seed) % n];
-        scope(str_del) str_t lan = pos_move_to_lan(&p[ply % 2], m);
+        pos_move_to_lan(&p[ply % 2], m, &lan);
         str_push(str_cat(pv, lan), ' ');
         pos_move(&p[(ply + 1) % 2], &p[ply % 2], m);
     }

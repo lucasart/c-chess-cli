@@ -530,15 +530,15 @@ bool pos_move_is_castling(const Position *pos, move_t m)
     return bb_test(pos->byColor[pos->turn], move_to(m));
 }
 
-str_t pos_move_to_lan(const Position *pos, move_t m)
+void pos_move_to_lan(const Position *pos, move_t m, str_t *lan)
 {
-    str_t out = {0};
+    str_resize(lan, 0);
     const int from = move_from(m), prom = move_prom(m);
     int to = move_to(m);
 
     if (!(from | to | prom)) {
-        str_cat_c(&out, "0000");
-        return out;
+        str_cat_c(lan, "0000");
+        return;
     }
 
     if (!pos->chess960 && pos_move_is_castling(pos, m))
@@ -547,12 +547,10 @@ str_t pos_move_to_lan(const Position *pos, move_t m)
     char fromStr[3], toStr[3];
     square_to_string(from, fromStr);
     square_to_string(to, toStr);
-    str_cat_c(str_cat_c(&out, fromStr), toStr);
+    str_cat_c(str_cat_c(lan, fromStr), toStr);
 
     if (prom < NB_PIECE)
-        str_push(&out, PieceLabel[BLACK][prom]);
-
-    return out;
+        str_push(lan, PieceLabel[BLACK][prom]);
 }
 
 move_t pos_lan_to_move(const Position *pos, const char *lan)
@@ -691,6 +689,7 @@ void pos_print(const Position *pos)
     scope(str_del) str_t fen = pos_get(pos);
     puts(fen.buf);
 
-    scope(str_del) str_t lan = pos_move_to_lan(pos, pos->lastMove);
+    scope(str_del) str_t lan = {0};
+    pos_move_to_lan(pos, pos->lastMove, &lan);
     printf("Last move: %s\n", lan.buf);
 }

@@ -29,10 +29,11 @@ static void uci_position_command(const Game *g, str_t *cmd)
     str_cpy_fmt(cmd, "position fen %S", fen);
 
     if (ply0 < g->ply) {
+        scope(str_del) str_t lan = {0};
         str_cat_c(cmd, " moves");
 
         for (int ply = ply0 + 1; ply <= g->ply; ply++) {
-            scope(str_del) str_t lan = pos_move_to_lan(&g->pos[ply - 1], g->pos[ply].lastMove);
+            pos_move_to_lan(&g->pos[ply - 1], g->pos[ply].lastMove, &lan);
             str_cat(str_push(cmd, ' '), lan);
         }
     }
