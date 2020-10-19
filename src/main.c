@@ -63,10 +63,10 @@ static void *thread_start(void *arg)
 
         // Write to Sample file
         if (W->sampleFile) {
-            scope(str_del) str_t lines = {0};
+            scope(str_del) str_t lines = {0}, sampleFen = {0};
 
             for (size_t i = 0; i < vec_size(game.samples); i++) {
-                scope(str_del) str_t sampleFen = pos_get(&game.samples[i].pos);
+                pos_get(&game.samples[i].pos, &sampleFen);
                 str_cat_fmt(&lines, "%S,%i,%i\n", sampleFen, game.samples[i].score,
                     game.samples[i].result);
             }

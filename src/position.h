@@ -33,7 +33,7 @@ typedef struct {
 } Position;
 
 bool pos_set(Position *pos, const char *fen, bool chess960);
-str_t pos_get(const Position *pos);
+void pos_get(const Position *pos, str_t *fen);
 void pos_move(Position *pos, const Position *before, move_t m);
 
 bitboard_t pos_pieces(const Position* pos);

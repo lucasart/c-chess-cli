@@ -165,6 +165,7 @@ static void test_position(void)
     };
 
     uint64_t hash = 0;
+    scope(str_del) str_t outFen = {0};
 
     for (size_t i = 0; fens[i]; i++) {
         Position pos;
@@ -172,7 +173,7 @@ static void test_position(void)
 
         hash_blocks(&pos, sizeof(pos), &hash);
 
-        scope(str_del) str_t outFen = pos_get(&pos);
+        pos_get(&pos, &outFen);
         TEST(strncmp(fens[i], outFen.buf, strlen(fens[i])) == 0);
     }
 

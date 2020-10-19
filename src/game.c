@@ -25,7 +25,8 @@ static void uci_position_command(const Game *g, str_t *cmd)
     // Index of the starting FEN, where rule50 was last reset
     const int ply0 = max(g->ply - g->pos[g->ply].rule50, 0);
 
-    scope(str_del) str_t fen = pos_get(&g->pos[ply0]);
+    scope(str_del) str_t fen = {0};
+    pos_get(&g->pos[ply0], &fen);
     str_cpy_fmt(cmd, "position fen %S", fen);
 
     if (ply0 < g->ply) {
@@ -114,6 +115,7 @@ static Position resolve_pv(const Position *pos, str_t pv, FILE *log)
     p[0] = *pos;
     int idx = 0;
     move_t *moves = vec_new(64, move_t);
+    scope(str_del) str_t fen = {0};
 
     while ((tail = str_tok(tail, &token, " "))) {
         const move_t m = pos_lan_to_move(&p[idx], token.buf);
@@ -121,8 +123,8 @@ static Position resolve_pv(const Position *pos, str_t pv, FILE *log)
 
         if (illegal_move(m, moves)) {
             if (log) {
+                pos_get(pos, &fen);
                 DIE_IF(W->id, fprintf(log, "WARNING: invalid PV\n") < 0);
-                scope(str_del) str_t fen = pos_get(pos);
                 DIE_IF(W->id, fprintf(log, "\tfen: '%s'\n", fen.buf) < 0);
                 DIE_IF(W->id, fprintf(log, "\tpv: '%s'\n", pv.buf) < 0);
                 DIE_IF(W->id, fprintf(log, "\t'%s%s' starts with an illegal move\n", token.buf,
@@ -356,7 +358,8 @@ str_t game_pgn(const Game *g)
     str_cat_fmt(&pgn, "[Result \"%S\"]\n", result);
     str_cat_fmt(&pgn, "[Termination \"%S\"]\n", reason);
 
-    scope(str_del) str_t fen = pos_get(&g->pos[0]);
+    scope(str_del) str_t fen = {0};
+    pos_get(&g->pos[0], &fen);
     str_cat_fmt(&pgn, "[FEN \"%S\"]\n", fen);
 
     if (g->pos[0].chess960)

@@ -325,9 +325,9 @@ bool pos_set(Position *pos, const char *fen, bool chess960)
 }
 
 // Get FEN string of position
-str_t pos_get(const Position *pos)
+void pos_get(const Position *pos, str_t *fen)
 {
-    str_t fen = {0};
+    str_resize(fen, 0);
 
     // Piece placement
     for (int rank = RANK_8; rank >= RANK_1; rank--) {
@@ -338,26 +338,26 @@ str_t pos_get(const Position *pos)
 
             if (bb_test(pos_pieces(pos), square)) {
                 if (cnt)
-                    str_push(&fen, (char)cnt + '0');
+                    str_push(fen, (char)cnt + '0');
 
-                str_push(&fen, PieceLabel[pos_color_on(pos, square)][pos_piece_on(pos, square)]);
+                str_push(fen, PieceLabel[pos_color_on(pos, square)][pos_piece_on(pos, square)]);
                 cnt = 0;
             } else
                 cnt++;
         }
 
         if (cnt)
-            str_push(&fen, (char)cnt + '0');
+            str_push(fen, (char)cnt + '0');
 
-        str_push(&fen, rank == RANK_1 ? ' ' : '/');
+        str_push(fen, rank == RANK_1 ? ' ' : '/');
     }
 
     // Turn of play
-    str_cat_c(&fen, pos->turn == WHITE ? "w " : "b ");
+    str_cat_c(fen, pos->turn == WHITE ? "w " : "b ");
 
     // Castling rights
     if (!pos->castleRooks)
-        str_push(&fen, '-');
+        str_push(fen, '-');
     else {
         for (int color = WHITE; color <= BLACK; color++) {
             const bitboard_t b = pos->castleRooks & pos->byColor[color];
@@ -367,11 +367,11 @@ str_t pos_get(const Position *pos)
 
                 // Right side castling
                 if (b & Ray[king][king + RIGHT])
-                    str_push(&fen, PieceLabel[color][KING]);
+                    str_push(fen, PieceLabel[color][KING]);
 
                 // Left side castling
                 if (b & Ray[king][king + LEFT])
-                    str_push(&fen, PieceLabel[color][QUEEN]);
+                    str_push(fen, PieceLabel[color][QUEEN]);
             }
         }
     }
@@ -379,9 +379,7 @@ str_t pos_get(const Position *pos)
     // En passant and 50 move
     char epStr[3];
     square_to_string(pos->epSquare, epStr);
-    str_cat_fmt(&fen, " %s %i %i", epStr, pos->rule50, pos->fullMove);
-
-    return fen;
+    str_cat_fmt(fen, " %s %i %i", epStr, pos->rule50, pos->fullMove);
 }
 
 // Play a move on a position copy (original 'before' is untouched): pos = before + play(m)
@@ -684,7 +682,8 @@ void pos_print(const Position *pos)
         puts(line);
     }
 
-    scope(str_del) str_t fen = pos_get(pos);
+    scope(str_del) str_t fen = {0};
+    pos_get(pos, &fen);
     puts(fen.buf);
 
     scope(str_del) str_t lan = {0};
