@@ -189,7 +189,7 @@ static void test_position(void)
     scope(str_del) str_t token = {0}, sanMoves = {0}, lanMoves= {0};
     int ply = 0;
     hash = 0;
-    scope(str_del) str_t lan = {0};
+    scope(str_del) str_t lan = {0}, san = {0};
 
     while ((tail = str_tok(tail, &token, " "))) {
         move_t m = pos_lan_to_move(&pos[ply % 2], token.buf);
@@ -199,7 +199,7 @@ static void test_position(void)
         pos_move_to_lan(&pos[ply % 2], m, &lan);
         str_push(str_cat(&lanMoves, lan), ' ');
 
-        scope(str_del) str_t san = pos_move_to_san(&pos[ply % 2], m);
+        pos_move_to_san(&pos[ply % 2], m, &san);
         str_push(str_cat(&sanMoves, san), ' ');
         ply++;
     }

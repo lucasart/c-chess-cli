@@ -363,6 +363,7 @@ str_t game_pgn(const Game *g)
         str_cat_c(&pgn, "[Variant \"Chess960\"]\n");
 
     str_cat_fmt(&pgn, "[PlyCount \"%i\"]\n\n", g->ply);
+    scope(str_del) str_t san = {0};
 
     for (int ply = 1; ply <= g->ply; ply++) {
         // Write move number
@@ -371,7 +372,7 @@ str_t game_pgn(const Game *g)
                 g->pos[ply - 1].fullMove);
 
         // Append SAN move
-        scope(str_del) str_t san = pos_move_to_san(&g->pos[ply - 1], g->pos[ply].lastMove);
+        pos_move_to_san(&g->pos[ply - 1], g->pos[ply].lastMove, &san);
         str_cat(&pgn, san);
 
         // Append check marker
