@@ -11,14 +11,14 @@ p.add_argument('-p', '--task', help='Task to run', choices=['main', 'test', 'eng
 args = p.parse_args()
 
 # Determine flags for: compilation, warning, and linking
-cflags = '-I./src -std=gnu11 {} -mpopcnt -Ofast -flto'.format('-DNDEBUG -s' if not args.debug else '-g')
+cflags = '-I./src -std=gnu11 -mpopcnt {}'.format('-DNDEBUG -Ofast -flto -s' if not args.debug else '-g -O1')
 wflags = '-Wfatal-errors -Wall -Wextra -Wstrict-prototypes -Wsign-conversion -Wshadow -Wpadded'
 lflags ='-lpthread -lm'
 if args.static: lflags += ' -static'
 if 'ANDROID_DATA' in os.environ: lflags += ' -latomic'
 
 def run(cmd):
-    print('$ ' + cmd)
+    print('> ' + cmd)
     return os.system(cmd)
 
 def compile(program, output):
@@ -42,8 +42,8 @@ if args.task == 'test':
 
         run('./c-chess-cli -each cmd=./test/engine depth=8 option.Hash=4 ' \
             '-engine "name=engine\:1" option.Threads=2 -engine name=engine2 ' \
-            '-sample 0.5,y,training.csv -openings test/chess960.epd -games 965 ' \
-            '-log -pgnout out.pgn |shasum')
+            '-sample 0.5,y,training.csv -openings test/chess960.epd -repeat ' \
+            '-resign 4,9000 -draw 2,10000 -games 1925 -log -pgnout out.pgn |shasum')
         run('shasum out.pgn training.csv')
         run('grep -v deadline c-chess-cli.1.log |shasum')
 

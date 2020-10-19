@@ -71,7 +71,8 @@ static void *thread_start(void *arg)
                     game.samples[i].result);
             }
 
-            DIE_IF(W->id, fputs(lines.buf, W->sampleFile) < 0);
+            if (lines.len)
+                DIE_IF(W->id, fputs(lines.buf, W->sampleFile) < 0);
         }
 
         // Write to stdout a one line summary of the game
