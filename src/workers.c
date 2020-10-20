@@ -29,6 +29,7 @@ EngineOptions engine_options_new(void)
     EngineOptions eo = {0};
     eo.cmd = str_new();
     eo.name = str_new();
+    eo.options = vec_new(1, str_t);
     return eo;
 }
 

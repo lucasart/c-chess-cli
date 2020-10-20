@@ -63,8 +63,6 @@ static void options_parse_tc(const char *s, EngineOptions *eo)
 
 static void options_parse_eo(int argc, const char **argv, int *i, EngineOptions *eo)
 {
-    eo->options = vec_new(1, str_t);
-
     for (int j = *i + 1; j < argc && argv[j][0] != '-'; j++) {
         scope(str_del) str_t key = str_new(), value = str_new();
         str_tok_esc(str_tok(argv[j], &key, "="), &value, '=', '\\');
