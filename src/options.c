@@ -21,7 +21,7 @@
 
 static void options_parse_sample(const char *s, Options *o, GameOptions *go)
 {
-    scope(str_del) str_t token = {0};
+    scope(str_del) str_t token = str_new();
     const char *tail = str_tok(s, &token, ",");
     assert(tail);
 
@@ -36,9 +36,9 @@ static void options_parse_sample(const char *s, Options *o, GameOptions *go)
 
     // Parse filename (default sample.csv if omitted)
     if ((tail = str_tok(tail, &token, ",")))
-        o->sampleFileName = str_dup(token);
+        o->sampleFileName = str_new_from(token);
     else
-        o->sampleFileName = str_dup_c("sample.csv");
+        o->sampleFileName = str_new_from_c("sample.csv");
 }
 
 // Parse time control. Expects 'mtg/time+inc' or 'time+inc'. Note that time and inc are provided by
@@ -61,12 +61,12 @@ static void options_parse_tc(const char *s, EngineOptions *eo)
     eo->increment = (int64_t)(increment * 1000);
 }
 
-void options_parse_eo(int argc, const char **argv, int *i, EngineOptions *eo)
+static void options_parse_eo(int argc, const char **argv, int *i, EngineOptions *eo)
 {
     eo->options = vec_new(1, str_t);
 
     for (int j = *i + 1; j < argc && argv[j][0] != '-'; j++) {
-        scope(str_del) str_t key = {0}, value = {0};
+        scope(str_del) str_t key = str_new(), value = str_new();
         str_tok_esc(str_tok(argv[j], &key, "="), &value, '=', '\\');
         assert(key.len);
 
@@ -74,11 +74,11 @@ void options_parse_eo(int argc, const char **argv, int *i, EngineOptions *eo)
             DIE("invalid syntax '%s'\n", key.buf);
 
         if (!strcmp(key.buf, "cmd"))
-            eo->cmd = str_dup(value);
+            eo->cmd = str_new_from(value);
         else if (!strcmp(key.buf, "name"))
-            eo->name = str_dup(value);
+            eo->name = str_new_from(value);
         else if (!strncmp(key.buf, "option.", strlen("option."))) {
-            str_t s = {0};
+            str_t s = str_new();
             str_cat_fmt(&s, "%s value %S", key.buf + strlen("option."), value);
             vec_push(eo->options, s);  // not calling str_del(&s) is intentional: s is moved
         } else if (!strcmp(key.buf, "depth"))
@@ -96,6 +96,15 @@ void options_parse_eo(int argc, const char **argv, int *i, EngineOptions *eo)
     }
 }
 
+Options options_new(void)
+{
+    Options o = {0};
+    o.openings = str_new();
+    o.pgnOut = str_new();
+    o.sampleFileName = str_new();
+    return o;
+}
+
 void options_parse(int argc, const char **argv, Options *o, GameOptions *go, EngineOptions **eo)
 {
     // List options that expect a value
@@ -109,7 +118,7 @@ void options_parse(int argc, const char **argv, Options *o, GameOptions *go, Eng
     o->games = 1;
     o->alpha = o->beta = 0.05;
 
-    scope(engine_options_del) EngineOptions each = {0};
+    scope(engine_options_del) EngineOptions each = engine_options_new();
     bool eachSet = false;
 
     bool expectValue = false;  // pattern: '-tag [value]'. should next arg be a value or tag ?
@@ -129,7 +138,7 @@ void options_parse(int argc, const char **argv, Options *o, GameOptions *go, Eng
             if (!expectValue) {
                 // process tag without value (bool)
                 if (!strcmp(argv[i], "-engine")) {
-                    EngineOptions new = {0};
+                    EngineOptions new = engine_options_new();
                     options_parse_eo(argc, argv, &i, &new);
                     vec_push(*eo, new);  // new is moved here (engine_options_del(&new) not called)
                 } else if (!strcmp(argv[i], "-each")) {
@@ -185,7 +194,7 @@ void options_parse(int argc, const char **argv, Options *o, GameOptions *go, Eng
                 str_cpy(&(*eo)[i].name, each.name);
 
             for (size_t j = 0; j < vec_size(each.options); j++)
-                vec_push((*eo)[i].options, str_dup(each.options[j]));
+                vec_push((*eo)[i].options, str_new_from(each.options[j]));
 
             if (each.time)
                 (*eo)[i].time = each.time;
@@ -208,8 +217,7 @@ void options_parse(int argc, const char **argv, Options *o, GameOptions *go, Eng
     }
 }
 
-void options_delete(Options *o, EngineOptions *eo)
+void options_del(Options *o)
 {
     str_del_n(&o->openings, &o->pgnOut, &o->sampleFileName);
-    vec_del_rec(eo, engine_options_del);
 }

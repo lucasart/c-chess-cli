@@ -34,7 +34,7 @@ static void *thread_start(void *arg)
     // Prepare log file
     FILE *log = NULL;
 
-    scope(str_del) str_t logName = {0};
+    scope(str_del) str_t logName = str_new();
     str_cat_fmt(&logName, "c-chess-cli.%i.log", W->id);
 
     if (options.log)
@@ -46,7 +46,7 @@ static void *thread_start(void *arg)
             &W->deadline);
 
     int next;
-    scope(str_del) str_t fen = {0};
+    scope(str_del) str_t fen = str_new();
 
     while ((next = openings_next(&openings, &fen, W->id)) <= options.games) {
         // Play 1 game
@@ -63,7 +63,7 @@ static void *thread_start(void *arg)
 
         // Write to Sample file
         if (W->sampleFile) {
-            scope(str_del) str_t lines = {0}, sampleFen = {0};
+            scope(str_del) str_t lines = str_new(), sampleFen = str_new();
 
             for (size_t i = 0; i < vec_size(game.samples); i++) {
                 pos_get(&game.samples[i].pos, &sampleFen);
@@ -76,7 +76,7 @@ static void *thread_start(void *arg)
         }
 
         // Write to stdout a one line summary of the game
-        scope(str_del) str_t reason = {0}, result = game_decode_state(&game, &reason);
+        scope(str_del) str_t reason = str_new(), result = game_decode_state(&game, &reason);
         printf("[%i] %s vs %s: %s (%s)\n", W->id, game.names[WHITE].buf,
             game.names[BLACK].buf, result.buf, reason.buf);
 
@@ -106,7 +106,7 @@ static void *thread_start(void *arg)
                 printf("SPRT: LLR = %.3f [%.3f,%.3f]\n", llr, llrLbound, llrUbound);
         }
 
-        game_delete(&game);
+        game_del(&game);
     }
 
     for (int i = 0; i < 2; i++)
@@ -123,6 +123,7 @@ int main(int argc, const char **argv)
 {
     GameOptions go;
     eo = vec_new(2, EngineOptions);
+    options = options_new();
     options_parse(argc, argv, &options, &go, &eo);
 
     openings = openings_new(options.openings, options.random, options.repeat, 0);
@@ -166,6 +167,7 @@ int main(int argc, const char **argv)
         DIE_IF(0, fclose(sampleFile) < 0);
 
     openings_delete(&openings, 0);
-    options_delete(&options, eo);
+    options_del(&options);
+    vec_del_rec(eo, engine_options_del);
     return 0;
 }

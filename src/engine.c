@@ -75,13 +75,13 @@ Engine engine_new(str_t cmd, str_t name, str_t *options, FILE *log, Deadline *de
 
     Engine e;
     e.log = log;
-    e.name = str_dup(name.len ? name : cmd); // default value
+    e.name = str_new_from(name.len ? name : cmd); // default value
 
     /* Shell parsing of cmd */
 
     // Step 1: isolate the first token being the command to run. The space character is ambiguous,
     // because it is allowed in file names. So we must use str_tok_esc().
-    scope(str_del) str_t token = {0};
+    scope(str_del) str_t token = str_new();
     const char *tail = cmd.buf;
     tail = str_tok_esc(tail, &token, ' ', '\\');
 
@@ -90,7 +90,7 @@ Engine engine_new(str_t cmd, str_t name, str_t *options, FILE *log, Deadline *de
     // (b) a qualified path (absolute starting with "/", or relative starting with "./" or "../")
     // For (b), we want to separate into executable and directory, so instead of running
     // "../Engines/demolito" from the cwd, we execute run="./demolito" from cwd="../Engines"
-    scope(str_del) str_t cwd = str_dup_c("./"), run = str_dup(token);
+    scope(str_del) str_t cwd = str_new_from_c("./"), run = str_new_from(token);
     const char *lastSlash = strrchr(token.buf, '/');
 
     if (lastSlash) {
@@ -101,10 +101,10 @@ Engine engine_new(str_t cmd, str_t name, str_t *options, FILE *log, Deadline *de
 
     // Step 3: Collect the arguments into a vec of str_t, args[]
     str_t *args = vec_new(1, str_t);
-    vec_push(args, str_dup(run));  // argv[0] is the executed command
+    vec_push(args, str_new_from(run));  // argv[0] is the executed command
 
     while ((tail = str_tok_esc(tail, &token, ' ', '\\')))
-        vec_push(args, str_dup(token));
+        vec_push(args, str_new_from(token));
 
     // Step 4: Obviously, evecvp() doesn't deal in vec of str_t, so prepare a char **, whose
     // elements point to the C-string buffers of the elements of args (with an extra NULL to signal
@@ -123,7 +123,7 @@ Engine engine_new(str_t cmd, str_t name, str_t *options, FILE *log, Deadline *de
     // Start the uci..uciok dialogue
     deadline_set(deadline, &e, system_msec() + 2000);
     engine_writeln(&e, "uci");
-    scope(str_del) str_t line = {0};
+    scope(str_del) str_t line = str_new();
 
     do {
         engine_readln(&e, &line);
@@ -178,7 +178,7 @@ void engine_sync(const Engine *e, Deadline *deadline)
 {
     deadline_set(deadline, e, system_msec() + 1000);
     engine_writeln(e, "isready");
-    scope(str_del) str_t line = {0};
+    scope(str_del) str_t line = str_new();
 
     do {
         engine_readln(e, &line);
@@ -192,8 +192,8 @@ bool engine_bestmove(const Engine *e, int *score, int64_t *timeLeft, Deadline *d
 {
     int result = false;
     *score = 0;
-    scope(str_del) str_t line = {0}, token = {0};
-    str_resize(pv, 0);
+    scope(str_del) str_t line = str_new(), token = str_new();
+    str_clear(pv);
 
     const int64_t start = system_msec(), timeLimit = start + *timeLeft;
     deadline_set(deadline, e, timeLimit + 1000);

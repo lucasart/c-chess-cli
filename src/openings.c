@@ -29,7 +29,7 @@ Openings openings_new(str_t fileName, bool random, bool repeat, int threadId)
     if (o.file) {
         // Builds o.index[] to record file offsets for each lines
         o.index = vec_new(1, size_t);
-        scope(str_del) str_t line = {0};
+        scope(str_del) str_t line = str_new();
 
         do {
             vec_push(o.index, ftell(o.file));
@@ -80,7 +80,7 @@ int openings_next(Openings *o, str_t *fen, int threadId)
     pthread_mutex_lock(&o->mtx);
 
     // Read 'fen' from file
-    scope(str_del) str_t line = {0};
+    scope(str_del) str_t line = str_new();
     DIE_IF(threadId, fseek(o->file, o->index[o->pos], SEEK_SET) < 0);
     DIE_IF(threadId, !str_getline(&line, o->file));
     str_tok(line.buf, fen, ";");

@@ -172,7 +172,7 @@ static bool pos_move_is_capture(const Position *pos, move_t m)
 bool pos_set(Position *pos, const char *fen, bool chess960)
 {
     *pos = (Position){0};
-    scope(str_del) str_t token = {0};
+    scope(str_del) str_t token = str_new();
 
     // Piece placement
     fen = str_tok(fen, &token, " ");
@@ -327,7 +327,7 @@ bool pos_set(Position *pos, const char *fen, bool chess960)
 // Get FEN string of position
 void pos_get(const Position *pos, str_t *fen)
 {
-    str_resize(fen, 0);
+    str_clear(fen);
 
     // Piece placement
     for (int rank = RANK_8; rank >= RANK_1; rank--) {
@@ -530,7 +530,7 @@ bool pos_move_is_castling(const Position *pos, move_t m)
 
 void pos_move_to_lan(const Position *pos, move_t m, str_t *lan)
 {
-    str_resize(lan, 0);
+    str_clear(lan);
     const int from = move_from(m), prom = move_prom(m);
     int to = move_to(m);
 
@@ -576,7 +576,7 @@ void pos_move_to_san(const Position *pos, move_t m, str_t *san)
     const int us = pos->turn;
     const int from = move_from(m), to = move_to(m), prom = move_prom(m);
     const int piece = pos_piece_on(pos, from);
-    str_resize(san, 0);
+    str_clear(san);
 
     if (piece == PAWN) {
         str_push(san, (char)file_of(from) + 'a');
@@ -682,11 +682,11 @@ void pos_print(const Position *pos)
         puts(line);
     }
 
-    scope(str_del) str_t fen = {0};
+    scope(str_del) str_t fen = str_new();
     pos_get(pos, &fen);
     puts(fen.buf);
 
-    scope(str_del) str_t lan = {0};
+    scope(str_del) str_t lan = str_new();
     pos_move_to_lan(pos, pos->lastMove, &lan);
     printf("Last move: %s\n", lan.buf);
 }

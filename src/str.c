@@ -33,13 +33,13 @@ static size_t str_round_up(size_t n)
     return p2;
 }
 
-void str_resize(str_t *s, size_t len)
-// After this call, 's' may be invalid according to the strict definition of str_ok(), because it
-// may contain 0's before the end. This will cause problems with most code, starting with the C
-// standard library, which is why this function is not exposed to the API.
+static void str_resize(str_t *s, size_t len)
+// This function is not exposed to the API, because it does not respect the str_ok() criteria:
+// - entry: may be called with (str_t){0} or a valid string.
+// - exit: will not satisfy the condition !memchr(s->buf, 0, s->len), in the case of extending len
+//   with early '\0' between buf[0] and buf[len-1].
 {
-    assert(str_ok(*s));
-    s->len = len;
+    assert((!s->alloc && !s->len && !s->buf) || str_ok(*s));
 
     // Implement lazy realloc strategy
     if (s->alloc < str_round_up(len + 1)) {
@@ -47,13 +47,20 @@ void str_resize(str_t *s, size_t len)
         s->buf = realloc(s->buf, s->alloc);
     }
 
+    s->len = len;
     s->buf[len] = '\0';
+
+    assert(s->alloc > s->len && s->buf && s->buf[s->len] == '\0');
+}
+
+void str_clear(str_t *s)
+{
+    str_resize(s, 0);
 }
 
 bool str_ok(str_t s)
 {
-    return (!s.alloc && !s.len && !s.buf)
-        || (s.alloc > s.len && s.buf && s.buf[s.len] == '\0' && !memchr(s.buf, 0, s.len));
+    return s.alloc > s.len && s.buf && s.buf[s.len] == '\0' && !memchr(s.buf, 0, s.len);
 }
 
 bool str_eq(str_t s1, str_t s2)
@@ -80,9 +87,20 @@ static str_t *do_str_cat(str_t *dest, const char *src, size_t n)
     return dest;
 }
 
-str_t str_dup(const str_t src)
+str_t str_new(void)
 {
-    return *do_str_cat(&(str_t){0}, src.buf, src.len);
+    str_t s = {0};
+    str_resize(&s, 0);
+    return s;
+}
+
+str_t str_new_from(const str_t src)
+{
+    str_t s = {0};
+    str_resize(&s, src.len);
+    memcpy(s.buf, src.buf, s.len);
+    assert(str_ok(s));
+    return s;
 }
 
 void str_del(str_t *s)

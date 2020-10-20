@@ -30,6 +30,7 @@ typedef struct {
     int depth, movestogo;
 } EngineOptions;
 
+EngineOptions engine_options_new(void);
 void engine_options_del(EngineOptions *eo);
 
 typedef struct {

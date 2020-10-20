@@ -23,8 +23,6 @@ typedef struct {
     size_t len;  // number of characters for string content, excluding '\0' terminator
 } str_t;
 
-void str_resize(str_t *s, size_t len);
-
 // checks if string 's' is valid
 bool str_ok(str_t s);
 bool str_eq(str_t s1, str_t s2);
@@ -33,9 +31,13 @@ bool str_eq(str_t s1, str_t s2);
 // without any copying, and without duplicating all functions (just adding macros for convience).
 str_t str_ref(const char *src);
 
-// returns a string, copying its content from 'src'
-str_t str_dup(str_t src);
-#define str_dup_c(c_str) str_dup(str_ref(c_str))
+// constructors
+str_t str_new(void);  // empty string ""
+str_t str_new_from(str_t src);  // copy from string
+#define str_new_from_c(c_str) str_new_from(str_ref(c_str))  // copy from C-string
+
+// set s = "", but faster than using str_cpy_c(s, "")
+void str_clear(str_t *s);
 
 void str_del(str_t *s);
 #define scope(func) __attribute__ ((cleanup(func)))
