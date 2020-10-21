@@ -64,10 +64,10 @@ static void square_to_string(int square, char str[3])
     *str = '\0';
 }
 
-static int string_to_square(str_t str)
+static int string_to_square(const char *s)
 {
-    return str.buf[0] != '-'
-        ? square_from(str.buf[1] - '1', str.buf[0] - 'a')
+    return s[0] != '-'
+        ? square_from(s[1] - '1', s[0] - 'a')
         : NB_SQUARE;
 }
 
@@ -258,7 +258,7 @@ bool pos_set(Position *pos, const char *fen, bool chess960)
     if (token.len > 2)
         return false;
 
-    pos->epSquare = (uint8_t)string_to_square(token);
+    pos->epSquare = (uint8_t)string_to_square(token.buf);
     pos->key ^= ZobristEnPassant[pos->epSquare];
 
     // 50 move counter (in plies, starts at 0): optional, default 0

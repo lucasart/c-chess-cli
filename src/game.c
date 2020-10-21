@@ -102,10 +102,10 @@ static bool illegal_move(move_t move, const move_t *moves)
     return true;
 }
 
-static Position resolve_pv(const Position *pos, str_t pv)
+static Position resolve_pv(const Position *pos, const char *pv)
 {
     scope(str_del) str_t token = str_new();
-    const char *tail = pv.buf;
+    const char *tail = pv;
 
     // Start with current position. We can't guarantee that the resolved position won't be in check,
     // but a valid one must be returned.
@@ -126,7 +126,7 @@ static Position resolve_pv(const Position *pos, str_t pv)
                 pos_get(pos, &fen);
                 DIE_IF(W->id, fprintf(W->log, "WARNING: invalid PV\n") < 0);
                 DIE_IF(W->id, fprintf(W->log, "\tfen: '%s'\n", fen.buf) < 0);
-                DIE_IF(W->id, fprintf(W->log, "\tpv: '%s'\n", pv.buf) < 0);
+                DIE_IF(W->id, fprintf(W->log, "\tpv: '%s'\n", pv) < 0);
                 DIE_IF(W->id, fprintf(W->log, "\t'%s%s' starts with an illegal move\n", token.buf,
                     tail) < 0);
             }
@@ -241,7 +241,7 @@ int game_play(Game *g, const GameOptions *go, const Engine engines[2], const Eng
         // Parses the last PV sent. An invalid PV is not fatal, but logs some warnings. Keep track
         // of the resolved position, which is the last in the PV that is not in check (or the
         // current one if that's impossible).
-        Position resolved = resolve_pv(&g->pos[g->ply], pv);
+        Position resolved = resolve_pv(&g->pos[g->ply], pv.buf);
 
         if (!ok) {  // engine_bestmove() time out before parsing a bestmove
             g->state = STATE_TIME_LOSS;

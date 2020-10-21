@@ -14,7 +14,7 @@ typedef struct {
     char pad[7];
 } Openings;
 
-Openings openings_new(str_t fileName, bool random, bool repeat, int threadId);
+Openings openings_new(const char *fileName, bool random, bool repeat, int threadId);
 void openings_delete(Openings *openings, int threadId);
 
 int openings_next(Openings *o, str_t *fen, int threadId);

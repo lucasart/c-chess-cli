@@ -41,7 +41,7 @@ static void *thread_start(void *arg)
 
     // Prepare engines[]
     for (int i = 0; i < 2; i++)
-        engines[i] = engine_new(eo[i].cmd, eo[i].name, eo[i].options, &W->deadline);
+        engines[i] = engine_new(eo[i].cmd.buf, eo[i].name.buf, eo[i].options, &W->deadline);
 
     int next;
     scope(str_del) str_t fen = str_new();
@@ -123,7 +123,7 @@ int main(int argc, const char **argv)
     options = options_new();
     options_parse(argc, argv, &options, &go, &eo);
 
-    openings = openings_new(options.openings, options.random, options.repeat, 0);
+    openings = openings_new(options.openings.buf, options.random, options.repeat, 0);
 
     FILE *pgnOut = NULL;
     if (options.pgnOut.len)

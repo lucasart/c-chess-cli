@@ -70,22 +70,22 @@ static void engine_spawn(Engine *e, const char *cwd, const char *run, char **arg
     }
 }
 
-Engine engine_new(str_t cmd, str_t name, str_t *options, Deadline *deadline)
+Engine engine_new(const char *cmd, const char *name, const str_t *options, Deadline *deadline)
 {
     assert(W && options && deadline);
 
-    if (!cmd.len)
+    if (!*cmd)
         DIE("[%d] missing command to start engine.\n", W->id);
 
     Engine e;
-    e.name = str_new_from(name.len ? name : cmd); // default value
+    e.name = str_new_from_c(*name ? name : cmd); // default value
 
     /* Shell parsing of cmd */
 
     // Step 1: isolate the first token being the command to run. The space character is ambiguous,
     // because it is allowed in file names. So we must use str_tok_esc().
     scope(str_del) str_t token = str_new();
-    const char *tail = cmd.buf;
+    const char *tail = cmd;
     tail = str_tok_esc(tail, &token, ' ', '\\');
 
     // Step 2: now we have the command (without its arguments). This command could be:
@@ -133,7 +133,7 @@ Engine engine_new(str_t cmd, str_t name, str_t *options, Deadline *deadline)
         tail = line.buf;
 
         // Set e.name, by parsing "id name %s", only if no name was provided (*name == '\0')
-        if (!name.len && (tail = str_tok(tail, &token, " ")) && !strcmp(token.buf, "id")
+        if (!*name && (tail = str_tok(tail, &token, " ")) && !strcmp(token.buf, "id")
                 && (tail = str_tok(tail, &token, " ")) && !strcmp(token.buf, "name") && tail)
             str_cpy_c(&e.name, tail + strspn(tail, " "));
     } while (strcmp(line.buf, "uciok"));

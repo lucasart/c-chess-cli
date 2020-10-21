@@ -17,12 +17,12 @@
 #include "util.h"
 #include "vec.h"
 
-Openings openings_new(str_t fileName, bool random, bool repeat, int threadId)
+Openings openings_new(const char *fileName, bool random, bool repeat, int threadId)
 {
     Openings o = {0};
 
-    if (fileName.len)
-        DIE_IF(threadId, !(o.file = fopen(fileName.buf, "r")));
+    if (*fileName)
+        DIE_IF(threadId, !(o.file = fopen(fileName, "r")));
     else
         o.file = NULL;
 
