@@ -32,18 +32,16 @@ static void *thread_start(void *arg)
     Engine engines[2];
 
     // Prepare log file
-    FILE *log = NULL;
-
+    W->log = NULL;
     scope(str_del) str_t logName = str_new();
     str_cat_fmt(&logName, "c-chess-cli.%i.log", W->id);
 
     if (options.log)
-        DIE_IF(W->id, !(log = fopen(logName.buf, "w")));
+        DIE_IF(W->id, !(W->log = fopen(logName.buf, "w")));
 
     // Prepare engines[]
     for (int i = 0; i < 2; i++)
-        engines[i] = engine_new(eo[i].cmd, eo[i].name, eo[i].options, log,
-            &W->deadline);
+        engines[i] = engine_new(eo[i].cmd, eo[i].name, eo[i].options, &W->deadline);
 
     int next;
     scope(str_del) str_t fen = str_new();
@@ -111,8 +109,8 @@ static void *thread_start(void *arg)
     for (int i = 0; i < 2; i++)
         engine_del(&engines[i]);
 
-    if (log)
-        DIE_IF(W->id, fclose(log) < 0);
+    if (W->log)
+        DIE_IF(W->id, fclose(W->log) < 0);
 
     WorkersBusy--;
     return NULL;
@@ -147,7 +145,7 @@ int main(int argc, const char **argv)
         system_sleep(100);
 
         for (int i = 0; i < options.concurrency; i++) {
-            const Engine *deadEngine = deadline_overdue(&Workers[i].deadline);
+            const Engine *deadEngine = deadline_overdue(&Workers[i].deadline, Workers[i].log);
 
             if (deadEngine)
                 DIE("[%d] engine %s is unresponsive\n", i, deadEngine->name.buf);

@@ -45,6 +45,7 @@ typedef struct {
 // Per thread data
 typedef struct {
     Deadline deadline;
+    FILE *log;
     FILE *pgnOut;
     FILE *sampleFile;
     const GameOptions *go;

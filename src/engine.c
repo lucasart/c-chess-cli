@@ -27,6 +27,8 @@
 static void engine_spawn(Engine *e, const char *cwd, const char *run, char **argv,
     bool readStdErr)
 {
+    assert(e && cwd && run && argv && argv[0]);
+
     // Pipe diagram: Parent -> [1]into[0] -> Child -> [1]outof[0] -> Parent
     // 'into' and 'outof' are pipes, each with 2 ends: read=0, write=1
     int outof[2], into[2];
@@ -68,13 +70,14 @@ static void engine_spawn(Engine *e, const char *cwd, const char *run, char **arg
     }
 }
 
-Engine engine_new(str_t cmd, str_t name, str_t *options, FILE *log, Deadline *deadline)
+Engine engine_new(str_t cmd, str_t name, str_t *options, Deadline *deadline)
 {
+    assert(W && options && deadline);
+
     if (!cmd.len)
         DIE("[%d] missing command to start engine.\n", W->id);
 
     Engine e;
-    e.log = log;
     e.name = str_new_from(name.len ? name : cmd); // default value
 
     /* Shell parsing of cmd */
@@ -115,7 +118,7 @@ Engine engine_new(str_t cmd, str_t name, str_t *options, FILE *log, Deadline *de
         argv[i] = args[i].buf;
 
     // Spawn child process and plug pipes
-    engine_spawn(&e, cwd.buf, run.buf, argv, log != NULL);
+    engine_spawn(&e, cwd.buf, run.buf, argv, W->log != NULL);
 
     // Free memory for string elements in the vector, then for the vector itself
     vec_del_rec(args, str_del);
@@ -147,6 +150,8 @@ Engine engine_new(str_t cmd, str_t name, str_t *options, FILE *log, Deadline *de
 
 void engine_del(Engine *e)
 {
+    assert(W);
+
     str_del(&e->name);
     DIE_IF(W->id, fclose(e->in) < 0);
     DIE_IF(W->id, fclose(e->out) < 0);
@@ -155,27 +160,33 @@ void engine_del(Engine *e)
 
 void engine_readln(const Engine *e, str_t *line)
 {
+    assert(W);  // called by worker threads
+
     if (!str_getline(line, e->in))
         DIE("[%d] could not read from %s\n", W->id, e->name.buf);
 
-    if (e->log)
-        DIE_IF(W->id, fprintf(e->log, "%s -> %s\n", e->name.buf, line->buf) < 0);
+    if (W->log)
+        DIE_IF(W->id, fprintf(W->log, "%s -> %s\n", e->name.buf, line->buf) < 0);
 }
 
 void engine_writeln(const Engine *e, char *buf)
 {
+    assert(W);  // called by worker threads
+
     DIE_IF(W->id, fputs(buf, e->out) < 0);
     DIE_IF(W->id, fputc('\n', e->out) < 0);
     DIE_IF(W->id, fflush(e->out) < 0);
 
-    if (e->log) {
-        DIE_IF(W->id, fprintf(e->log, "%s <- %s\n", e->name.buf, buf) < 0);
-        DIE_IF(W->id, fflush(e->log) < 0);
+    if (W->log) {
+        DIE_IF(W->id, fprintf(W->log, "%s <- %s\n", e->name.buf, buf) < 0);
+        DIE_IF(W->id, fflush(W->log) < 0);
     }
 }
 
 void engine_sync(const Engine *e, Deadline *deadline)
 {
+    assert(W);
+
     deadline_set(deadline, e, system_msec() + 1000);
     engine_writeln(e, "isready");
     scope(str_del) str_t line = str_new();
@@ -190,6 +201,8 @@ void engine_sync(const Engine *e, Deadline *deadline)
 bool engine_bestmove(const Engine *e, int *score, int64_t *timeLeft, Deadline *deadline,
     str_t *best, str_t *pv)
 {
+    assert(W);
+
     int result = false;
     *score = 0;
     scope(str_del) str_t line = str_new(), token = str_new();
@@ -243,14 +256,14 @@ bool engine_bestmove(const Engine *e, int *score, int64_t *timeLeft, Deadline *d
 
 void deadline_set(Deadline *deadline, const Engine *e, int64_t timeLimit)
 {
-    assert(deadline);
+    assert(W && deadline);
 
     pthread_mutex_lock(&deadline->mtx);
     deadline->engine = e;
     deadline->timeLimit = timeLimit;
 
-    if (e && e->log)
-        DIE_IF(W->id, fprintf(e->log, "deadline set: %s must respond by %" PRId64 "\n",
+    if (e && W->log)
+        DIE_IF(W->id, fprintf(W->log, "deadline set: %s must respond by %" PRId64 "\n",
             e->name.buf, timeLimit) < 0);
 
     pthread_mutex_unlock(&deadline->mtx);
@@ -258,19 +271,18 @@ void deadline_set(Deadline *deadline, const Engine *e, int64_t timeLimit)
 
 void deadline_clear(Deadline *deadline)
 {
-    assert(deadline);
+    assert(W && deadline);
 
-    if (deadline->engine && deadline->engine->log)
-        DIE_IF(W->id, fprintf(deadline->engine->log, "deadline cleared: %s"
-            " has no more deadline (was %" PRId64 " previously).\n", deadline->engine->name.buf,
-            deadline->timeLimit) < 0);
+    if (deadline->engine && W->log)
+        DIE_IF(W->id, fprintf(W->log, "deadline cleared: %s has no more deadline (was %" PRId64
+            " previously).\n", deadline->engine->name.buf, deadline->timeLimit) < 0);
 
     deadline_set(deadline, NULL, 0);
 }
 
-const Engine *deadline_overdue(Deadline *deadline)
+const Engine *deadline_overdue(Deadline *deadline, FILE *log)
 {
-    assert(deadline);
+    assert(!W && deadline);
 
     pthread_mutex_lock(&deadline->mtx);
     const int64_t timeLimit = deadline->timeLimit;
@@ -280,15 +292,15 @@ const Engine *deadline_overdue(Deadline *deadline)
     const int64_t time = system_msec();
 
     if (e && time > timeLimit) {
-        if (e->log)
-            DIE_IF(W->id, fprintf(e->log, "deadline failed: %s responded at %" PRId64 ", %"
-                PRId64 "ms after the deadline.\n", e->name.buf, time, time - timeLimit) < 0);
+        if (log)
+            DIE_IF(W->id, fprintf(log, "deadline failed: %s responded at %" PRId64 ", %" PRId64
+                "ms after the deadline.\n", e->name.buf, time, time - timeLimit) < 0);
 
         return e;
     } else {
-        if (e && e->log)
-            DIE_IF(W->id, fprintf(e->log, "deadline ok: %s responded at %" PRId64 ", %"
-                PRId64 "ms before the deadline.\n", e->name.buf, time, timeLimit - time) < 0);
+        if (e && log)
+            DIE_IF(W->id, fprintf(log, "deadline ok: %s responded at %" PRId64 ", %" PRId64
+                "ms before the deadline.\n", e->name.buf, time, timeLimit - time) < 0);
 
         return NULL;
     }

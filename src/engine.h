@@ -21,7 +21,7 @@
 
 // Engine process
 typedef struct {
-    FILE *in, *out, *log;
+    FILE *in, *out;
     str_t name;
     pid_t pid;
     char pad[4];
@@ -39,8 +39,7 @@ typedef struct {
     int64_t timeLimit;
 } Deadline;
 
-const Engine *deadline_overdue(Deadline *deadline);
-Engine engine_new(str_t cmd, str_t name, str_t *options, FILE *log, Deadline *deadline);
+Engine engine_new(str_t cmd, str_t name, str_t *options, Deadline *deadline);
 void engine_del(Engine *e);
 
 void engine_readln(const Engine *e, str_t *line);
@@ -52,3 +51,5 @@ bool engine_bestmove(const Engine *e, int *score, int64_t *timeLeft, Deadline *d
 
 void deadline_set(Deadline *deadline, const Engine *engine, int64_t timeLimit);
 void deadline_clear(Deadline *deadline);
+
+const Engine *deadline_overdue(Deadline *deadline, FILE *log);
