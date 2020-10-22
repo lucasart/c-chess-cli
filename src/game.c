@@ -311,91 +311,83 @@ int game_play(Game *g, const GameOptions *go, const Engine engines[2], const Eng
         : RESULT_DRAW;
 }
 
-str_t game_decode_state(const Game *g, str_t *reason)
+void game_decode_state(const Game *g, str_t *result, str_t *reason)
 {
-    assert(g && reason);
-    str_t result = str_new();
+    assert(g && result && reason);
+    str_cpy_c(result, "1/2-1/2");
+    str_clear(reason);
 
     if (g->state == STATE_NONE) {
-        str_cpy_c(&result, "*");
+        str_cpy_c(result, "*");
         str_cpy_c(reason, "unterminated");
     } else if (g->state == STATE_CHECKMATE) {
-        str_cpy_c(&result, g->pos[g->ply].turn == WHITE ? "0-1" : "1-0");
+        str_cpy_c(result, g->pos[g->ply].turn == WHITE ? "0-1" : "1-0");
         str_cpy_c(reason, "checkmate");
-    } else if (g->state == STATE_STALEMATE) {
-        str_cpy_c(&result, "1/2-1/2");
+    } else if (g->state == STATE_STALEMATE)
         str_cpy_c(reason, "stalemate");
-    } else if (g->state == STATE_THREEFOLD) {
-        str_cpy_c(&result, "1/2-1/2");
+    else if (g->state == STATE_THREEFOLD)
         str_cpy_c(reason, "3-fold repetition");
-    } else if (g->state == STATE_FIFTY_MOVES) {
-        str_cpy_c(&result, "1/2-1/2");
+    else if (g->state == STATE_FIFTY_MOVES)
         str_cpy_c(reason, "50 moves rule");
-    } else if (g->state ==STATE_INSUFFICIENT_MATERIAL) {
-        str_cpy_c(&result, "1/2-1/2");
+    else if (g->state ==STATE_INSUFFICIENT_MATERIAL)
         str_cpy_c(reason, "insufficient material");
-    } else if (g->state == STATE_ILLEGAL_MOVE) {
-        str_cpy_c(&result, g->pos[g->ply].turn == WHITE ? "0-1" : "1-0");
+    else if (g->state == STATE_ILLEGAL_MOVE) {
+        str_cpy_c(result, g->pos[g->ply].turn == WHITE ? "0-1" : "1-0");
         str_cpy_c(reason, "rules infraction");
-    } else if (g->state == STATE_DRAW_ADJUDICATION) {
-        str_cpy_c(&result, "1/2-1/2");
+    } else if (g->state == STATE_DRAW_ADJUDICATION)
         str_cpy_c(reason, "adjudication");
-    } else if (g->state == STATE_RESIGN) {
-        str_cpy_c(&result, g->pos[g->ply].turn == WHITE ? "0-1" : "1-0");
+    else if (g->state == STATE_RESIGN) {
+        str_cpy_c(result, g->pos[g->ply].turn == WHITE ? "0-1" : "1-0");
         str_cpy_c(reason, "adjudication");
     } else if (g->state == STATE_TIME_LOSS) {
-        str_cpy_c(&result, g->pos[g->ply].turn == WHITE ? "0-1" : "1-0");
+        str_cpy_c(result, g->pos[g->ply].turn == WHITE ? "0-1" : "1-0");
         str_cpy_c(reason, "time forfeit");
     } else
         assert(false);
-
-    return result;
 }
 
-str_t game_pgn(const Game *g)
+void game_pgn(const Game *g, str_t *pgn)
 {
-    str_t pgn = str_new();
-
-    str_cat_fmt(&pgn, "[White \"%S\"]\n", g->names[WHITE]);
-    str_cat_fmt(&pgn, "[Black \"%S\"]\n", g->names[BLACK]);
+    str_cpy_fmt(pgn, "[White \"%S\"]\n", g->names[WHITE]);
+    str_cat_fmt(pgn, "[Black \"%S\"]\n", g->names[BLACK]);
 
     // Result in PGN format "1-0", "0-1", "1/2-1/2" (from white pov)
-    scope(str_del) str_t reason = str_new(), result = game_decode_state(g, &reason);
-    str_cat_fmt(&pgn, "[Result \"%S\"]\n", result);
-    str_cat_fmt(&pgn, "[Termination \"%S\"]\n", reason);
+    scope(str_del) str_t result = str_new(), reason = str_new();
+    game_decode_state(g, &result, &reason);
+    str_cat_fmt(pgn, "[Result \"%S\"]\n", result);
+    str_cat_fmt(pgn, "[Termination \"%S\"]\n", reason);
 
     scope(str_del) str_t fen = str_new();
     pos_get(&g->pos[0], &fen);
-    str_cat_fmt(&pgn, "[FEN \"%S\"]\n", fen);
+    str_cat_fmt(pgn, "[FEN \"%S\"]\n", fen);
 
     if (g->pos[0].chess960)
-        str_cat_c(&pgn, "[Variant \"Chess960\"]\n");
+        str_cat_c(pgn, "[Variant \"Chess960\"]\n");
 
-    str_cat_fmt(&pgn, "[PlyCount \"%i\"]\n\n", g->ply);
+    str_cat_fmt(pgn, "[PlyCount \"%i\"]\n\n", g->ply);
     scope(str_del) str_t san = str_new();
 
     for (int ply = 1; ply <= g->ply; ply++) {
         // Write move number
         if (g->pos[ply - 1].turn == WHITE || ply == 1)
-            str_cat_fmt(&pgn, g->pos[ply - 1].turn == WHITE ? "%i. " : "%i... ",
+            str_cat_fmt(pgn, g->pos[ply - 1].turn == WHITE ? "%i. " : "%i... ",
                 g->pos[ply - 1].fullMove);
 
         // Append SAN move
         pos_move_to_san(&g->pos[ply - 1], g->pos[ply].lastMove, &san);
-        str_cat(&pgn, san);
+        str_cat(pgn, san);
 
         // Append check marker
         if (g->pos[ply].checkers) {
             if (ply == g->ply && g->state == STATE_CHECKMATE)
-                str_push(&pgn, '#');  // checkmate
+                str_push(pgn, '#');  // checkmate
             else
-                str_push(&pgn, '+');  // normal check
+                str_push(pgn, '+');  // normal check
         }
 
         // Append delimiter
-        str_push(&pgn, ply % 10 == 0 ? '\n' : ' ');
+        str_push(pgn, ply % 10 == 0 ? '\n' : ' ');
     }
 
-    str_cat_c(str_cat(&pgn, result), "\n\n");
-    return pgn;
+    str_cat_c(str_cat(pgn, result), "\n\n");
 }

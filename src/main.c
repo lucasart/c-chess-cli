@@ -55,7 +55,8 @@ static void *thread_start(void *arg)
 
         // Write to PGN file
         if (W->pgnOut) {
-            scope(str_del) str_t pgn = game_pgn(&game);
+            scope(str_del) str_t pgn = str_new();
+            game_pgn(&game, &pgn);
             DIE_IF(W->id, fputs(pgn.buf, W->pgnOut) < 0);
         }
 
@@ -73,7 +74,8 @@ static void *thread_start(void *arg)
         }
 
         // Write to stdout a one line summary of the game
-        scope(str_del) str_t reason = str_new(), result = game_decode_state(&game, &reason);
+        scope(str_del) str_t result = str_new(), reason = str_new();
+        game_decode_state(&game, &result, &reason);
         printf("[%i] %s vs %s: %s (%s)\n", W->id, game.names[WHITE].buf,
             game.names[BLACK].buf, result.buf, reason.buf);
 
