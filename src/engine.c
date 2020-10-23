@@ -70,6 +70,19 @@ static void engine_spawn(Engine *e, const char *cwd, const char *run, char **arg
     }
 }
 
+Deadline deadline_new(void)
+{
+    Deadline d = {0};
+    pthread_mutex_init(&d.mtx, NULL);
+    return d;
+}
+
+void deadline_del(Deadline *d)
+{
+    pthread_mutex_destroy(&d->mtx);
+    *d = (Deadline){0};
+}
+
 Engine engine_new(const char *cmd, const char *name, const str_t *options, Deadline *deadline)
 {
     assert(W && options && deadline);

@@ -19,7 +19,6 @@
 
 Worker *Workers;
 _Thread_local Worker *W = NULL;
-static int WorkersCount = 0;
 static pthread_mutex_t mtxWorkers = PTHREAD_MUTEX_INITIALIZER;
 
 _Atomic(int) WorkersBusy = 0;
@@ -39,43 +38,45 @@ void engine_options_del(EngineOptions *eo)
     vec_del_rec(eo->options, str_del);
 }
 
-void workers_new(int count, FILE *pgnOut, FILE *sampleFile, const GameOptions *go)
+Worker worker_new(int i, const char *logName)
 {
-    WorkersCount = count;
-    Workers = calloc((size_t)count, sizeof(Worker));
+    assert(!W && logName);
 
-    for (int i = 0; i < count; i++) {
-        pthread_mutex_init(&Workers[i].deadline.mtx, NULL);
-        Workers[i].seed = (uint64_t)i;
-        Workers[i].id = i + 1;
-        Workers[i].pgnOut = pgnOut;
-        Workers[i].sampleFile = sampleFile;
-        Workers[i].go = go;
+    Worker w = {0};
+    w.seed = (uint64_t)i;
+    w.id = i + 1;
+
+    if (*logName) {
+        w.log = fopen(logName, "w");
+        DIE_IF(0, !w.log);
     }
+
+    w.deadline = deadline_new();
+    return w;
 }
 
-void workers_delete()
+void worker_del(Worker *w)
 {
-    for (int i = 0; i < WorkersCount; i++)
-        pthread_mutex_destroy(&Workers[i].deadline.mtx);
+    deadline_del(&w->deadline);
 
-    free(Workers);
-    Workers = NULL;
-    WorkersCount = 0;
+    if (w->log)
+        DIE_IF(0, fclose(w->log) < 0);
+
+    *w = (Worker){0};
 }
 
 // TODO: document this function...
-void workers_add_result(Worker *worker, int result, int wldCount[3])
+void workers_add_result(Worker *w, int result, int wldCount[3])
 {
     pthread_mutex_lock(&mtxWorkers);
 
     // Add wld result to specificied worker
-    worker->wldCount[result]++;
+    w->wldCount[result]++;
 
     // Refresh totals (across workers)
     wldCount[0] = wldCount[1] = wldCount[2] = 0;
 
-    for (int i = 0; i < WorkersCount; i++)
+    for (size_t i = 0; i < vec_size(Workers); i++)
         for (int j = 0; j < 3; j++)
             wldCount[j] += Workers[i].wldCount[j];
 

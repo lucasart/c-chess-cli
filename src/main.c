@@ -24,20 +24,14 @@
 
 static Options options;
 static EngineOptions *eo;
+static GameOptions go;
 static Openings openings;
+static FILE *pgnOut, *sampleFile;
 
 static void *thread_start(void *arg)
 {
     W = (Worker *)arg;
     Engine engines[2];
-
-    // Prepare log file
-    W->log = NULL;
-    scope(str_del) str_t logName = str_new();
-    str_cat_fmt(&logName, "c-chess-cli.%i.log", W->id);
-
-    if (options.log)
-        DIE_IF(W->id, !(W->log = fopen(logName.buf, "w")));
 
     // Prepare engines[]
     for (int i = 0; i < 2; i++)
@@ -50,18 +44,18 @@ static void *thread_start(void *arg)
         // Play 1 game
         Game game = game_new(&fen);
         const EngineOptions *eoPair[2] = {&eo[0], &eo[1]};
-        const int wld = game_play(&game, W->go, engines, eoPair, &W->deadline,
+        const int wld = game_play(&game, &go, engines, eoPair, &W->deadline,
             next % 2 == 0, &W->seed);
 
         // Write to PGN file
-        if (W->pgnOut) {
+        if (pgnOut) {
             scope(str_del) str_t pgn = str_new();
             game_pgn(&game, &pgn);
-            DIE_IF(W->id, fputs(pgn.buf, W->pgnOut) < 0);
+            DIE_IF(W->id, fputs(pgn.buf, pgnOut) < 0);
         }
 
         // Write to Sample file
-        if (W->sampleFile) {
+        if (sampleFile) {
             scope(str_del) str_t lines = str_new(), sampleFen = str_new();
 
             for (size_t i = 0; i < vec_size(game.samples); i++) {
@@ -70,7 +64,7 @@ static void *thread_start(void *arg)
                     game.samples[i].result);
             }
 
-            DIE_IF(W->id, fputs(lines.buf, W->sampleFile) < 0);
+            DIE_IF(W->id, fputs(lines.buf, sampleFile) < 0);
         }
 
         // Write to stdout a one line summary of the game
@@ -111,38 +105,44 @@ static void *thread_start(void *arg)
     for (int i = 0; i < 2; i++)
         engine_del(&engines[i]);
 
-    if (W->log)
-        DIE_IF(W->id, fclose(W->log) < 0);
-
     WorkersBusy--;
     return NULL;
 }
 
 int main(int argc, const char **argv)
 {
-    GameOptions go;
     eo = vec_new(2, EngineOptions);
     options = options_new();
     options_parse(argc, argv, &options, &go, &eo);
 
     openings = openings_new(options.openings.buf, options.random, options.repeat, 0);
 
-    FILE *pgnOut = NULL;
+    pgnOut = NULL;
     if (options.pgnOut.len)
         DIE_IF(0, !(pgnOut = fopen(options.pgnOut.buf, "a")));
 
-    FILE *sampleFile = NULL;
+    sampleFile = NULL;
     if (options.sampleFileName.len)
         DIE_IF(0, !(sampleFile = fopen(options.sampleFileName.buf, "ab")));
 
+    // Prepare Workers[]
+    Workers = vec_new((size_t)options.concurrency, Worker);
+
+    for (int i = 0; i < options.concurrency; i++) {
+        scope(str_del) str_t logName = str_new();
+        str_cat_fmt(&logName, "c-chess-cli.%i.log", i + 1);
+        vec_push(Workers, worker_new(i, logName.buf));
+    }
+
+    // Start threads[]
     pthread_t threads[options.concurrency];
-    workers_new(options.concurrency, pgnOut, sampleFile, &go);
 
     for (int i = 0; i < options.concurrency; i++) {
         WorkersBusy++;
         pthread_create(&threads[i], NULL, thread_start, &Workers[i]);
     }
 
+    // Main thread loop: check deadline overdue at regular intervals
     do {
         system_sleep(100);
 
@@ -154,10 +154,12 @@ int main(int argc, const char **argv)
         }
     } while (WorkersBusy > 0);
 
+    // Join threads[]
     for (int i = 0; i < options.concurrency; i++)
         pthread_join(threads[i], NULL);
 
-    workers_delete();
+    // Cleanup
+    vec_del_rec(Workers, worker_del);
 
     if (pgnOut)
         DIE_IF(0, fclose(pgnOut) < 0);
@@ -168,5 +170,6 @@ int main(int argc, const char **argv)
     openings_delete(&openings, 0);
     options_del(&options);
     vec_del_rec(eo, engine_options_del);
+
     return 0;
 }

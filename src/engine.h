@@ -39,6 +39,9 @@ typedef struct {
     int64_t timeLimit;
 } Deadline;
 
+Deadline deadline_new(void);
+void deadline_del(Deadline *d);
+
 Engine engine_new(const char *cmd, const char *name, const str_t *options, Deadline *deadline);
 void engine_del(Engine *e);
 
