@@ -15,8 +15,8 @@
 #pragma once
 #include "position.h"
 #include "engine.h"
+#include "options.h"
 #include "vec.h"
-#include "workers.h"
 
 enum {
     STATE_NONE,

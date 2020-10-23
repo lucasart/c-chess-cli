@@ -25,6 +25,15 @@ typedef struct {
     char pad[4];
 } Options;
 
+typedef struct {
+    str_t cmd, name, *options;
+    int64_t time, increment, movetime, nodes;
+    int depth, movestogo;
+} EngineOptions;
+
+EngineOptions engine_options_new(void);
+void engine_options_del(EngineOptions *eo);
+
 Options options_new(void);
 void options_parse(int argc, const char **argv, Options *o, GameOptions *go, EngineOptions **eo);
 void options_del(Options *o);

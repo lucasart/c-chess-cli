@@ -25,15 +25,6 @@ enum {
 };
 
 typedef struct {
-    str_t cmd, name, *options;
-    int64_t time, increment, movetime, nodes;
-    int depth, movestogo;
-} EngineOptions;
-
-EngineOptions engine_options_new(void);
-void engine_options_del(EngineOptions *eo);
-
-typedef struct {
     // Per engine, by index in engines[] array (not the same as color)
     double sampleFrequency;
     int resignCount, resignScore;

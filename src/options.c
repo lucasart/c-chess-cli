@@ -94,6 +94,21 @@ static void options_parse_eo(int argc, const char **argv, int *i, EngineOptions 
     }
 }
 
+EngineOptions engine_options_new(void)
+{
+    EngineOptions eo = {0};
+    eo.cmd = str_new();
+    eo.name = str_new();
+    eo.options = vec_new(1, str_t);
+    return eo;
+}
+
+void engine_options_del(EngineOptions *eo)
+{
+    str_del_n(&eo->cmd, &eo->name);
+    vec_del_rec(eo->options, str_del);
+}
+
 Options options_new(void)
 {
     Options o = {0};
