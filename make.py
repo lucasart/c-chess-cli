@@ -33,13 +33,7 @@ def compile(program, output):
 
 if args.task == 'test':
     if compile('engine', './test/engine') == 0 and compile('main', './c-chess-cli') == 0:
-        try:
-            os.remove('./out.pgn')
-            os.remove('./training.csv')
-            os.remove('./c-chess-cli.1.log')
-        except OSError:
-            pass
-
+        run('rm out.pgn training.csv c-chess-cli.1.log')
         run('./c-chess-cli -each cmd=./test/engine depth=8 option.Hash=4 ' \
             '-engine "name=engine\:1" option.Threads=2 -engine name=engine2 ' \
             '-sample 0.5,y,training.csv -openings test/chess960.epd -repeat ' \

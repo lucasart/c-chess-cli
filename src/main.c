@@ -129,7 +129,10 @@ int main(int argc, const char **argv)
 
     for (int i = 0; i < options.concurrency; i++) {
         scope(str_del) str_t logName = str_new();
-        str_cat_fmt(&logName, "c-chess-cli.%i.log", i + 1);
+
+        if (options.log)
+            str_cat_fmt(&logName, "c-chess-cli.%i.log", i + 1);
+
         vec_push(Workers, worker_new(i, logName.buf));
     }
 
