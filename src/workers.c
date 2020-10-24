@@ -69,7 +69,7 @@ void deadline_clear(Worker *w)
     pthread_mutex_unlock(&w->deadline.mtx);
 }
 
-bool deadline_overdue(Worker *w)
+int64_t deadline_overdue(Worker *w)
 {
     assert(w);
 
@@ -85,9 +85,9 @@ bool deadline_overdue(Worker *w)
                 ". Caught by main thread %" PRId64 "ms after.\n", w->deadline.engineName.buf,
                 timeLimit, time - timeLimit) < 0);
 
-        return true;
+        return time - timeLimit;
     } else
-        return false;
+        return 0;
 }
 
 Worker worker_new(int i, const char *logName)

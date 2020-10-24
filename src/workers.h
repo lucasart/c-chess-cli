@@ -36,12 +36,6 @@ typedef struct {
     char pad[7];
 } GameOptions;
 
-// Deadlines overdues are unrecovrable errors. Given a choice, we prefer to handle them gracefully
-// as time losses in the worker threads. Since deadlines are enforced by the master thread, there is
-// no other choice than to terminate. Any attempt by the master thread to communicate with a buggy
-// engine, could result in hanguing forever on blocking I/O.
-enum {DEADLINE_TOLERANCE = 1000};
-
 typedef struct {
     pthread_mutex_t mtx;
     int64_t timeLimit;
@@ -70,7 +64,7 @@ void worker_del(Worker *w);
 
 void deadline_set(Worker *w, const char *engineName, int64_t timeLimit);
 void deadline_clear(Worker *w);
-bool deadline_overdue(Worker *w);
+int64_t deadline_overdue(Worker *w);
 
 void workers_add_result(Worker *worker, int result, int wld[3]);
 

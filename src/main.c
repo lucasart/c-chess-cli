@@ -145,9 +145,19 @@ int main(int argc, const char **argv)
     do {
         system_sleep(100);
 
-        for (int i = 0; i < options.concurrency; i++)
-            if (deadline_overdue(&Workers[i]))
+        for (int i = 0; i < options.concurrency; i++) {
+            const int64_t delay = deadline_overdue(&Workers[i]);
+
+            // We want some tolerance on small delays here. Given a choice, it's best to wait for
+            // the worker thread to notice an overdue deadline, which it will handled nicely by
+            // counting the game as lost for the offending engine, and continue. Enforcing deadlines
+            // from the master thread is the last resort solution, because it is an unrecovrable
+            // error. At this point we are likely to face a completely unresponsive engine, where
+            // any attempt at I/O will block the master thread, on top of the already blocked
+            // worker. Hence, we must DIE().
+            if (delay > 1000)
                 DIE("[%d] engine %s is unresponsive\n", i, Workers[i].deadline.engineName.buf);
+        }
     } while (WorkersBusy > 0);
 
     // Join threads[]
