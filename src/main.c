@@ -146,12 +146,9 @@ int main(int argc, const char **argv)
     do {
         system_sleep(100);
 
-        for (int i = 0; i < options.concurrency; i++) {
-            const Engine *deadEngine = deadline_overdue(&Workers[i].deadline, Workers[i].log);
-
-            if (deadEngine)
-                DIE("[%d] engine %s is unresponsive\n", i, deadEngine->name.buf);
-        }
+        for (int i = 0; i < options.concurrency; i++)
+            if (deadline_overdue(&Workers[i].deadline, Workers[i].log))
+                DIE("[%d] engine %s is unresponsive\n", i, Workers[i].deadline.engineName.buf);
     } while (WorkersBusy > 0);
 
     // Join threads[]

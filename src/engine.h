@@ -35,8 +35,10 @@ enum {DEADLINE_TOLERANCE = 1000};
 
 typedef struct {
     pthread_mutex_t mtx;
-    const Engine *engine;
     int64_t timeLimit;
+    str_t engineName;
+    bool set;
+    char pad[7];
 } Deadline;
 
 Deadline deadline_new(void);
@@ -52,7 +54,7 @@ void engine_sync(const Engine *e, Deadline *deadline);
 bool engine_bestmove(const Engine *e, int *score, int64_t *timeLeft, Deadline *deadline,
     str_t *best, str_t *pv);
 
-void deadline_set(Deadline *deadline, const Engine *engine, int64_t timeLimit);
+void deadline_set(Deadline *deadline, const char *engineName, int64_t timeLimit);
 void deadline_clear(Deadline *deadline);
 
-const Engine *deadline_overdue(Deadline *deadline, FILE *log);
+bool deadline_overdue(Deadline *deadline, FILE *log);
