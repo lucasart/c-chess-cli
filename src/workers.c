@@ -39,25 +39,17 @@ void deadline_del(Deadline *d)
 
 void deadline_set(Worker *w, const char *engineName, int64_t timeLimit)
 {
-    assert(w);
+    assert(w && engineName && timeLimit > 0);
 
     pthread_mutex_lock(&w->deadline.mtx);
 
-    if (timeLimit) {
-        w->deadline.set = true;
-        str_cpy_c(&w->deadline.engineName, engineName);
-        w->deadline.timeLimit = timeLimit;
+    w->deadline.set = true;
+    str_cpy_c(&w->deadline.engineName, engineName);
+    w->deadline.timeLimit = timeLimit;
 
-        if (w->log)
-            DIE_IF(w->id, fprintf(w->log, "deadline: %s must respond by %" PRId64 "\n",
-                w->deadline.engineName.buf, w->deadline.timeLimit) < 0);
-    } else {
-        w->deadline.set = false;
-
-        if (w->log)
-            DIE_IF(w->id, fprintf(w->log, "deadline: %s responded in time\n",
-                w->deadline.engineName.buf) < 0);
-    }
+    if (w->log)
+        DIE_IF(w->id, fprintf(w->log, "deadline: %s must respond by %" PRId64 "\n",
+            w->deadline.engineName.buf, w->deadline.timeLimit) < 0);
 
     pthread_mutex_unlock(&w->deadline.mtx);
 }
@@ -65,7 +57,16 @@ void deadline_set(Worker *w, const char *engineName, int64_t timeLimit)
 void deadline_clear(Worker *w)
 {
     assert(w);
-    deadline_set(w, NULL, 0);
+
+    pthread_mutex_lock(&w->deadline.mtx);
+
+    w->deadline.set = false;
+
+    if (w->log)
+        DIE_IF(w->id, fprintf(w->log, "deadline: %s responded before %" PRId64 "\n",
+            w->deadline.engineName.buf, w->deadline.timeLimit) < 0);
+
+    pthread_mutex_unlock(&w->deadline.mtx);
 }
 
 bool deadline_overdue(Worker *w)
@@ -80,17 +81,13 @@ bool deadline_overdue(Worker *w)
 
     if (w->deadline.set && time > timeLimit) {
         if (w->log)
-            DIE_IF(w->id, fprintf(w->log, "deadline failed: %s responded at %" PRId64 ", %" PRId64
-                "ms after the deadline.\n", w->deadline.engineName.buf, time, time - timeLimit) < 0);
+            DIE_IF(w->id, fprintf(w->log, "deadline: %s failed to respond by %" PRId64
+                ". Caught by main thread %" PRId64 "ms after.\n", w->deadline.engineName.buf,
+                timeLimit, time - timeLimit) < 0);
 
         return true;
-    } else {
-        if (w->deadline.set && w->log)
-            DIE_IF(w->id, fprintf(w->log, "deadline ok: %s responded at %" PRId64 ", %" PRId64
-                "ms before the deadline.\n", w->deadline.engineName.buf, time, timeLimit - time) < 0);
-
+    } else
         return false;
-    }
 }
 
 Worker worker_new(int i, const char *logName)
