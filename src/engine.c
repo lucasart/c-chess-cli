@@ -22,9 +22,8 @@
 #include "engine.h"
 #include "util.h"
 #include "vec.h"
-#include "workers.h"
 
-static void engine_spawn(Engine *e, const char *cwd, const char *run, char **argv,
+static void engine_spawn(const Worker *w, Engine *e, const char *cwd, const char *run, char **argv,
     bool readStdErr)
 {
     assert(e && cwd && run && argv && argv[0]);
@@ -35,47 +34,47 @@ static void engine_spawn(Engine *e, const char *cwd, const char *run, char **arg
 
     e->in = e->out = NULL;  // silence bogus compiler warning
 
-    DIE_IF(W->id, pipe(outof) < 0);
-    DIE_IF(W->id, pipe(into) < 0);
-    DIE_IF(W->id, (e->pid = fork()) < 0);
+    DIE_IF(w->id, pipe(outof) < 0);
+    DIE_IF(w->id, pipe(into) < 0);
+    DIE_IF(w->id, (e->pid = fork()) < 0);
 
     if (e->pid == 0) {
         // in the child process
-        DIE_IF(W->id, close(into[1]) < 0);
-        DIE_IF(W->id, close(outof[0]) < 0);
+        DIE_IF(w->id, close(into[1]) < 0);
+        DIE_IF(w->id, close(outof[0]) < 0);
 
-        DIE_IF(W->id, dup2(into[0], STDIN_FILENO) < 0);
-        DIE_IF(W->id, dup2(outof[1], STDOUT_FILENO) < 0);
+        DIE_IF(w->id, dup2(into[0], STDIN_FILENO) < 0);
+        DIE_IF(w->id, dup2(outof[1], STDOUT_FILENO) < 0);
 
         // When readStdErr, dump stderr into stdout, like doing '2>&1' in bash
         if (readStdErr)
-            DIE_IF(W->id, dup2(outof[1], STDERR_FILENO) < 0);
+            DIE_IF(w->id, dup2(outof[1], STDERR_FILENO) < 0);
 
         // Close file descriptors that won't be needed anymore
-        DIE_IF(W->id, close(into[0]) < 0);
-        DIE_IF(W->id, close(outof[1]) > 0);
+        DIE_IF(w->id, close(into[0]) < 0);
+        DIE_IF(w->id, close(outof[1]) > 0);
 
         // Set cwd as current directory, and execute run
-        DIE_IF(W->id, chdir(cwd) < 0);
-        DIE_IF(W->id, execvp(run, argv) < 0);
+        DIE_IF(w->id, chdir(cwd) < 0);
+        DIE_IF(w->id, execvp(run, argv) < 0);
     } else {
         assert(e->pid > 0);
 
         // in the parent process
-        DIE_IF(W->id, close(into[0]) < 0);
-        DIE_IF(W->id, close(outof[1]) < 0);
+        DIE_IF(w->id, close(into[0]) < 0);
+        DIE_IF(w->id, close(outof[1]) < 0);
 
-        DIE_IF(W->id, !(e->in = fdopen(outof[0], "r")));
-        DIE_IF(W->id, !(e->out = fdopen(into[1], "w")));
+        DIE_IF(w->id, !(e->in = fdopen(outof[0], "r")));
+        DIE_IF(w->id, !(e->out = fdopen(into[1], "w")));
     }
 }
 
-Engine engine_new(const char *cmd, const char *name, const str_t *options)
+Engine engine_new(Worker *w, const char *cmd, const char *name, const str_t *options)
 {
-    assert(W && options);
+    assert(w && options);
 
     if (!*cmd)
-        DIE("[%d] missing command to start engine.\n", W->id);
+        DIE("[%d] missing command to start engine.\n", w->id);
 
     Engine e;
     e.name = str_new_from_c(*name ? name : cmd); // default value
@@ -118,18 +117,18 @@ Engine engine_new(const char *cmd, const char *name, const str_t *options)
         argv[i] = args[i].buf;
 
     // Spawn child process and plug pipes
-    engine_spawn(&e, cwd.buf, run.buf, argv, W->log != NULL);
+    engine_spawn(w, &e, cwd.buf, run.buf, argv, w->log != NULL);
 
     // Free memory for string elements in the vector, then for the vector itself
     vec_del_rec(args, str_del);
 
     // Start the uci..uciok dialogue
-    deadline_set(&W->deadline, e.name.buf, system_msec() + 2000);
-    engine_writeln(&e, "uci");
+    deadline_set(w, e.name.buf, system_msec() + 2000);
+    engine_writeln(w, &e, "uci");
     scope(str_del) str_t line = str_new();
 
     do {
-        engine_readln(&e, &line);
+        engine_readln(w, &e, &line);
         tail = line.buf;
 
         // Set e.name, by parsing "id name %s", only if no name was provided (*name == '\0')
@@ -141,66 +140,68 @@ Engine engine_new(const char *cmd, const char *name, const str_t *options)
     // Parses options vector elements of the form "name=value", and send to engine
     for (size_t i = 0; i < vec_size(options); i++) {
         str_cpy_fmt(&line, "setoption name %S", options[i]);
-        engine_writeln(&e, line.buf);
+        engine_writeln(w, &e, line.buf);
     }
 
-    deadline_clear(&W->deadline);
+    deadline_clear(w);
     return e;
 }
 
-void engine_del(Engine *e)
+void engine_del(const Worker *w, Engine *e)
 {
-    assert(W);
+    (void)w;  // silence compiler warning (unused variable)
+    assert(w);
 
     str_del(&e->name);
-    DIE_IF(W->id, fclose(e->in) < 0);
-    DIE_IF(W->id, fclose(e->out) < 0);
-    DIE_IF(W->id, kill(e->pid, SIGTERM) < 0);
+    DIE_IF(w->id, fclose(e->in) < 0);
+    DIE_IF(w->id, fclose(e->out) < 0);
+    DIE_IF(w->id, kill(e->pid, SIGTERM) < 0);
 }
 
-void engine_readln(const Engine *e, str_t *line)
+void engine_readln(const Worker *w, const Engine *e, str_t *line)
 {
-    assert(W);  // called by worker threads
+    assert(w);
 
     if (!str_getline(line, e->in))
-        DIE("[%d] could not read from %s\n", W->id, e->name.buf);
+        DIE("[%d] could not read from %s\n", w->id, e->name.buf);
 
-    if (W->log)
-        DIE_IF(W->id, fprintf(W->log, "%s -> %s\n", e->name.buf, line->buf) < 0);
+    if (w->log)
+        DIE_IF(w->id, fprintf(w->log, "%s -> %s\n", e->name.buf, line->buf) < 0);
 }
 
-void engine_writeln(const Engine *e, char *buf)
+void engine_writeln(const Worker *w, const Engine *e, char *buf)
 {
-    assert(W);  // called by worker threads
+    assert(w);
 
-    DIE_IF(W->id, fputs(buf, e->out) < 0);
-    DIE_IF(W->id, fputc('\n', e->out) < 0);
-    DIE_IF(W->id, fflush(e->out) < 0);
+    DIE_IF(w->id, fputs(buf, e->out) < 0);
+    DIE_IF(w->id, fputc('\n', e->out) < 0);
+    DIE_IF(w->id, fflush(e->out) < 0);
 
-    if (W->log) {
-        DIE_IF(W->id, fprintf(W->log, "%s <- %s\n", e->name.buf, buf) < 0);
-        DIE_IF(W->id, fflush(W->log) < 0);
+    if (w->log) {
+        DIE_IF(w->id, fprintf(w->log, "%s <- %s\n", e->name.buf, buf) < 0);
+        DIE_IF(w->id, fflush(w->log) < 0);
     }
 }
 
-void engine_sync(const Engine *e)
+void engine_sync(Worker *w, const Engine *e)
 {
-    assert(W);
+    assert(w);
 
-    deadline_set(&W->deadline, e->name.buf, system_msec() + 1000);
-    engine_writeln(e, "isready");
+    deadline_set(w, e->name.buf, system_msec() + 1000);
+    engine_writeln(w, e, "isready");
     scope(str_del) str_t line = str_new();
 
     do {
-        engine_readln(e, &line);
+        engine_readln(w, e, &line);
     } while (strcmp(line.buf, "readyok"));
 
-    deadline_clear(&W->deadline);
+    deadline_clear(w);
 }
 
-bool engine_bestmove(const Engine *e, int *score, int64_t *timeLeft, str_t *best, str_t *pv)
+bool engine_bestmove(Worker *w, const Engine *e, int *score, int64_t *timeLeft, str_t *best,
+    str_t *pv)
 {
-    assert(W);
+    assert(w);
 
     int result = false;
     *score = 0;
@@ -208,10 +209,10 @@ bool engine_bestmove(const Engine *e, int *score, int64_t *timeLeft, str_t *best
     str_clear(pv);
 
     const int64_t start = system_msec(), timeLimit = start + *timeLeft;
-    deadline_set(&W->deadline, e->name.buf, timeLimit + 1000);
+    deadline_set(w, e->name.buf, timeLimit + 1000);
 
     while (*timeLeft >= 0 && !result) {
-        engine_readln(e, &line);
+        engine_readln(w, e, &line);
         *timeLeft = timeLimit - system_msec();
 
         const char *tail = str_tok(line.buf, &token, " ");
@@ -242,13 +243,13 @@ bool engine_bestmove(const Engine *e, int *score, int64_t *timeLeft, str_t *best
     // Time out. Send "stop" and give the opportunity to the engine to respond with bestmove (still
     // under deadline protection).
     if (!result) {
-        engine_writeln(e, "stop");
+        engine_writeln(w, e, "stop");
 
         do {
-            engine_readln(e, &line);
+            engine_readln(w, e, &line);
         } while (strncmp(line.buf, "bestmove ", strlen("bestmove ")));
     }
 
-    deadline_clear(&W->deadline);
+    deadline_clear(w);
     return result;
 }

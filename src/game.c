@@ -102,7 +102,7 @@ static bool illegal_move(move_t move, const move_t *moves)
     return true;
 }
 
-static Position resolve_pv(const Position *pos, const char *pv)
+static Position resolve_pv(const Worker *w, const Position *pos, const char *pv)
 {
     scope(str_del) str_t token = str_new();
     const char *tail = pv;
@@ -122,12 +122,12 @@ static Position resolve_pv(const Position *pos, const char *pv)
         moves = gen_all_moves(&p[idx], moves);
 
         if (illegal_move(m, moves)) {
-            if (W->log) {
+            if (w->log) {
                 pos_get(pos, &fen);
-                DIE_IF(W->id, fprintf(W->log, "WARNING: invalid PV\n") < 0);
-                DIE_IF(W->id, fprintf(W->log, "\tfen: '%s'\n", fen.buf) < 0);
-                DIE_IF(W->id, fprintf(W->log, "\tpv: '%s'\n", pv) < 0);
-                DIE_IF(W->id, fprintf(W->log, "\t'%s%s' starts with an illegal move\n", token.buf,
+                DIE_IF(w->id, fprintf(w->log, "WARNING: invalid PV\n") < 0);
+                DIE_IF(w->id, fprintf(w->log, "\tfen: '%s'\n", fen.buf) < 0);
+                DIE_IF(w->id, fprintf(w->log, "\tpv: '%s'\n", pv) < 0);
+                DIE_IF(w->id, fprintf(w->log, "\t'%s%s' starts with an illegal move\n", token.buf,
                     tail) < 0);
             }
 
@@ -145,9 +145,9 @@ static Position resolve_pv(const Position *pos, const char *pv)
     return resolved;
 }
 
-Game game_new(const str_t *fen)
+Game game_new(const Worker *w, const char *fen)
 {
-    assert(W && fen->len);
+    assert(w && fen);
 
     Game g;
     g.names[WHITE] = str_new();
@@ -157,8 +157,8 @@ Game game_new(const str_t *fen)
     g.pos = vec_new(128, Position);
     vec_push(g.pos, (Position){0});
 
-    if (!pos_set(&g.pos[0], fen->buf, false))
-        DIE("[%d] illegal FEN '%s'\n", W->id, fen->buf);
+    if (!pos_set(&g.pos[0], fen, false))
+        DIE("[%d] illegal FEN '%s'\n", w->id, fen);
 
     g.samples = vec_new(0, Sample);
     g.state = STATE_NONE;
@@ -175,24 +175,24 @@ void game_del(Game *g)
     str_del_n(&g->names[WHITE], &g->names[BLACK]);
 }
 
-int game_play(Game *g, const GameOptions *go, const Engine engines[2], const EngineOptions *eo[2],
-    bool reverse)
+int game_play(Worker *w, Game *g, const GameOptions *go, const Engine engines[2],
+    const EngineOptions *eo[2], bool reverse)
 // Play a game:
 // - engines[reverse] plays the first move (which does not mean white, that depends on the FEN)
 // - sets g->state value: see enum STATE_* codes
 // - returns RESULT_LOSS/DRAW/WIN from engines[0] pov
 {
-    assert(W && g && go);
+    assert(w && g && go);
 
     for (int color = WHITE; color <= BLACK; color++)
         str_cpy(&g->names[color], engines[color ^ g->pos[0].turn ^ reverse].name);
 
     for (int i = 0; i < 2; i++) {
         if (g->pos[0].chess960)
-            engine_writeln(&engines[i], "setoption name UCI_Chess960 value true");
+            engine_writeln(w, &engines[i], "setoption name UCI_Chess960 value true");
 
-        engine_writeln(&engines[i], "ucinewgame");
-        engine_sync(&engines[i]);
+        engine_writeln(w, &engines[i], "ucinewgame");
+        engine_sync(w, &engines[i]);
     }
 
     scope(str_del) str_t posCmd = str_new(), goCmd = str_new(), best = str_new();
@@ -214,8 +214,8 @@ int game_play(Game *g, const GameOptions *go, const Engine engines[2], const Eng
             break;
 
         uci_position_command(g, &posCmd);
-        engine_writeln(&engines[ei], posCmd.buf);
-        engine_sync(&engines[ei]);
+        engine_writeln(w, &engines[ei], posCmd.buf);
+        engine_sync(w, &engines[ei]);
 
         // Prepare timeLeft[ei]
         if (eo[ei]->movetime)
@@ -233,15 +233,15 @@ int game_play(Game *g, const GameOptions *go, const Engine engines[2], const Eng
             timeLeft[ei] = INT64_MAX / 2;  // HACK: system_msec() + timeLeft must not overflow
 
         uci_go_command(g, eo, ei, timeLeft, &goCmd);
-        engine_writeln(&engines[ei], goCmd.buf);
+        engine_writeln(w, &engines[ei], goCmd.buf);
 
         int score = 0;
-        const bool ok = engine_bestmove(&engines[ei], &score, &timeLeft[ei], &best, &pv);
+        const bool ok = engine_bestmove(w, &engines[ei], &score, &timeLeft[ei], &best, &pv);
 
         // Parses the last PV sent. An invalid PV is not fatal, but logs some warnings. Keep track
         // of the resolved position, which is the last in the PV that is not in check (or the
         // current one if that's impossible).
-        Position resolved = resolve_pv(&g->pos[g->ply], pv.buf);
+        Position resolved = resolve_pv(w, &g->pos[g->ply], pv.buf);
 
         if (!ok) {  // engine_bestmove() time out before parsing a bestmove
             g->state = STATE_TIME_LOSS;
@@ -279,7 +279,7 @@ int game_play(Game *g, const GameOptions *go, const Engine engines[2], const Eng
             resignCount[ei] = 0;
 
         // Write sample: position (compactly encoded) + score
-        if (prngf(&W->seed) <= go->sampleFrequency) {
+        if (prngf(&w->seed) <= go->sampleFrequency) {
             Sample sample = {
                 .pos = go->sampleResolvePv ? resolved : g->pos[g->ply],
                 .score = score,

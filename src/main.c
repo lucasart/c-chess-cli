@@ -30,27 +30,27 @@ static FILE *pgnOut, *sampleFile;
 
 static void *thread_start(void *arg)
 {
-    W = (Worker *)arg;
+    Worker *w = arg;
     Engine engines[2];
 
     // Prepare engines[]
     for (int i = 0; i < 2; i++)
-        engines[i] = engine_new(eo[i].cmd.buf, eo[i].name.buf, eo[i].options);
+        engines[i] = engine_new(w, eo[i].cmd.buf, eo[i].name.buf, eo[i].options);
 
     int next;
     scope(str_del) str_t fen = str_new();
 
-    while ((next = openings_next(&openings, &fen, W->id)) <= options.games) {
+    while ((next = openings_next(&openings, &fen, w->id)) <= options.games) {
         // Play 1 game
-        Game game = game_new(&fen);
+        Game game = game_new(w, fen.buf);
         const EngineOptions *eoPair[2] = {&eo[0], &eo[1]};
-        const int wld = game_play(&game, &go, engines, eoPair, next % 2 == 0);
+        const int wld = game_play(w, &game, &go, engines, eoPair, next % 2 == 0);
 
         // Write to PGN file
         if (pgnOut) {
             scope(str_del) str_t pgn = str_new();
             game_pgn(&game, &pgn);
-            DIE_IF(W->id, fputs(pgn.buf, pgnOut) < 0);
+            DIE_IF(w->id, fputs(pgn.buf, pgnOut) < 0);
         }
 
         // Write to Sample file
@@ -63,18 +63,18 @@ static void *thread_start(void *arg)
                     game.samples[i].result);
             }
 
-            DIE_IF(W->id, fputs(lines.buf, sampleFile) < 0);
+            DIE_IF(w->id, fputs(lines.buf, sampleFile) < 0);
         }
 
         // Write to stdout a one line summary of the game
         scope(str_del) str_t result = str_new(), reason = str_new();
         game_decode_state(&game, &result, &reason);
-        printf("[%i] %s vs %s: %s (%s)\n", W->id, game.names[WHITE].buf,
+        printf("[%i] %s vs %s: %s (%s)\n", w->id, game.names[WHITE].buf,
             game.names[BLACK].buf, result.buf, reason.buf);
 
         // Update on global score (across workers)
         int wldCount[3];
-        workers_add_result(W, wld, wldCount);
+        workers_add_result(w, wld, wldCount);
 
         const int n = wldCount[RESULT_WIN] + wldCount[RESULT_LOSS] + wldCount[RESULT_DRAW];
 
@@ -102,7 +102,7 @@ static void *thread_start(void *arg)
     }
 
     for (int i = 0; i < 2; i++)
-        engine_del(&engines[i]);
+        engine_del(w, &engines[i]);
 
     WorkersBusy--;
     return NULL;
@@ -146,7 +146,7 @@ int main(int argc, const char **argv)
         system_sleep(100);
 
         for (int i = 0; i < options.concurrency; i++)
-            if (deadline_overdue(&Workers[i].deadline, Workers[i].log))
+            if (deadline_overdue(&Workers[i]))
                 DIE("[%d] engine %s is unresponsive\n", i, Workers[i].deadline.engineName.buf);
     } while (WorkersBusy > 0);
 

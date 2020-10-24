@@ -53,11 +53,6 @@ typedef struct {
 Deadline deadline_new(void);
 void deadline_del(Deadline *d);
 
-void deadline_set(Deadline *deadline, const char *engineName, int64_t timeLimit);
-void deadline_clear(Deadline *deadline);
-
-bool deadline_overdue(Deadline *deadline, FILE *log);
-
 // Per thread data
 typedef struct {
     Deadline deadline;
@@ -68,11 +63,14 @@ typedef struct {
 } Worker;
 
 extern Worker *Workers;
-extern _Thread_local Worker *W;
 extern _Atomic(int) WorkersBusy;  // how many workers are busy
 
 Worker worker_new(int id, const char *logName);
 void worker_del(Worker *w);
+
+void deadline_set(Worker *w, const char *engineName, int64_t timeLimit);
+void deadline_clear(Worker *w);
+bool deadline_overdue(Worker *w);
 
 void workers_add_result(Worker *worker, int result, int wld[3]);
 

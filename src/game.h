@@ -50,11 +50,11 @@ typedef struct {
     int ply, state;
 } Game;
 
-Game game_new(const str_t *fen);
+Game game_new(const Worker *w, const char *fen);
 void game_del(Game *g);
 
-int game_play(Game *g, const GameOptions *go, const Engine engines[2], const EngineOptions *eo[2],
-    bool reverse);
+int game_play(Worker *w, Game *g, const GameOptions *go, const Engine engines[2],
+    const EngineOptions *eo[2], bool reverse);
 
 void game_decode_state(const Game *g, str_t *result, str_t *reason);
 void game_pgn(const Game *g, str_t *pgn);
