@@ -102,7 +102,7 @@ Engine engine_new(Worker *w, const char *cmd, const char *name, const str_t *opt
     }
 
     // Step 3: Collect the arguments into a vec of str_t, args[]
-    str_t *args = vec_new(1, str_t);
+    str_t *args = vec_new(str_t);
     vec_push(args, str_new_from(run));  // argv[0] is the executed command
 
     while ((tail = str_tok_esc(tail, &token, ' ', '\\')))

@@ -28,7 +28,7 @@ Openings openings_new(const char *fileName, bool random, bool repeat, int thread
 
     if (o.file) {
         // Builds o.index[] to record file offsets for each lines
-        o.index = vec_new(1, size_t);
+        o.index = vec_new(size_t);
         scope(str_del) str_t line = str_new();
 
         do {

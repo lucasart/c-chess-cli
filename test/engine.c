@@ -85,7 +85,7 @@ static void random_pv(const Position *pos, uint64_t *seed, int len, str_t *pv)
     str_clear(pv);
     Position p[2];
     p[0] = *pos;
-    move_t *moves = vec_new(64, move_t);
+    move_t *moves = vec_new_reserve(64, move_t);
     scope(str_del) str_t lan = str_new();
 
     for (int ply = 0; ply < len; ply++) {

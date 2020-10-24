@@ -110,7 +110,7 @@ static void *thread_start(void *arg)
 
 int main(int argc, const char **argv)
 {
-    eo = vec_new(2, EngineOptions);
+    eo = vec_new(EngineOptions);
     options = options_new();
     options_parse(argc, argv, &options, &go, &eo);
 
@@ -125,7 +125,7 @@ int main(int argc, const char **argv)
         DIE_IF(0, !(sampleFile = fopen(options.sampleFileName.buf, "a")));
 
     // Prepare Workers[]
-    Workers = vec_new((size_t)options.concurrency, Worker);
+    Workers = vec_new_reserve((size_t)options.concurrency, Worker);
 
     for (int i = 0; i < options.concurrency; i++) {
         scope(str_del) str_t logName = str_new();

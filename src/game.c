@@ -114,7 +114,7 @@ static Position resolve_pv(const Worker *w, const Position *pos, const char *pv)
     Position p[2];
     p[0] = *pos;
     int idx = 0;
-    move_t *moves = vec_new(64, move_t);
+    move_t *moves = vec_new_reserve(64, move_t);
     scope(str_del) str_t fen = str_new();
 
     while ((tail = str_tok(tail, &token, " "))) {
@@ -154,13 +154,13 @@ Game game_new(const Worker *w, const char *fen)
     g.names[BLACK] = str_new();
 
     g.ply = 0;
-    g.pos = vec_new(128, Position);
+    g.pos = vec_new(Position);
     vec_push(g.pos, (Position){0});
 
     if (!pos_set(&g.pos[0], fen, false))
         DIE("[%d] illegal FEN '%s'\n", w->id, fen);
 
-    g.samples = vec_new(0, Sample);
+    g.samples = vec_new(Sample);
     g.state = STATE_NONE;
 
     return g;
@@ -202,7 +202,7 @@ int game_play(Worker *w, Game *g, const GameOptions *go, const Engine engines[2]
     int ei;  // engines[ei] has the move
     int64_t timeLeft[2] = {eo[0]->time, eo[1]->time};
     scope(str_del) str_t pv = str_new();
-    move_t *moves = vec_new(64, move_t);
+    move_t *legalMoves = vec_new_reserve(64, move_t);
 
     for (g->ply = 0; ; g->ply++) {
         if (played)
@@ -210,7 +210,7 @@ int game_play(Worker *w, Game *g, const GameOptions *go, const Engine engines[2]
 
         ei = (g->ply % 2) ^ reverse;  // engine[ei] has the move
 
-        if ((g->state = game_apply_chess_rules(g, &moves)))
+        if ((g->state = game_apply_chess_rules(g, &legalMoves)))
             break;
 
         uci_position_command(g, &posCmd);
@@ -250,7 +250,7 @@ int game_play(Worker *w, Game *g, const GameOptions *go, const Engine engines[2]
 
         played = pos_lan_to_move(&g->pos[g->ply], best.buf);
 
-        if (illegal_move(played, moves)) {
+        if (illegal_move(played, legalMoves)) {
             g->state = STATE_ILLEGAL_MOVE;
             break;
         }
@@ -296,7 +296,7 @@ int game_play(Worker *w, Game *g, const GameOptions *go, const Engine engines[2]
     }
 
     assert(g->state != STATE_NONE);
-    vec_del(moves);
+    vec_del(legalMoves);
 
     // Signed result from white's pov: -1 (loss), 0 (draw), +1 (win)
     const int wpov = g->state < STATE_SEPARATOR

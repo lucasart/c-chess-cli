@@ -38,17 +38,18 @@ size_t vec_capacity(const void *v)
     return vec_cptr(v)->capacity;
 }
 
-void *vec_do_realloc(void *v, size_t esize, size_t newCapacity)
+void *vec_do_grow(void *v, size_t esize, size_t n)
 {
     assert(v);
-    vec_t *p;
 
-    p = vec_ptr(v);
-    p = realloc(p, sizeof(vec_t) + esize * newCapacity);
-    p->capacity = newCapacity;
+    if (n * esize < 2 * sizeof(size_t))
+        n = (2 * sizeof(size_t) + esize) / esize;
+    else
+        n += n;
 
-    if (p->size > p->capacity)
-        p->size = p->capacity;
+    vec_t *p = vec_ptr(v);
+    p = realloc(p, sizeof(vec_t) + esize * n);
+    p->capacity = n;
 
     return p->buf;
 }
