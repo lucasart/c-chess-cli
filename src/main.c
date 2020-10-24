@@ -122,7 +122,7 @@ int main(int argc, const char **argv)
 
     sampleFile = NULL;
     if (options.sampleFileName.len)
-        DIE_IF(0, !(sampleFile = fopen(options.sampleFileName.buf, "ab")));
+        DIE_IF(0, !(sampleFile = fopen(options.sampleFileName.buf, "a")));
 
     // Prepare Workers[]
     Workers = vec_new((size_t)options.concurrency, Worker);
