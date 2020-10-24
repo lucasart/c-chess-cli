@@ -70,24 +70,9 @@ static void engine_spawn(Engine *e, const char *cwd, const char *run, char **arg
     }
 }
 
-Deadline deadline_new(void)
+Engine engine_new(const char *cmd, const char *name, const str_t *options)
 {
-    Deadline d = {0};
-    pthread_mutex_init(&d.mtx, NULL);
-    d.engineName = str_new();
-    return d;
-}
-
-void deadline_del(Deadline *d)
-{
-    str_del(&d->engineName);
-    pthread_mutex_destroy(&d->mtx);
-    *d = (Deadline){0};
-}
-
-Engine engine_new(const char *cmd, const char *name, const str_t *options, Deadline *deadline)
-{
-    assert(W && options && deadline);
+    assert(W && options);
 
     if (!*cmd)
         DIE("[%d] missing command to start engine.\n", W->id);
@@ -139,7 +124,7 @@ Engine engine_new(const char *cmd, const char *name, const str_t *options, Deadl
     vec_del_rec(args, str_del);
 
     // Start the uci..uciok dialogue
-    deadline_set(deadline, e.name.buf, system_msec() + 2000);
+    deadline_set(&W->deadline, e.name.buf, system_msec() + 2000);
     engine_writeln(&e, "uci");
     scope(str_del) str_t line = str_new();
 
@@ -159,7 +144,7 @@ Engine engine_new(const char *cmd, const char *name, const str_t *options, Deadl
         engine_writeln(&e, line.buf);
     }
 
-    deadline_clear(deadline);
+    deadline_clear(&W->deadline);
     return e;
 }
 
@@ -198,11 +183,11 @@ void engine_writeln(const Engine *e, char *buf)
     }
 }
 
-void engine_sync(const Engine *e, Deadline *deadline)
+void engine_sync(const Engine *e)
 {
     assert(W);
 
-    deadline_set(deadline, e->name.buf, system_msec() + 1000);
+    deadline_set(&W->deadline, e->name.buf, system_msec() + 1000);
     engine_writeln(e, "isready");
     scope(str_del) str_t line = str_new();
 
@@ -210,11 +195,10 @@ void engine_sync(const Engine *e, Deadline *deadline)
         engine_readln(e, &line);
     } while (strcmp(line.buf, "readyok"));
 
-    deadline_clear(deadline);
+    deadline_clear(&W->deadline);
 }
 
-bool engine_bestmove(const Engine *e, int *score, int64_t *timeLeft, Deadline *deadline,
-    str_t *best, str_t *pv)
+bool engine_bestmove(const Engine *e, int *score, int64_t *timeLeft, str_t *best, str_t *pv)
 {
     assert(W);
 
@@ -224,7 +208,7 @@ bool engine_bestmove(const Engine *e, int *score, int64_t *timeLeft, Deadline *d
     str_clear(pv);
 
     const int64_t start = system_msec(), timeLimit = start + *timeLeft;
-    deadline_set(deadline, e->name.buf, timeLimit + 1000);
+    deadline_set(&W->deadline, e->name.buf, timeLimit + 1000);
 
     while (*timeLeft >= 0 && !result) {
         engine_readln(e, &line);
@@ -265,62 +249,6 @@ bool engine_bestmove(const Engine *e, int *score, int64_t *timeLeft, Deadline *d
         } while (strncmp(line.buf, "bestmove ", strlen("bestmove ")));
     }
 
-    deadline_clear(deadline);
+    deadline_clear(&W->deadline);
     return result;
-}
-
-void deadline_set(Deadline *deadline, const char *engineName, int64_t timeLimit)
-{
-    assert(W && deadline);
-
-    pthread_mutex_lock(&deadline->mtx);
-
-    if (timeLimit) {
-        deadline->set = true;
-        str_cpy_c(&deadline->engineName, engineName);
-        deadline->timeLimit = timeLimit;
-
-        if (W->log)
-            DIE_IF(W->id, fprintf(W->log, "deadline: %s must respond by %" PRId64 "\n",
-                deadline->engineName.buf, deadline->timeLimit) < 0);
-    } else {
-        deadline->set = false;
-
-        if (W->log)
-            DIE_IF(W->id, fprintf(W->log, "deadline: %s responded in time\n",
-                deadline->engineName.buf) < 0);
-    }
-
-    pthread_mutex_unlock(&deadline->mtx);
-}
-
-void deadline_clear(Deadline *deadline)
-{
-    assert(W && deadline);
-    deadline_set(deadline, NULL, 0);
-}
-
-bool deadline_overdue(Deadline *deadline, FILE *log)
-{
-    assert(!W && deadline);
-
-    pthread_mutex_lock(&deadline->mtx);
-    const int64_t timeLimit = deadline->timeLimit;
-    pthread_mutex_unlock(&deadline->mtx);
-
-    const int64_t time = system_msec();
-
-    if (deadline->set && time > timeLimit) {
-        if (log)
-            DIE_IF(W->id, fprintf(log, "deadline failed: %s responded at %" PRId64 ", %" PRId64
-                "ms after the deadline.\n", deadline->engineName.buf, time, time - timeLimit) < 0);
-
-        return true;
-    } else {
-        if (deadline->set && log)
-            DIE_IF(W->id, fprintf(log, "deadline ok: %s responded at %" PRId64 ", %" PRId64
-                "ms before the deadline.\n", deadline->engineName.buf, time, timeLimit - time) < 0);
-
-        return false;
-    }
 }

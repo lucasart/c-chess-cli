@@ -14,7 +14,10 @@
 */
 #pragma once
 #include <pthread.h>
-#include "engine.h"
+#include <inttypes.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include "str.h"
 
 // Game results
 enum {
@@ -32,6 +35,28 @@ typedef struct {
     bool sampleResolvePv;
     char pad[7];
 } GameOptions;
+
+// Deadlines overdues are unrecovrable errors. Given a choice, we prefer to handle them gracefully
+// as time losses in the worker threads. Since deadlines are enforced by the master thread, there is
+// no other choice than to terminate. Any attempt by the master thread to communicate with a buggy
+// engine, could result in hanguing forever on blocking I/O.
+enum {DEADLINE_TOLERANCE = 1000};
+
+typedef struct {
+    pthread_mutex_t mtx;
+    int64_t timeLimit;
+    str_t engineName;
+    bool set;
+    char pad[7];
+} Deadline;
+
+Deadline deadline_new(void);
+void deadline_del(Deadline *d);
+
+void deadline_set(Deadline *deadline, const char *engineName, int64_t timeLimit);
+void deadline_clear(Deadline *deadline);
+
+bool deadline_overdue(Deadline *deadline, FILE *log);
 
 // Per thread data
 typedef struct {

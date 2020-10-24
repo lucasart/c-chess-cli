@@ -176,13 +176,13 @@ void game_del(Game *g)
 }
 
 int game_play(Game *g, const GameOptions *go, const Engine engines[2], const EngineOptions *eo[2],
-    Deadline *deadline, bool reverse, uint64_t *seed)
+    bool reverse)
 // Play a game:
 // - engines[reverse] plays the first move (which does not mean white, that depends on the FEN)
 // - sets g->state value: see enum STATE_* codes
 // - returns RESULT_LOSS/DRAW/WIN from engines[0] pov
 {
-    assert(W && g && go && deadline && seed);
+    assert(W && g && go);
 
     for (int color = WHITE; color <= BLACK; color++)
         str_cpy(&g->names[color], engines[color ^ g->pos[0].turn ^ reverse].name);
@@ -192,7 +192,7 @@ int game_play(Game *g, const GameOptions *go, const Engine engines[2], const Eng
             engine_writeln(&engines[i], "setoption name UCI_Chess960 value true");
 
         engine_writeln(&engines[i], "ucinewgame");
-        engine_sync(&engines[i], deadline);
+        engine_sync(&engines[i]);
     }
 
     scope(str_del) str_t posCmd = str_new(), goCmd = str_new(), best = str_new();
@@ -215,7 +215,7 @@ int game_play(Game *g, const GameOptions *go, const Engine engines[2], const Eng
 
         uci_position_command(g, &posCmd);
         engine_writeln(&engines[ei], posCmd.buf);
-        engine_sync(&engines[ei], deadline);
+        engine_sync(&engines[ei]);
 
         // Prepare timeLeft[ei]
         if (eo[ei]->movetime)
@@ -236,7 +236,7 @@ int game_play(Game *g, const GameOptions *go, const Engine engines[2], const Eng
         engine_writeln(&engines[ei], goCmd.buf);
 
         int score = 0;
-        const bool ok = engine_bestmove(&engines[ei], &score, &timeLeft[ei], deadline, &best, &pv);
+        const bool ok = engine_bestmove(&engines[ei], &score, &timeLeft[ei], &best, &pv);
 
         // Parses the last PV sent. An invalid PV is not fatal, but logs some warnings. Keep track
         // of the resolved position, which is the last in the PV that is not in check (or the
@@ -279,7 +279,7 @@ int game_play(Game *g, const GameOptions *go, const Engine engines[2], const Eng
             resignCount[ei] = 0;
 
         // Write sample: position (compactly encoded) + score
-        if (prngf(seed) <= go->sampleFrequency) {
+        if (prngf(&W->seed) <= go->sampleFrequency) {
             Sample sample = {
                 .pos = go->sampleResolvePv ? resolved : g->pos[g->ply],
                 .score = score,

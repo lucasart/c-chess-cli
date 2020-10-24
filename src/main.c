@@ -35,7 +35,7 @@ static void *thread_start(void *arg)
 
     // Prepare engines[]
     for (int i = 0; i < 2; i++)
-        engines[i] = engine_new(eo[i].cmd.buf, eo[i].name.buf, eo[i].options, &W->deadline);
+        engines[i] = engine_new(eo[i].cmd.buf, eo[i].name.buf, eo[i].options);
 
     int next;
     scope(str_del) str_t fen = str_new();
@@ -44,8 +44,7 @@ static void *thread_start(void *arg)
         // Play 1 game
         Game game = game_new(&fen);
         const EngineOptions *eoPair[2] = {&eo[0], &eo[1]};
-        const int wld = game_play(&game, &go, engines, eoPair, &W->deadline,
-            next % 2 == 0, &W->seed);
+        const int wld = game_play(&game, &go, engines, eoPair, next % 2 == 0);
 
         // Write to PGN file
         if (pgnOut) {
