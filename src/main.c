@@ -35,14 +35,24 @@ static void *thread_start(void *arg)
     Worker *w = arg;
     Engine engines[2] = {0};
 
-    // Prepare engines[]
-    for (int i = 0; i < 2; i++)
-        engines[i] = engine_new(w, eo[i].cmd.buf, eo[i].name.buf, eo[i].options);
-
     scope(str_del) str_t fen = str_new();
     Job j = {0};
+    int e1 = 0, e2 = 1;  // eo[e1] plays eo[e2]
+
+    // Prepare engines[]
+    engines[0] = engine_new(w, eo[e1].cmd.buf, eo[e1].name.buf, eo[e1].options);
+    engines[1] = engine_new(w, eo[e2].cmd.buf, eo[e2].name.buf, eo[e2].options);
 
     while (job_queue_pop(&jq, &j)) {
+        // Engine switching (if needed)
+        assert(j.e1 == 0);  // gauntlet only for now
+
+        if (j.e2 != e2) {
+            e2 = j.e2;
+            engine_del(w, &engines[1]);
+            engines[1] = engine_new(w, eo[e2].cmd.buf, eo[e2].name.buf, eo[e2].options);
+        }
+
         if (!options.repeat || !j.reverse)
             openings_next(&openings, &fen, w->id);  // draw new FEN
         else
