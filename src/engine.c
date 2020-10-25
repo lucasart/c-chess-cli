@@ -79,8 +79,7 @@ Engine engine_new(Worker *w, const char *cmd, const char *name, const str_t *opt
 
     /* Shell parsing of cmd */
 
-    // Step 1: isolate the first token being the command to run. The space character is ambiguous,
-    // because it is allowed in file names. So we must use str_tok_esc().
+    // Step 1: isolate the first token being the command to run.
     scope(str_del) str_t token = str_new();
     const char *tail = cmd;
     tail = str_tok_esc(tail, &token, ' ', '\\');

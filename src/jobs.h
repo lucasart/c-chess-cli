@@ -27,9 +27,10 @@ typedef struct {
 typedef struct {
     pthread_mutex_t mtx;
     Job *jobs;
+    size_t idx;
 } JobQueue;
 
 JobQueue job_queue_new(int engines, int rounds, int games);
 void job_queue_del(JobQueue *jq);
 
-bool job_queue_pop(JobQueue *jq, Job *j);
+bool job_queue_pop(JobQueue *jq, Job *j, size_t *idx);

@@ -23,10 +23,10 @@ JobQueue job_queue_new(int engines, int rounds, int games)
     pthread_mutex_init(&jq.mtx, NULL);
     jq.jobs = vec_new(Job);
 
-    // Gauntlet: vec_push() in reverse, so we can vec_pop() in order
-    for (int r = rounds - 1; r >= 0; r--)
-        for (int e = engines - 1; e >= 1; e--)
-            for (int g = games - 1; g >= 0; g--) {
+    // Gauntlet
+    for (int r = 0; r < rounds; r++)
+        for (int e = 1; e < engines; e++)
+            for (int g = 0; g < games; g++) {
                 const Job j = {.e1 = 0, .e2 = e, .reverse = g % 2};
                 vec_push(jq.jobs, j);
             }
@@ -40,14 +40,16 @@ void job_queue_del(JobQueue *jq)
     pthread_mutex_destroy(&jq->mtx);
 }
 
-bool job_queue_pop(JobQueue *jq, Job *j)
+bool job_queue_pop(JobQueue *jq, Job *j, size_t *idx)
 {
     pthread_mutex_lock(&jq->mtx);
 
-    const bool ok = vec_size(jq->jobs);
+    const bool ok = jq->idx < vec_size(jq->jobs);
 
-    if (ok)
-        *j = vec_pop(jq->jobs);
+    if (ok) {
+        *j = jq->jobs[jq->idx];
+        *idx = jq->idx++;
+    }
 
     pthread_mutex_unlock(&jq->mtx);
 

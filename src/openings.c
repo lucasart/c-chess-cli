@@ -62,7 +62,7 @@ void openings_delete(Openings *o, int threadId)
     vec_del(o->index);
 }
 
-void openings_next(Openings *o, str_t *fen, int threadId)
+void openings_next(Openings *o, str_t *fen, size_t idx, int threadId)
 {
     if (!o->file) {
         str_cpy_c(fen, "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
@@ -73,12 +73,9 @@ void openings_next(Openings *o, str_t *fen, int threadId)
     scope(str_del) str_t line = str_new();
 
     pthread_mutex_lock(&o->mtx);
-    DIE_IF(threadId, fseek(o->file, o->index[o->pos], SEEK_SET) < 0);
+    DIE_IF(threadId, fseek(o->file, o->index[idx % vec_size(o->index)], SEEK_SET) < 0);
     DIE_IF(threadId, !str_getline(&line, o->file));
     pthread_mutex_unlock(&o->mtx);
 
     str_tok(line.buf, fen, ";");
-
-    // make o->pos point to the next opening
-    o->pos = (o->pos + 1) % vec_size(o->index);
 }

@@ -38,12 +38,13 @@ static void *thread_start(void *arg)
     scope(str_del) str_t fen = str_new();
     Job j = {0};
     int e1 = 0, e2 = 1;  // eo[e1] plays eo[e2]
+    size_t idx = 0;  // game idx (global across workers)
 
     // Prepare engines[]
     engines[0] = engine_new(w, eo[e1].cmd.buf, eo[e1].name.buf, eo[e1].options);
     engines[1] = engine_new(w, eo[e2].cmd.buf, eo[e2].name.buf, eo[e2].options);
 
-    while (job_queue_pop(&jq, &j)) {
+    while (job_queue_pop(&jq, &j, &idx)) {
         // Engine switching (if needed)
         assert(j.e1 == 0);  // gauntlet only for now
 
@@ -53,10 +54,8 @@ static void *thread_start(void *arg)
             engines[1] = engine_new(w, eo[e2].cmd.buf, eo[e2].name.buf, eo[e2].options);
         }
 
-        if (!options.repeat || !j.reverse)
-            openings_next(&openings, &fen, w->id);  // draw new FEN
-        else
-            assert(fen.len);  // reuse previous FEN
+        // Choose opening position
+        openings_next(&openings, &fen, options.repeat ? idx / 2 : idx, w->id);
 
         // Play 1 game
         Game game = game_new(w, fen.buf);

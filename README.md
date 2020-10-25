@@ -1,6 +1,6 @@
 ## c-chess-cli
 
-c-chess-cli is a command line interface for UCI chess engines written in C. Free from [dependency hell](https://en.wikipedia.org/wiki/Dependency_hell), it only uses the C standard library, and POSIX. Primarily developped on Linux, it should work on all POSIX operating systems, including MacOS and Android. Windows is not supported, because it is not POSIX compliant.
+c-chess-cli is a command line interface for UCI chess engines written in C. Free from [dependency hell](https://en.wikipedia.org/wiki/Dependency_hell), it only uses the C standard library, and POSIX. Primarily developped on Linux, it should work on all POSIX operating systems, including MacOS and Android. Windows is not supported.
 
 ## How to compile ?
 
@@ -9,6 +9,10 @@ Run `make.py` script, without any parameters.
 See `make.py --help` for more options.
 
 ## How to use ?
+
+```
+c-chess-cli [-each [eng_options]] -engine [eng_options] -engine [eng_options] ... [options]
+```
 
 ### Example
 
@@ -22,60 +26,31 @@ See `make.py --help` for more options.
 
 ### Options
 
-Syntax: `-option value`.
-
-List of `option value`:
- * `concurrency c`: number of games played concurrently.
- * `draw n,s`: draw when |score| <= `s` (in cp) for `n` consecutive moves, for both sides.
- * `games n`: number of games to play.
- * `openings file`: input file, in EPD format, where opening positions are read. Note that
-  chess960 is auto-detected by analysing each FEN, so there is no command line parameter
-  for it.
- * `pgnout file`: output file, in PGN format, where games are written.
- * `resign n,s`: resign when score <= -`s` (in cp) for `n` consecutive moves, for the losing side.
- * `sample freq[,resolvePv[,file]]`: collects sample of position and search score. `freq` is the frequency (between
-  0 and 1), `resolvePv` is either `y` or `n`, and `file` is the output file (if omitted, defaults to `sample.csv`).
-  More details in Sample section below.
- * `sprt elo0,elo1,alpha,beta`: performs a [Sequential Probability Ratio Test](https://en.wikipedia.org/wiki/Sequential_probability_ratio_test)
-  for `H1: elo=elo1` vs `H0: elo=elo0`, where `alpha` is the type I error probability (false positive),
-  and `beta` is type II error probability (false negative). It uses the GSPRT approximation of the LLR
-  derived by Michel Van den Bergh [here](http://hardy.uhasselt.be/Toga/GSPRT_approximation.pdf).
-  Note that `alpha` and `beta` are optional, and their default value is 0.05.
-
-### Flags
-
-Syntax: `-flag`.
-
-List:
- * `log`: write all I/O communication with engines to file(s). This produces `c-chess-cli.id.log`,
-where `id` is the thread id (range `1..concurrency`). Note that all communications (including
-error messages) starting with `[id]` mean within the context of thread number `id`, which tells you
-which log file to inspect (id = 0 is the main thread).
+ * `engine OPTIONS`: Add an engine defined by `OPTIONS` to the tournament.
+ * `each OPTIONS`: Apply `OPTIONS` to each engine in the tournament.
+ * `concurrency N`: Set the maximum number of concurrent games to N.
+ * `draw COUNT,SCORE`: Adjudicate the game as a draw, if the score of both engines is within `SCORE` centipawns from zero, for at least `COUNT` consecutive moves.
+ * `resign COUNT,SCORE`: Adjudicate the game as a loss, if an engine's score is at least `SCORE` centipawns below zero, for at least `COUNT` consecutive moves.
+ * `games N`: Play N games per encounter. This value should be set to an even number in tournaments with more than two players to make sure that each player plays an equal number of games with white and black pieces.
+ * `sprt elo0,elo1[,alpha,beta]`: Performs a Sequential Probability Ratio Test for `H1: elo=elo1` vs `H0: elo=elo0`, where `alpha` is the type I error probability (false positive), and `beta` is type II error probability (false negative). Note that `alpha` and `beta` are optional, and their default value is 0.05. This can only be used in matches between two players.
+ * `log`: Write all I/O communication with engines to file(s). This produces `c-chess-cli.id.log`, where `id` is the thread id (range `1..concurrency`). Note that all communications (including error messages) starting with `[id]` mean within the context of thread number `id`, which tells you which log file to inspect (id = 0 is the main thread, which does not product a log file, but simply writes to stdout).
+ * `openings file`: Input file, in EPD format, where opening positions are read. Note that Chess960 is auto-detected by analysing each FEN, so there is no command line parameter for it.
  * `random`: shuffle the opening set (play shuffled set sequentially, no repetitions).
- * `repeat`: repeat each opening twice, with each engine playing both sides.
+ * `pgnout file`: Output file, in PGN format, where games are written.
+ * `repeat`: Repeat each opening twice, with each engine playing both sides.
+ * `sample freq[,resolvePv[,file]]`. See below.
 
 ### Engine options
 
-Syntax: `engine key1=value1 ... keyN=valueN`
-
-Keys:
- * `cmd`: command to run each engine. The current working directory will be set automatically, if a
-  `/` is contained in the value string(s). For example, `cmd=../Engines/critter_1.6a`, will run
-  `./critter_1.6a` from `../Engines`. If no `/` is found, the command is executed as is. Without `/`,
-  for example `cmd=demolito` will run `demolito`, which only works if `demolito` is in `PATH`.
- * `name`: name override for each engine. By default the name is read from `id name` following the UCI
-  protocol (and if that fails cmd value will be used as name).
- * `option.name`: UCI option for engine. Several can be specified, for example `option.Hash=2 option.Threads=1`.
-  Special characters, like space, should be escaped using the appropriate shell syntax. For example
-  `option.Time\ Buffer=50`, or `"option.Time Buffer=50"`.
- * `depth`: depth limit per move.
- * `st`: time limit per move, in seconds (can be fractional like `st=0.123`).
- * `nodes`: node limit per move.
- * `tc`: expects value of the form `[mtg/]time[+inc]`. For example:
-   * `40/10` corresponds to a tournament time control with 10s for every 40 moves
-   * `10+0.1` corresponds to an increment time control with 10s for the game and 100ms increment per move
-   * `10` corresponds to a sudden death time control with 10s for the game
-   * `40/10+0.1` is possible, but does not correspond to any standard chess clock system.
+ * `cmd=COMMAND`: Set the command to run the engine.
+   * The current working directory will be set automatically, if a `/` is contained in `COMMAND`. For example, `cmd=../Engines/critter_1.6a`, will run `./critter_1.6a` from `../Engines`. If no `/` is found, the command is executed as is. Without `/`, for example `cmd=demolito` will run `demolito`, which only works if `demolito` is in `PATH`.
+   * Arguments can be provided as part of the command. For example `"cmd=../fooEngine -foo=1"`. Note that the `""` are needed here, for the command line interpreter to parse the whole string as a single token.
+ * `name=NAME`: Set the engine's name. If omitted, the name is take from the `id name` value sent by the engine.
+ * `tc=TIMECONTROL`: Set the time control to `TIMECONTROL`. The format is `moves/time+increment`, where `moves` is the number of moves per tc, `time` is time per tc (in seconds), and `increment` is time increment per move (in seconds).
+ * `st=N`: time limit per move, in seconds (can be fractional like `st=0.123`).
+ * `depth=N`: depth limit per move.
+ * `nodes=N`: node limit per move.
+ * `option.OPTION=VALUE`: Set custom option OPTION to value VALUE.
 
 ### Sampling
 
