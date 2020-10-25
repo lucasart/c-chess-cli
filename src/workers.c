@@ -24,9 +24,10 @@ _Atomic(int) WorkersBusy = 0;
 
 Deadline deadline_new(void)
 {
-    Deadline d = {0};
+    Deadline d;
     pthread_mutex_init(&d.mtx, NULL);
     d.engineName = str_new();
+    d.set = false;
     return d;
 }
 
@@ -34,7 +35,7 @@ void deadline_del(Deadline *d)
 {
     str_del(&d->engineName);
     pthread_mutex_destroy(&d->mtx);
-    *d = (Deadline){0};
+    d->set = false;
 }
 
 void deadline_set(Worker *w, const char *engineName, int64_t timeLimit)
@@ -111,10 +112,10 @@ void worker_del(Worker *w)
 {
     deadline_del(&w->deadline);
 
-    if (w->log)
+    if (w->log) {
         DIE_IF(0, fclose(w->log) < 0);
-
-    *w = (Worker){0};
+        w->log = NULL;
+    }
 }
 
 // TODO: document this function...

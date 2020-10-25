@@ -106,7 +106,7 @@ str_t str_new_from(const str_t src)
 void str_del(str_t *s)
 {
     free(s->buf);
-    *s = (str_t){0};
+    s->buf = NULL;
 }
 
 str_t *str_cpy(str_t *dest, const str_t src)
