@@ -125,8 +125,6 @@ void options_parse(int argc, const char **argv, Options *o, GameOptions *go, Eng
         "-depth", "-draw", "-resign", "-st", "-tc", "-sprt", "-sample"};
 
     // Default values
-    *go = (GameOptions){0};
-    *o = (Options){0};
     o->concurrency = 1;
     o->games = 1;
     o->alpha = o->beta = 0.05;
