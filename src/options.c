@@ -226,6 +226,9 @@ void options_parse(int argc, const char **argv, Options *o, GameOptions *go, Eng
                 (*eo)[i].movestogo = each.movestogo;
         }
     }
+
+    if (vec_size(*eo) < 2)
+        DIE("at least 2 engines are needed\n");
 }
 
 void options_del(Options *o)
