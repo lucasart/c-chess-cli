@@ -29,7 +29,12 @@ void *vec_do_new(size_t capacity, size_t esize);
 #define vec_new(etype) vec_do_new(0, sizeof(etype))
 #define vec_new_reserve(capacity, etype) vec_do_new(capacity, sizeof(etype))
 
-void vec_del(void *v);
+#define vec_del(v) ({ \
+    if (v) { \
+        free(vec_ptr(v)); \
+        v = NULL; \
+    } \
+})
 
 // delete elements using dtor(&elt), then delete vector
 #define vec_del_rec(v, dtor) ({ \

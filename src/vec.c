@@ -32,12 +32,6 @@ void *vec_do_new(size_t capacity, size_t esize)
     return (void *)p->buf;
 }
 
-void vec_del(void *v)
-{
-    if (v)
-        free(vec_ptr(v));
-}
-
 size_t vec_size(const void *v)
 {
     return v ? vec_cptr(v)->size : 0;
