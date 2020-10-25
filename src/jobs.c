@@ -17,16 +17,16 @@
 
 JobQueue job_queue_new(int engines, int rounds, int games)
 {
+    assert(engines >= 2 && rounds >= 1 && games >= 1);
+
     JobQueue jq = {0};
     pthread_mutex_init(&jq.mtx, NULL);
     jq.jobs = vec_new(Job);
 
-    // Gauntlet
-    assert(engines >= 2 && rounds >= 1 && games >= 1);
-
-    for (int r = 0; r < rounds; r++)
-        for (int e = 1; e < engines; e++)
-            for (int g = 0; g < games; g++) {
+    // Gauntlet: vec_push() in reverse, so we can vec_pop() in order
+    for (int r = rounds - 1; r >= 0; r--)
+        for (int e = engines - 1; e >= 1; e--)
+            for (int g = games - 1; g >= 0; g--) {
                 const Job j = {.e1 = 0, .e2 = e, .reverse = g % 2};
                 vec_push(jq.jobs, j);
             }

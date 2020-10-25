@@ -17,15 +17,13 @@
 #include "util.h"
 #include "vec.h"
 
-Openings openings_new(const char *fileName, bool random, bool repeat, int threadId)
+Openings openings_new(const char *fileName, bool random, int threadId)
 {
     Openings o = {0};
     o.index = vec_new(size_t);
 
     if (*fileName)
         DIE_IF(threadId, !(o.file = fopen(fileName, "r")));
-    else
-        o.file = NULL;
 
     if (o.file) {
         // Fill o.index[] to record file offsets for each lines
@@ -52,8 +50,6 @@ Openings openings_new(const char *fileName, bool random, bool repeat, int thread
     }
 
     pthread_mutex_init(&o.mtx, NULL);
-    o.repeat = repeat;
-
     return o;
 }
 
@@ -66,30 +62,23 @@ void openings_delete(Openings *o, int threadId)
     vec_del(o->index);
 }
 
-int openings_next(Openings *o, str_t *fen, int threadId)
+void openings_next(Openings *o, str_t *fen, int threadId)
 {
     if (!o->file) {
-        pthread_mutex_lock(&o->mtx);
-        const size_t count = ++o->count;
-        pthread_mutex_unlock(&o->mtx);
-
         str_cpy_c(fen, "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
-        return count;
+        return;
     }
-
-    pthread_mutex_lock(&o->mtx);
 
     // Read 'fen' from file
     scope(str_del) str_t line = str_new();
+
+    pthread_mutex_lock(&o->mtx);
     DIE_IF(threadId, fseek(o->file, o->index[o->pos], SEEK_SET) < 0);
     DIE_IF(threadId, !str_getline(&line, o->file));
+    pthread_mutex_unlock(&o->mtx);
+
     str_tok(line.buf, fen, ";");
 
-    const size_t count = ++o->count;
-
-    if (!o->repeat || count % 2 == 0)
-        o->pos = (o->pos + 1) % vec_size(o->index);
-
-    pthread_mutex_unlock(&o->mtx);
-    return count;
+    // make o->pos point to the next opening
+    o->pos = (o->pos + 1) % vec_size(o->index);
 }

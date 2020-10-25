@@ -16,6 +16,7 @@
 #include <stdlib.h>
 #include "engine.h"
 #include "game.h"
+#include "jobs.h"
 #include "openings.h"
 #include "options.h"
 #include "sprt.h"
@@ -27,6 +28,7 @@ static EngineOptions *eo;
 static GameOptions go;
 static Openings openings;
 static FILE *pgnOut, *sampleFile;
+static JobQueue jq;
 
 static void *thread_start(void *arg)
 {
@@ -37,14 +39,19 @@ static void *thread_start(void *arg)
     for (int i = 0; i < 2; i++)
         engines[i] = engine_new(w, eo[i].cmd.buf, eo[i].name.buf, eo[i].options);
 
-    int next = 0;
     scope(str_del) str_t fen = str_new();
+    Job j = {0};
 
-    while ((next = openings_next(&openings, &fen, w->id)) <= options.games) {
+    while (job_queue_pop(&jq, &j)) {
+        if (!options.repeat || !j.reverse)
+            openings_next(&openings, &fen, w->id);  // draw new FEN
+        else
+            assert(fen.len);  // reuse previous FEN
+
         // Play 1 game
         Game game = game_new(w, fen.buf);
         const EngineOptions *eoPair[2] = {&eo[0], &eo[1]};
-        const int wld = game_play(w, &game, &go, engines, eoPair, next % 2 == 0);
+        const int wld = game_play(w, &game, &go, engines, eoPair, j.reverse);
 
         // Write to PGN file
         if (pgnOut) {
@@ -94,7 +101,7 @@ static void *thread_start(void *arg)
             if (llr < llrLbound)
                 DIE("SPRT: LLR = %.3f [%.3f,%.3f]. H0 accepted.\n", llr, llrLbound, llrUbound);
 
-            if (next % 2 == 0)
+            if (j.reverse)
                 printf("SPRT: LLR = %.3f [%.3f,%.3f]\n", llr, llrLbound, llrUbound);
         }
 
@@ -114,7 +121,8 @@ int main(int argc, const char **argv)
     options = options_new();
     options_parse(argc, argv, &options, &go, &eo);
 
-    openings = openings_new(options.openings.buf, options.random, options.repeat, 0);
+    jq = job_queue_new(vec_size(eo), 1, options.games);
+    openings = openings_new(options.openings.buf, options.random, 0);
 
     pgnOut = NULL;
     if (options.pgnOut.len)
@@ -177,6 +185,7 @@ int main(int argc, const char **argv)
         DIE_IF(0, fclose(sampleFile) < 0);
 
     openings_delete(&openings, 0);
+    job_queue_del(&jq);
     options_del(&options);
     vec_del_rec(eo, engine_options_del);
 
