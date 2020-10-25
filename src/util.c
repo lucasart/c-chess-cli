@@ -35,7 +35,7 @@ double prngf(uint64_t *state)
 
 int64_t system_msec()
 {
-    struct timespec t;
+    struct timespec t = {0};
     clock_gettime(CLOCK_MONOTONIC, &t);
     return t.tv_sec * 1000LL + t.tv_nsec / 1000000;
 }

@@ -76,17 +76,17 @@ static bitboard_t slider_attacks(int square, bitboard_t occ, const int dir[4][2]
     bitboard_t result = 0;
 
     for (int i = 0; i < 4; i++) {
-        int dr = dir[i][0], df = dir[i][1];
-        int rank, file;
+        const int dr = dir[i][0], df = dir[i][1];
+        int rank = rank_of(square) + dr, file = file_of(square) + df;
 
-        for (rank = rank_of(square) + dr, file = file_of(square) + df;
-                0 <= rank && rank < NB_RANK && 0 <= file && file < NB_FILE;
-                rank += dr, file += df) {
+        while (0 <= rank && rank < NB_RANK && 0 <= file && file < NB_FILE) {
             const int sq = square_from(rank, file);
             bb_set(&result, sq);
 
             if (bb_test(occ, sq))
                 break;
+
+            rank += dr, file += df;
         }
     }
 
@@ -102,7 +102,7 @@ static void init_slider_attacks(int square, bitboard_t mask[NB_SQUARE],
     const bitboard_t magic[NB_SQUARE], unsigned shift[NB_SQUARE], bitboard_t *attacksPtr[NB_SQUARE],
     const int dir[4][2])
 {
-    bitboard_t edges = ((Rank[RANK_1] | Rank[RANK_8]) & ~Rank[rank_of(square)]) |
+    const bitboard_t edges = ((Rank[RANK_1] | Rank[RANK_8]) & ~Rank[rank_of(square)]) |
         ((File[RANK_1] | File[RANK_8]) & ~File[file_of(square)]);
     mask[square] = slider_attacks(square, 0, dir) & ~edges;
     shift[square] = (unsigned)(64 - bb_count(mask[square]));
@@ -112,6 +112,7 @@ static void init_slider_attacks(int square, bitboard_t mask[NB_SQUARE],
 
     // Loop over the subsets of mask[square]
     bitboard_t occ = 0;
+
     do {
         attacksPtr[square][slider_index(occ, mask[square], magic[square], shift[square])]
             = slider_attacks(square, occ, dir);
@@ -296,7 +297,7 @@ int bb_msb(bitboard_t b)
 
 int bb_pop_lsb(bitboard_t *b)
 {
-    int square = bb_lsb(*b);
+    const int square = bb_lsb(*b);
     *b &= *b - 1;
     return square;
 }

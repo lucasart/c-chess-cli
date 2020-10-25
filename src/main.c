@@ -31,13 +31,13 @@ static FILE *pgnOut, *sampleFile;
 static void *thread_start(void *arg)
 {
     Worker *w = arg;
-    Engine engines[2];
+    Engine engines[2] = {0};
 
     // Prepare engines[]
     for (int i = 0; i < 2; i++)
         engines[i] = engine_new(w, eo[i].cmd.buf, eo[i].name.buf, eo[i].options);
 
-    int next;
+    int next = 0;
     scope(str_del) str_t fen = str_new();
 
     while ((next = openings_next(&openings, &fen, w->id)) <= options.games) {
@@ -73,7 +73,7 @@ static void *thread_start(void *arg)
             game.names[BLACK].buf, result.buf, reason.buf);
 
         // Update on global score (across workers)
-        int wldCount[3];
+        int wldCount[3] = {0};
         workers_add_result(w, wld, wldCount);
 
         const int n = wldCount[RESULT_WIN] + wldCount[RESULT_LOSS] + wldCount[RESULT_DRAW];
@@ -83,7 +83,7 @@ static void *thread_start(void *arg)
             (wldCount[RESULT_WIN] + 0.5 * wldCount[RESULT_DRAW]) / n, n);
 
         if (options.sprt) {
-            double llrLbound, llrUbound;
+            double llrLbound = 0, llrUbound = 0;
             sprt_bounds(options.alpha, options.beta, &llrLbound, &llrUbound);
 
             const double llr = sprt_llr(wldCount, options.elo0, options.elo1);

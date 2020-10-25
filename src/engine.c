@@ -30,9 +30,7 @@ static void engine_spawn(const Worker *w, Engine *e, const char *cwd, const char
 
     // Pipe diagram: Parent -> [1]into[0] -> Child -> [1]outof[0] -> Parent
     // 'into' and 'outof' are pipes, each with 2 ends: read=0, write=1
-    int outof[2], into[2];
-
-    e->in = e->out = NULL;  // silence bogus compiler warning
+    int outof[2] = {0}, into[2] = {0};
 
     DIE_IF(w->id, pipe(outof) < 0);
     DIE_IF(w->id, pipe(into) < 0);
@@ -76,7 +74,7 @@ Engine engine_new(Worker *w, const char *cmd, const char *name, const str_t *opt
     if (!*cmd)
         DIE("[%d] missing command to start engine.\n", w->id);
 
-    Engine e;
+    Engine e = {0};
     e.name = str_new_from_c(*name ? name : cmd); // default value
 
     /* Shell parsing of cmd */

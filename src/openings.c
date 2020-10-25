@@ -20,6 +20,7 @@
 Openings openings_new(const char *fileName, bool random, bool repeat, int threadId)
 {
     Openings o = {0};
+    o.index = vec_new(size_t);
 
     if (*fileName)
         DIE_IF(threadId, !(o.file = fopen(fileName, "r")));
@@ -27,8 +28,7 @@ Openings openings_new(const char *fileName, bool random, bool repeat, int thread
         o.file = NULL;
 
     if (o.file) {
-        // Builds o.index[] to record file offsets for each lines
-        o.index = vec_new(size_t);
+        // Fill o.index[] to record file offsets for each lines
         scope(str_del) str_t line = str_new();
 
         do {

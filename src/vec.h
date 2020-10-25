@@ -30,10 +30,9 @@ void *vec_do_new(size_t capacity, size_t esize);
 #define vec_new_reserve(capacity, etype) vec_do_new(capacity, sizeof(etype))
 
 #define vec_del(v) ({ \
-    if (v) { \
-        free(vec_ptr(v)); \
-        v = NULL; \
-    } \
+    assert(v); \
+    free(vec_ptr(v)); \
+    v = NULL; \
 })
 
 // delete elements using dtor(&elt), then delete vector

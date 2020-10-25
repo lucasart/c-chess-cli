@@ -24,20 +24,20 @@ static uint64_t ZobristCastling[NB_SQUARE], ZobristEnPassant[NB_SQUARE + 1], Zob
 
 static __attribute__((constructor)) void zobrist_init(void)
 {
-    uint64_t state = 0;
+    uint64_t seed = 0;
 
     for (int color = WHITE; color <= BLACK; color++)
         for (int piece = KNIGHT; piece < NB_PIECE; piece++)
             for (int square = A1; square <= H8; square++)
-                ZobristKey[color][piece][square] = prng(&state);
+                ZobristKey[color][piece][square] = prng(&seed);
 
     for (int square = A1; square <= H8; square++) {
-        ZobristCastling[square] = prng(&state);
-        ZobristEnPassant[square] = prng(&state);
+        ZobristCastling[square] = prng(&seed);
+        ZobristEnPassant[square] = prng(&seed);
     }
 
-    ZobristEnPassant[NB_SQUARE] = prng(&state);
-    ZobristTurn = prng(&state);
+    ZobristEnPassant[NB_SQUARE] = prng(&seed);
+    ZobristTurn = prng(&seed);
 }
 
 static uint64_t zobrist_castling(bitboard_t castleRooks)
@@ -64,10 +64,10 @@ static void square_to_string(int square, char str[3])
     *str = '\0';
 }
 
-static int string_to_square(const char *s)
+static int string_to_square(const char *str)
 {
-    return s[0] != '-'
-        ? square_from(s[1] - '1', s[0] - 'a')
+    return str[0] != '-'
+        ? square_from(str[1] - '1', str[0] - 'a')
         : NB_SQUARE;
 }
 
@@ -126,12 +126,12 @@ static void finish(Position *pos)
         pos->attacked |= KnightAttacks[bb_pop_lsb(&knights)];
 
     // Pawn captures
-    bitboard_t pawns = pos_pieces_cp(pos, them, PAWN);
+    const bitboard_t pawns = pos_pieces_cp(pos, them, PAWN);
     pos->attacked |= bb_shift(pawns & ~File[FILE_A], push_inc(them) + LEFT);
     pos->attacked |= bb_shift(pawns & ~File[FILE_H], push_inc(them) + RIGHT);
 
     // Sliders (using modified occupancy to see through a checked king)
-    bitboard_t occ = pos_pieces(pos) ^ pos_pieces_cp(pos, opposite(them), KING);
+    const bitboard_t occ = pos_pieces(pos) ^ pos_pieces_cp(pos, opposite(them), KING);
     bitboard_t rookMovers = pos_pieces_cpp(pos, them, ROOK, QUEEN);
 
     while (rookMovers)
@@ -176,7 +176,7 @@ bool pos_set(Position *pos, const char *fen, bool chess960)
 
     // Piece placement
     fen = str_tok(fen, &token, " ");
-    int file = FILE_A, rank = RANK_8;
+    int rank = RANK_8, file = FILE_A;
 
     for (const char *c = token.buf; *c; c++) {
         if ('1' <= *c && *c <= '8') {
@@ -224,7 +224,7 @@ bool pos_set(Position *pos, const char *fen, bool chess960)
         for (const char *c = token.buf; *c; c++) {
             rank = isupper((unsigned char)*c) ? RANK_1 : RANK_8;
             const bitboard_t ourRooks = pos_pieces_cp(pos, rank / RANK_8, ROOK);
-            char uc = (char)toupper(*c);
+            const char uc = (char)toupper(*c);
 
             if (uc == 'K')
                 bb_set(&pos->castleRooks, bb_msb(Rank[rank] & ourRooks));
@@ -377,7 +377,7 @@ void pos_get(const Position *pos, str_t *fen)
     }
 
     // En passant and 50 move
-    char epStr[3];
+    char epStr[3] = "";
     square_to_string(pos->epSquare, epStr);
     str_cat_fmt(fen, " %s %i %i", epStr, pos->rule50, pos->fullMove);
 }
@@ -514,13 +514,11 @@ int pos_piece_on(const Position *pos, int square)
 {
     BOUNDS(square, NB_SQUARE);
 
-    int piece;
-
-    for (piece = KNIGHT; piece <= PAWN; piece++)
+    for (int piece = KNIGHT; piece <= PAWN; piece++)
         if (bb_test(pos->byPiece[piece], square))
-            break;
+            return piece;
 
-    return piece;
+    return NB_PIECE;
 }
 
 bool pos_move_is_castling(const Position *pos, move_t m)
@@ -530,9 +528,10 @@ bool pos_move_is_castling(const Position *pos, move_t m)
 
 void pos_move_to_lan(const Position *pos, move_t m, str_t *lan)
 {
-    str_clear(lan);
     const int from = move_from(m), prom = move_prom(m);
     int to = move_to(m);
+
+    str_clear(lan);
 
     if (!(from | to | prom)) {
         str_cat_c(lan, "0000");
@@ -542,7 +541,7 @@ void pos_move_to_lan(const Position *pos, move_t m, str_t *lan)
     if (!pos->chess960 && pos_move_is_castling(pos, m))
         to = to > from ? from + 2 : from - 2;  // e1h1 -> e1g1, e1a1 -> e1c1
 
-    char fromStr[3], toStr[3];
+    char fromStr[3] = "", toStr[3] = "";
     square_to_string(from, fromStr);
     square_to_string(to, toStr);
     str_cat_c(str_cat_c(lan, fromStr), toStr);
@@ -576,6 +575,7 @@ void pos_move_to_san(const Position *pos, move_t m, str_t *san)
     const int us = pos->turn;
     const int from = move_from(m), to = move_to(m), prom = move_prom(m);
     const int piece = pos_piece_on(pos, from);
+
     str_clear(san);
 
     if (piece == PAWN) {
@@ -597,7 +597,7 @@ void pos_move_to_san(const Position *pos, move_t m, str_t *san)
             if (pos_move_is_capture(pos, m))
                 str_push(san, 'x');
 
-            char toStr[3];
+            char toStr[3] = "";
             square_to_string(to, toStr);
             str_cat_c(san, toStr);
         }
@@ -620,7 +620,7 @@ void pos_move_to_san(const Position *pos, move_t m, str_t *san)
             assert(BISHOP <= piece && piece <= QUEEN);
 
             // 1.2.1. Restrict to those that can pseudo-legally reach the 'to' square.
-            bitboard_t occ = pos_pieces(pos);
+            const bitboard_t occ = pos_pieces(pos);
 
             if (piece == BISHOP)
                 contesters &= bb_bishop_attacks(to, occ);
@@ -660,7 +660,7 @@ void pos_move_to_san(const Position *pos, move_t m, str_t *san)
         if (pos_move_is_capture(pos, m))
             str_push(san, 'x');
 
-        char toStr[3];
+        char toStr[3] = "";
         square_to_string(to, toStr);
         str_cat_c(san, toStr);
     }

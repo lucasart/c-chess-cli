@@ -149,11 +149,10 @@ Game game_new(const Worker *w, const char *fen)
 {
     assert(w && fen);
 
-    Game g;
+    Game g = {0};
     g.names[WHITE] = str_new();
     g.names[BLACK] = str_new();
 
-    g.ply = 0;
     g.pos = vec_new(Position);
     vec_push(g.pos, (Position){0});
 
@@ -199,16 +198,14 @@ int game_play(Worker *w, Game *g, const GameOptions *go, const Engine engines[2]
     move_t played = 0;
     int drawPlyCount = 0;
     int resignCount[NB_COLOR] = {0};
-    int ei;  // engines[ei] has the move
+    int ei = reverse;  // engines[ei] has the move
     int64_t timeLeft[2] = {eo[0]->time, eo[1]->time};
     scope(str_del) str_t pv = str_new();
     move_t *legalMoves = vec_new_reserve(64, move_t);
 
-    for (g->ply = 0; ; g->ply++) {
+    for (g->ply = 0; ; ei = 1 - ei, g->ply++) {
         if (played)
             pos_move(&g->pos[g->ply], &g->pos[g->ply - 1], played);
-
-        ei = (g->ply % 2) ^ reverse;  // engine[ei] has the move
 
         if ((g->state = game_apply_chess_rules(g, &legalMoves)))
             break;

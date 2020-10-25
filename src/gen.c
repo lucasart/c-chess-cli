@@ -19,7 +19,6 @@
 static move_t *serialize_piece_moves(int from, bitboard_t pins, int king, bitboard_t targets,
     move_t *moves)
 {
-
     if (bb_test(pins, from))
         targets &= Ray[king][from];
 
@@ -54,21 +53,21 @@ static move_t *gen_pawn_moves(const Position *pos, move_t *moves, bitboard_t fil
         & ~Rank[relative_rank(us, RANK_7)];
 
     // Left captures
-    bitboard_t b = nonPromotingPawns & ~File[FILE_A] & bb_shift(capturable, -(push + LEFT));
-    moves = serialize_pawn_moves(b, pos->pins, king, push + LEFT, moves);
+    const bitboard_t lc = nonPromotingPawns & ~File[FILE_A] & bb_shift(capturable, -(push + LEFT));
+    moves = serialize_pawn_moves(lc, pos->pins, king, push + LEFT, moves);
 
     // Right captures
-    b = nonPromotingPawns & ~File[FILE_H] & bb_shift(capturable, -(push + RIGHT));
-    moves = serialize_pawn_moves(b, pos->pins, king, push + RIGHT, moves);
+    const bitboard_t rc = nonPromotingPawns & ~File[FILE_H] & bb_shift(capturable, -(push + RIGHT));
+    moves = serialize_pawn_moves(rc, pos->pins, king, push + RIGHT, moves);
 
     // Single pushes
-    b = nonPromotingPawns & bb_shift(~pos_pieces(pos) & filter, -push);
-    moves = serialize_pawn_moves(b, pos->pins, king, push, moves);
+    const bitboard_t sp = nonPromotingPawns & bb_shift(~pos_pieces(pos) & filter, -push);
+    moves = serialize_pawn_moves(sp, pos->pins, king, push, moves);
 
     // Double pushes
-    b = nonPromotingPawns & Rank[relative_rank(us, RANK_2)] & bb_shift(~pos_pieces(pos), -push)
+    const bitboard_t dp = nonPromotingPawns & Rank[relative_rank(us, RANK_2)] & bb_shift(~pos_pieces(pos), -push)
         & bb_shift(~pos_pieces(pos) & filter, -2 * push);
-    moves = serialize_pawn_moves(b, pos->pins, king, 2 * push, moves);
+    moves = serialize_pawn_moves(dp, pos->pins, king, 2 * push, moves);
 
     // ** En passant **
     if (pos->epSquare != NB_SQUARE) {
@@ -158,7 +157,6 @@ static move_t *gen_castling_moves(const Position *pos, move_t *moves)
 {
     assert(!pos->checkers);
     const int king = pos_king_square(pos, pos->turn);
-
     bitboard_t rooks = pos->castleRooks & pos->byColor[pos->turn];
 
     while (rooks) {
@@ -177,8 +175,8 @@ static move_t *gen_castling_moves(const Position *pos, move_t *moves)
 static move_t *gen_check_escapes(const Position *pos, move_t *moves)
 {
     assert(pos->checkers);
-    bitboard_t ours = pos->byColor[pos->turn];
     const int king = pos_king_square(pos, pos->turn);
+    const bitboard_t ours = pos->byColor[pos->turn];
 
     // King moves
     moves = serialize_piece_moves(king, pos->pins, king, KingAttacks[king] & ~ours & ~pos->attacked,

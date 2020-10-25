@@ -16,6 +16,7 @@
 
 vec_t *vec_ptr(void *v)
 {
+    assert(v);
     return (vec_t *)((char *)(v) - offsetof(vec_t, buf));
 }
 
@@ -34,7 +35,7 @@ void *vec_do_new(size_t capacity, size_t esize)
 
 size_t vec_size(const void *v)
 {
-    return v ? vec_cptr(v)->size : 0;
+    return vec_cptr(v)->size;
 }
 
 size_t vec_capacity(const void *v)
