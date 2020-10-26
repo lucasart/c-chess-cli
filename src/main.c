@@ -94,9 +94,9 @@ static void *thread_start(void *arg)
 
         const int n = wldCount[RESULT_WIN] + wldCount[RESULT_LOSS] + wldCount[RESULT_DRAW];
 
-        printf("Score of %s vs %s: %d - %d - %d  [%.3f] %d\n", engines[0].name.buf,
+        printf("Score of %s vs %s: %d - %d - %d  [%.3f] %zu\n", engines[0].name.buf,
             engines[1].name.buf, wldCount[RESULT_WIN], wldCount[RESULT_LOSS], wldCount[RESULT_DRAW],
-            (wldCount[RESULT_WIN] + 0.5 * wldCount[RESULT_DRAW]) / n, n);
+            (wldCount[RESULT_WIN] + 0.5 * wldCount[RESULT_DRAW]) / n, idx + 1);
 
         if (options.sprt) {
             double llrLbound = 0, llrUbound = 0;
