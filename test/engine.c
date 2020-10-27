@@ -120,12 +120,12 @@ static void run_go(const Position *pos, const Go *go, uint64_t *seed)
     uci_printf("bestmove %s\n", token.buf);
 }
 
-int main(void)
+int main(int argc, char **argv)
 {
     Position pos = {0};
     Go go = {0};
-    uint64_t seed = 0;
     bool uciChess960 = false;
+    uint64_t seed = argc > 1 ? (uint64_t)atoll(argv[1]) : 0;
 
     scope(str_del) str_t line = str_new(), token = str_new();
 

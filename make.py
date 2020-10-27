@@ -38,7 +38,7 @@ if args.task == 'test':
             '-engine "name=engine\:1" option.Threads=2 -engine name=engine2 depth=5 ' \
             '-sample 0.5,y,training.csv -openings test/chess960.epd -repeat ' \
             '-resign 4,9000 -draw 2,10000 -games 1925 -log -pgnout out.pgn > stdout1')
-        run('./c-chess-cli -each cmd=./test/engine depth=7 option.Hash=4 ' \
+        run('./c-chess-cli -each "cmd=./test/engine 123" depth=7 option.Hash=4 ' \
             '-engine "name=engine\:1" option.Threads=2 -engine name=engine2 ' \
             '-openings test/chess960.epd -games 100 > stdout2')
         print('\nFile signatures:')
