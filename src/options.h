@@ -20,9 +20,8 @@
 typedef struct {
     str_t openings, pgnOut, sampleFileName;
     double elo0, elo1, alpha, beta;
-    int concurrency, games;
+    int concurrency, games, rounds;
     bool log, random, repeat, sprt;
-    char pad[4];
 } Options;
 
 typedef struct {

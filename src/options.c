@@ -121,12 +121,12 @@ Options options_new(void)
 void options_parse(int argc, const char **argv, Options *o, GameOptions *go, EngineOptions **eo)
 {
     // List options that expect a value
-    static const char *options[] = {"-concurrency", "-games", "-openings", "-pgnout", "-nodes",
-        "-depth", "-draw", "-resign", "-st", "-tc", "-sprt", "-sample"};
+    static const char *options[] = {"-concurrency", "-games", "-rounds", "-openings", "-pgnout",
+        "-nodes", "-depth", "-draw", "-resign", "-st", "-tc", "-sprt", "-sample"};
 
     // Default values
     o->concurrency = 1;
-    o->games = 1;
+    o->games = o->rounds = 1;
     o->alpha = o->beta = 0.05;
 
     scope(engine_options_del) EngineOptions each = engine_options_new();
@@ -173,6 +173,8 @@ void options_parse(int argc, const char **argv, Options *o, GameOptions *go, Eng
                 o->concurrency = atoi(argv[i]);
             else if (!strcmp(argv[i - 1], "-games"))
                 o->games = atoi(argv[i]);
+            else if (!strcmp(argv[i - 1], "-rounds"))
+                o->rounds = atoi(argv[i]);
             else if (!strcmp(argv[i - 1], "-openings"))
                 str_cpy_c(&o->openings, argv[i]);
             else if (!strcmp(argv[i - 1], "-pgnout"))

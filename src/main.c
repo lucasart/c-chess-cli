@@ -134,7 +134,7 @@ int main(int argc, const char **argv)
     options = options_new();
     options_parse(argc, argv, &options, &go, &eo);
 
-    jq = job_queue_new(vec_size(eo), 1, options.games);
+    jq = job_queue_new(vec_size(eo), options.rounds, options.games);
     openings = openings_new(options.openings.buf, options.random, 0);
 
     pgnOut = NULL;
