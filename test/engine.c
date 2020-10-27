@@ -52,7 +52,7 @@ static void parse_position(const char *tail, Position *pos, bool uciChess960)
     assert(tail);
 
     if (!strcmp(token.buf, "startpos")) {
-        pos_set(pos, "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", uciChess960);
+        pos_set(pos, "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", uciChess960, NULL);
         tail = str_tok(tail, &token, " ");
     } else if (!strcmp(token.buf, "fen")) {
         scope(str_del) str_t fen = str_new();
@@ -60,7 +60,7 @@ static void parse_position(const char *tail, Position *pos, bool uciChess960)
         while ((tail = str_tok(tail, &token, " ")) && strcmp(token.buf, "moves"))
             str_push(str_cat(&fen, token), ' ');
 
-        if (!pos_set(pos, fen.buf, uciChess960))
+        if (!pos_set(pos, fen.buf, uciChess960, NULL))
             DIE("Illegal FEN '%s'\n", fen.buf);
     } else
         assert(false);

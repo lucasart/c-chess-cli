@@ -74,7 +74,7 @@ static void *thread_start(void *arg)
             scope(str_del) str_t lines = str_new(), sampleFen = str_new();
 
             for (size_t i = 0; i < vec_size(game.samples); i++) {
-                pos_get(&game.samples[i].pos, &sampleFen);
+                pos_get(&game.samples[i].pos, &sampleFen, false);
                 str_cat_fmt(&lines, "%S,%i,%i\n", sampleFen, game.samples[i].score,
                     game.samples[i].result);
             }

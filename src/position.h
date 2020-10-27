@@ -32,8 +32,8 @@ typedef struct {
     bool chess960;  // for move<->string conversions ("e1h1" if chess960 else "e1g1")
 } Position;
 
-bool pos_set(Position *pos, const char *fen, bool chess960);
-void pos_get(const Position *pos, str_t *fen);
+bool pos_set(Position *pos, const char *fen, bool chess960, bool *sfen);
+void pos_get(const Position *pos, str_t *fen, bool sfen);
 void pos_move(Position *pos, const Position *before, move_t m);
 
 bitboard_t pos_pieces(const Position* pos);

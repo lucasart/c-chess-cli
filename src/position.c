@@ -18,6 +18,7 @@
 #include "util.h"
 
 static const char *PieceLabel[NB_COLOR] = {"NBRQKP.", "nbrqkp."};
+static const char *FileLabel[NB_COLOR] = {"ABCDEFGH", "abcdefgh"};
 
 static uint64_t ZobristKey[NB_COLOR][NB_PIECE][NB_SQUARE];
 static uint64_t ZobristCastling[NB_SQUARE], ZobristEnPassant[NB_SQUARE + 1], ZobristTurn;
@@ -166,10 +167,11 @@ static bool pos_move_is_capture(const Position *pos, move_t m)
     return bb_test(pos->byColor[opposite(pos->turn)], move_to(m));
 }
 
+bool pos_set(Position *pos, const char *fen, bool chess960, bool *sfen)
 // Set position from FEN string. chess960 is used only to force the value of pos.chess960:
 // chess960=false: pos.chess960 will be set based on auto-detection.
 // chess960=true: set pos.chess960=true, skipping auto-detection.
-bool pos_set(Position *pos, const char *fen, bool chess960)
+// when sfen != NULL, *sfen is set based on auto-detection.
 {
     *pos = (Position){0};
     scope(str_del) str_t token = str_new();
@@ -217,6 +219,8 @@ bool pos_set(Position *pos, const char *fen, bool chess960)
     }
 
     // Castling rights: optional, default '-'
+    bool _sfen = false;
+
     if ((fen = str_tok(fen, &token, " "))) {
         if (token.len > 4)
             return false;
@@ -230,12 +234,16 @@ bool pos_set(Position *pos, const char *fen, bool chess960)
                 bb_set(&pos->castleRooks, bb_msb(Rank[rank] & ourRooks));
             else if (uc == 'Q')
                 bb_set(&pos->castleRooks, bb_lsb(Rank[rank] & ourRooks));
-            else if ('A' <= uc && uc <= 'H')
+            else if ('A' <= uc && uc <= 'H') {
                 bb_set(&pos->castleRooks, square_from(rank, uc - 'A'));
-            else if (*c != '-' || pos->castleRooks || c[1] != '\0')
+                _sfen = true;
+            } else if (*c != '-' || pos->castleRooks || c[1] != '\0')
                 return false;
         }
     }
+
+    if (sfen)
+        *sfen = _sfen;
 
     pos->key ^= zobrist_castling(pos->castleRooks);
 
@@ -324,8 +332,8 @@ bool pos_set(Position *pos, const char *fen, bool chess960)
     return true;
 }
 
-// Get FEN string of position
-void pos_get(const Position *pos, str_t *fen)
+// Get FEN string of position. For Chess960, use HAha when sfen = true (instead of KQkq).
+void pos_get(const Position *pos, str_t *fen, bool sfen)
 {
     str_clear(fen);
 
@@ -360,19 +368,19 @@ void pos_get(const Position *pos, str_t *fen)
         str_push(fen, '-');
     else {
         for (int color = WHITE; color <= BLACK; color++) {
-            const bitboard_t b = pos->castleRooks & pos->byColor[color];
+            // Castling rook(s) for color
+            const int king = pos_king_square(pos, color);
+            const bitboard_t left = pos->castleRooks & pos->byColor[color] & Ray[king][king + LEFT];
+            const bitboard_t right = pos->castleRooks & pos->byColor[color] & Ray[king][king + RIGHT];
+            assert(!bb_several(left) && !bb_several(right));
 
-            if (b) {
-                const int king = pos_king_square(pos, color);
+            if (right)
+                str_push(fen, pos->chess960 && sfen ? FileLabel[color][file_of(bb_lsb(right))]
+                    : PieceLabel[color][KING]);
 
-                // Right side castling
-                if (b & Ray[king][king + RIGHT])
-                    str_push(fen, PieceLabel[color][KING]);
-
-                // Left side castling
-                if (b & Ray[king][king + LEFT])
-                    str_push(fen, PieceLabel[color][QUEEN]);
-            }
+            if (left)
+                str_push(fen, pos->chess960 && sfen ? FileLabel[color][file_of(bb_lsb(left))]
+                    : PieceLabel[color][QUEEN]);
         }
     }
 
@@ -683,7 +691,7 @@ void pos_print(const Position *pos)
     }
 
     scope(str_del) str_t fen = str_new();
-    pos_get(pos, &fen);
+    pos_get(pos, &fen, false);
     puts(fen.buf);
 
     scope(str_del) str_t lan = str_new();

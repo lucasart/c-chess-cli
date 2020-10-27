@@ -26,7 +26,7 @@ static void uci_position_command(const Game *g, str_t *cmd)
     const int ply0 = max(g->ply - g->pos[g->ply].rule50, 0);
 
     scope(str_del) str_t fen = str_new();
-    pos_get(&g->pos[ply0], &fen);
+    pos_get(&g->pos[ply0], &fen, g->sfen);
     str_cpy_fmt(cmd, "position fen %S", fen);
 
     if (ply0 < g->ply) {
@@ -102,17 +102,17 @@ static bool illegal_move(move_t move, const move_t *moves)
     return true;
 }
 
-static Position resolve_pv(const Worker *w, const Position *pos, const char *pv)
+static Position resolve_pv(const Worker *w, const Game *g, const char *pv)
 {
     scope(str_del) str_t token = str_new();
     const char *tail = pv;
 
     // Start with current position. We can't guarantee that the resolved position won't be in check,
     // but a valid one must be returned.
-    Position resolved = *pos;
+    Position resolved = g->pos[g->ply];
 
     Position p[2];
-    p[0] = *pos;
+    p[0] = resolved;
     int idx = 0;
     move_t *moves = vec_new_reserve(64, move_t);
     scope(str_del) str_t fen = str_new();
@@ -123,7 +123,7 @@ static Position resolve_pv(const Worker *w, const Position *pos, const char *pv)
 
         if (illegal_move(m, moves)) {
             if (w->log) {
-                pos_get(pos, &fen);
+                pos_get(&g->pos[g->ply], &fen, g->sfen);
                 DIE_IF(w->id, fprintf(w->log, "WARNING: invalid PV\n") < 0);
                 DIE_IF(w->id, fprintf(w->log, "\tfen: '%s'\n", fen.buf) < 0);
                 DIE_IF(w->id, fprintf(w->log, "\tpv: '%s'\n", pv) < 0);
@@ -156,7 +156,7 @@ Game game_new(const Worker *w, const char *fen)
     g.pos = vec_new(Position);
     vec_push(g.pos, (Position){0});
 
-    if (!pos_set(&g.pos[0], fen, false))
+    if (!pos_set(&g.pos[0], fen, false, &g.sfen))
         DIE("[%d] illegal FEN '%s'\n", w->id, fen);
 
     g.samples = vec_new(Sample);
@@ -238,7 +238,7 @@ int game_play(Worker *w, Game *g, const GameOptions *go, const Engine engines[2]
         // Parses the last PV sent. An invalid PV is not fatal, but logs some warnings. Keep track
         // of the resolved position, which is the last in the PV that is not in check (or the
         // current one if that's impossible).
-        Position resolved = resolve_pv(w, &g->pos[g->ply], pv.buf);
+        Position resolved = resolve_pv(w, g, pv.buf);
 
         if (!ok) {  // engine_bestmove() time out before parsing a bestmove
             g->state = STATE_TIME_LOSS;
@@ -355,7 +355,7 @@ void game_pgn(const Game *g, str_t *pgn)
     str_cat_fmt(pgn, "[Termination \"%S\"]\n", reason);
 
     scope(str_del) str_t fen = str_new();
-    pos_get(&g->pos[0], &fen);
+    pos_get(&g->pos[0], &fen, g->sfen);
     str_cat_fmt(pgn, "[FEN \"%S\"]\n", fen);
 
     if (g->pos[0].chess960)

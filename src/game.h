@@ -48,6 +48,8 @@ typedef struct {
     Position *pos;  // list of positions (including moves) since game start
     Sample *samples;  // list of samples when generating training data
     int ply, state;
+    bool sfen;  // use S-FEN for this game (ie. HAha instead of KQkq)
+    char pad[7];
 } Game;
 
 Game game_new(const Worker *w, const char *fen);
