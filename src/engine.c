@@ -67,6 +67,34 @@ static void engine_spawn(const Worker *w, Engine *e, const char *cwd, const char
     }
 }
 
+static void engine_parse_cmd(const char *cmd, str_t *cwd, str_t *run, str_t **args)
+{
+    // Isolate the first token being the command to run.
+    scope(str_del) str_t token = str_new();
+    const char *tail = cmd;
+    tail = str_tok_esc(tail, &token, ' ', '\\');
+
+    // Split token into (cwd, run). Possible cases:
+    // (a) unqualified path, like "demolito" (which evecvp() will search in PATH)
+    // (b) qualified path (absolute starting with "/", or relative starting with "./" or "../")
+    // For (b), we want to separate into executable and directory, so instead of running
+    // "../Engines/demolito" from the cwd, we execute run="./demolito" from cwd="../Engines"
+    str_cpy_c(cwd, "./");
+    str_cpy(run, token);
+    const char *lastSlash = strrchr(token.buf, '/');
+
+    if (lastSlash) {
+        str_ncpy(cwd, token, (size_t)(lastSlash - token.buf));
+        str_cpy_fmt(run, "./%s", lastSlash + 1);
+    }
+
+    // Collect the arguments into a vec of str_t, args[]
+    vec_push(*args, str_new_from(*run));  // argv[0] is the executed command
+
+    while ((tail = str_tok_esc(tail, &token, ' ', '\\')))
+        vec_push(*args, str_new_from(token));
+}
+
 Engine engine_new(Worker *w, const char *cmd, const char *name, const str_t *options)
 {
     assert(w && options);
@@ -77,37 +105,13 @@ Engine engine_new(Worker *w, const char *cmd, const char *name, const str_t *opt
     Engine e = {0};
     e.name = str_new_from_c(*name ? name : cmd); // default value
 
-    /* Shell parsing of cmd */
-
-    // Step 1: isolate the first token being the command to run.
-    scope(str_del) str_t token = str_new();
-    const char *tail = cmd;
-    tail = str_tok_esc(tail, &token, ' ', '\\');
-
-    // Step 2: now we have the command (without its arguments). This command could be:
-    // (a) an unqualified path, like "demolito" (which evecvp() will search in PATH)
-    // (b) a qualified path (absolute starting with "/", or relative starting with "./" or "../")
-    // For (b), we want to separate into executable and directory, so instead of running
-    // "../Engines/demolito" from the cwd, we execute run="./demolito" from cwd="../Engines"
-    scope(str_del) str_t cwd = str_new_from_c("./"), run = str_new_from(token);
-    const char *lastSlash = strrchr(token.buf, '/');
-
-    if (lastSlash) {
-        str_ncpy(&cwd, token, (size_t)(lastSlash - token.buf));
-        str_cpy_c(&run, "./");
-        str_cat_c(&run, lastSlash + 1);
-    }
-
-    // Step 3: Collect the arguments into a vec of str_t, args[]
+    // Parse cmd into (cwd, run, args): we want to execute run from cwd with args.
+    scope(str_del) str_t cwd = str_new(), run = str_new();
     str_t *args = vec_new(str_t);
-    vec_push(args, str_new_from(run));  // argv[0] is the executed command
+    engine_parse_cmd(cmd, &cwd, &run, &args);
 
-    while ((tail = str_tok_esc(tail, &token, ' ', '\\')))
-        vec_push(args, str_new_from(token));
-
-    // Step 4: Obviously, evecvp() doesn't deal in vec of str_t, so prepare a char **, whose
-    // elements point to the C-string buffers of the elements of args (with an extra NULL to signal
-    // the end of the argv array).
+    // execvp() needs NULL terminated char **, not vec of str_t. Prepare a char **, whose elements
+    // point to the C-string buffers of the elements of args, with the required NULL at the end.
     char **argv = calloc(vec_size(args) + 1, sizeof(char *));
 
     for (size_t i = 0; i < vec_size(args); i++)
@@ -122,11 +126,11 @@ Engine engine_new(Worker *w, const char *cmd, const char *name, const str_t *opt
     // Start the uci..uciok dialogue
     deadline_set(w, e.name.buf, system_msec() + 2000);
     engine_writeln(w, &e, "uci");
-    scope(str_del) str_t line = str_new();
+    scope(str_del) str_t line = str_new(), token = str_new();
 
     do {
         engine_readln(w, &e, &line);
-        tail = line.buf;
+        const char *tail = line.buf;
 
         // Set e.name, by parsing "id name %s", only if no name was provided (*name == '\0')
         if (!*name && (tail = str_tok(tail, &token, " ")) && !strcmp(token.buf, "id")
