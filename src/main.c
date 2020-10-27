@@ -38,13 +38,13 @@ static void *thread_start(void *arg)
     scope(str_del) str_t fen = str_new();
     Job j = {0};
     int e1 = 0, e2 = 1;  // eo[e1] plays eo[e2]
-    size_t idx = 0;  // game idx (global across workers)
+    size_t idx = 0, count = 0;  // game idx and count (shared across workers)
 
     // Prepare engines[]
     engines[0] = engine_new(w, eo[e1].cmd.buf, eo[e1].name.buf, eo[e1].options);
     engines[1] = engine_new(w, eo[e2].cmd.buf, eo[e2].name.buf, eo[e2].options);
 
-    while (job_queue_pop(&jq, &j, &idx)) {
+    while (job_queue_pop(&jq, &j, &idx, &count)) {
         // Engine switching (if needed)
         assert(j.e1 == 0);  // gauntlet only for now
 
@@ -53,6 +53,9 @@ static void *thread_start(void *arg)
             engine_del(w, &engines[1]);
             engines[1] = engine_new(w, eo[e2].cmd.buf, eo[e2].name.buf, eo[e2].options);
         }
+
+        printf("[%d] Started game %zu of %zu (%s vs %s)\n", w->id, idx + 1, count,
+            engines[0].name.buf, engines[1].name.buf);
 
         // Choose opening position
         openings_next(&openings, &fen, options.repeat ? idx / 2 : idx, w->id);
@@ -85,8 +88,9 @@ static void *thread_start(void *arg)
         // Write to stdout a one line summary of the game
         scope(str_del) str_t result = str_new(), reason = str_new();
         game_decode_state(&game, &result, &reason);
-        printf("[%i] %s vs %s: %s (%s)\n", w->id, game.names[WHITE].buf,
-            game.names[BLACK].buf, result.buf, reason.buf);
+
+        printf("[%d] Finished game %zu (%s vs %s): %s\n", w->id, idx + 1, engines[0].name.buf,
+            engines[1].name.buf, reason.buf);
 
         // Update on global score (across workers)
         int wldCount[3] = {0};
@@ -94,9 +98,9 @@ static void *thread_start(void *arg)
 
         const int n = wldCount[RESULT_WIN] + wldCount[RESULT_LOSS] + wldCount[RESULT_DRAW];
 
-        printf("Score of %s vs %s: %d - %d - %d  [%.3f] %zu\n", engines[0].name.buf,
+        printf("Score of %s vs %s: %d - %d - %d  [%.3f] %d\n", engines[0].name.buf,
             engines[1].name.buf, wldCount[RESULT_WIN], wldCount[RESULT_LOSS], wldCount[RESULT_DRAW],
-            (wldCount[RESULT_WIN] + 0.5 * wldCount[RESULT_DRAW]) / n, idx + 1);
+            (wldCount[RESULT_WIN] + 0.5 * wldCount[RESULT_DRAW]) / n, n);
 
         if (options.sprt) {
             double llrLbound = 0, llrUbound = 0;

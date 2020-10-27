@@ -40,7 +40,7 @@ void job_queue_del(JobQueue *jq)
     pthread_mutex_destroy(&jq->mtx);
 }
 
-bool job_queue_pop(JobQueue *jq, Job *j, size_t *idx)
+bool job_queue_pop(JobQueue *jq, Job *j, size_t *idx, size_t *count)
 {
     pthread_mutex_lock(&jq->mtx);
 
@@ -49,6 +49,7 @@ bool job_queue_pop(JobQueue *jq, Job *j, size_t *idx)
     if (ok) {
         *j = jq->jobs[jq->idx];
         *idx = jq->idx++;
+        *count = vec_size(jq->jobs);
     }
 
     pthread_mutex_unlock(&jq->mtx);
