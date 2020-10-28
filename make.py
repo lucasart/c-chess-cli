@@ -39,7 +39,7 @@ if args.task == 'test':
             '-sample 0.5,y,training.csv -openings test/chess960.epd -repeat ' \
             '-resign 4,9000 -draw 2,10000 -games 1925 -log -pgnout out.pgn > stdout1')
         run('./c-chess-cli -each "cmd=./test/engine 123" depth=7 option.Hash=4 ' \
-            '-engine name=engine:1 option.Threads=2 -engine name=engine2 ' \
+            '-engine option.Threads=2 -engine name=e2 ' \
             '-openings test/chess960.epd -games 100 > stdout2')
         print('\nFile signatures:')
         run('shasum stdout1 stdout2 out.pgn training.csv')
