@@ -89,8 +89,8 @@ static void *thread_start(void *arg)
         scope(str_del) str_t result = str_new(), reason = str_new();
         game_decode_state(&game, &result, &reason);
 
-        printf("[%d] Finished game %zu (%s vs %s): %s\n", w->id, idx + 1, engines[0].name.buf,
-            engines[1].name.buf, reason.buf);
+        printf("[%d] Finished game %zu (%s vs %s): %s {%s}\n", w->id, idx + 1, engines[0].name.buf,
+            engines[1].name.buf, result.buf, reason.buf);
 
         // Update on global score (across workers)
         int wldCount[3] = {0};
