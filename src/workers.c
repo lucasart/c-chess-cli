@@ -74,14 +74,16 @@ int64_t deadline_overdue(Worker *w)
 
     pthread_mutex_lock(&w->deadline.mtx);
     const int64_t timeLimit = w->deadline.timeLimit;
+    const bool set = w->deadline.set;
+    scope(str_del) str_t engineName = str_new_from(w->deadline.engineName);
     pthread_mutex_unlock(&w->deadline.mtx);
 
     const int64_t time = system_msec();
 
-    if (w->deadline.set && time > timeLimit) {
+    if (set && time > timeLimit) {
         if (w->log)
             DIE_IF(w->id, fprintf(w->log, "deadline: %s failed to respond by %" PRId64
-                ". Caught by main thread %" PRId64 "ms after.\n", w->deadline.engineName.buf,
+                ". Caught by main thread %" PRId64 "ms after.\n", engineName.buf,
                 timeLimit, time - timeLimit) < 0);
 
         return time - timeLimit;
