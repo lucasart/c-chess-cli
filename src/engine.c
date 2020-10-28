@@ -126,7 +126,7 @@ Engine engine_new(Worker *w, const char *cmd, const char *name, const str_t *opt
     // Start the uci..uciok dialogue
     deadline_set(w, e.name.buf, system_msec() + 2000);
     engine_writeln(w, &e, "uci");
-    scope(str_del) str_t line = str_new(), token = str_new();
+    scope(str_del) str_t line = str_new();
 
     do {
         engine_readln(w, &e, &line);
@@ -135,15 +135,18 @@ Engine engine_new(Worker *w, const char *cmd, const char *name, const str_t *opt
         // If no name was provided, parse it from "id name %s"
         if (!*name && (tail = str_prefix(line.buf, "id name ")))
             str_cpy_c(&e.name, tail + strspn(tail, " "));
+
+        if ((tail = str_prefix(line.buf, "option name UCI_Chess960 ")))
+            e.supportChess960 = true;
     } while (strcmp(line.buf, "uciok"));
 
-    // Parses options vector elements of the form "name=value", and send to engine
+    deadline_clear(w);
+
     for (size_t i = 0; i < vec_size(options); i++) {
         str_cpy_fmt(&line, "setoption name %S", options[i]);
         engine_writeln(w, &e, line.buf);
     }
 
-    deadline_clear(w);
     return e;
 }
 

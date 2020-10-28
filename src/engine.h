@@ -25,7 +25,8 @@ typedef struct {
     FILE *in, *out;
     str_t name;
     pid_t pid;
-    char pad[4];
+    bool supportChess960;
+    char pad[3];
 } Engine;
 
 Engine engine_new(Worker *w, const char *cmd, const char *name, const str_t *options);

@@ -187,8 +187,12 @@ int game_play(Worker *w, Game *g, const GameOptions *go, const Engine engines[2]
         str_cpy(&g->names[color], engines[color ^ g->pos[0].turn ^ reverse].name);
 
     for (int i = 0; i < 2; i++) {
-        if (g->pos[0].chess960)
-            engine_writeln(w, &engines[i], "setoption name UCI_Chess960 value true");
+        if (g->pos[0].chess960) {
+            if (engines[i].supportChess960)
+                engine_writeln(w, &engines[i], "setoption name UCI_Chess960 value true");
+            else
+                DIE("[%d] '%s' does not support Chess960\n", w->id, engines[i].name.buf);
+        }
 
         engine_writeln(w, &engines[i], "ucinewgame");
         engine_sync(w, &engines[i]);
