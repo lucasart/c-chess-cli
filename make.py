@@ -18,7 +18,7 @@ if args.static: lflags += ' -static'
 if 'ANDROID_DATA' in os.environ: lflags += ' -latomic'
 
 def run(cmd):
-    print('> ' + cmd)
+    print('% ' + cmd)
     return os.system(cmd)
 
 def compile(program, output):

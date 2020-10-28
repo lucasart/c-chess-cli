@@ -52,8 +52,10 @@ typedef struct {
     char pad[7];
 } Game;
 
-Game game_new(const Worker *w, const char *fen);
+Game game_new(void);
 void game_del(Game *g);
+
+bool game_load_fen(Game *g, const char *fen, int *color);
 
 int game_play(Worker *w, Game *g, const GameOptions *go, const Engine engines[2],
     const EngineOptions *eo[2], bool reverse);

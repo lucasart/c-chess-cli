@@ -145,24 +145,28 @@ static Position resolve_pv(const Worker *w, const Game *g, const char *pv)
     return resolved;
 }
 
-Game game_new(const Worker *w, const char *fen)
+Game game_new(void)
 {
-    assert(w && fen);
-
     Game g = {0};
+
     g.names[WHITE] = str_new();
     g.names[BLACK] = str_new();
 
     g.pos = vec_new(Position);
-    vec_push(g.pos, (Position){0});
-
-    if (!pos_set(&g.pos[0], fen, false, &g.sfen))
-        DIE("[%d] illegal FEN '%s'\n", w->id, fen);
-
     g.samples = vec_new(Sample);
-    g.state = STATE_NONE;
 
     return g;
+}
+
+bool game_load_fen(Game *g, const char *fen, int *color)
+{
+    vec_push(g->pos, (Position){0});
+
+    if (pos_set(&g->pos[0], fen, false, &g->sfen)) {
+        *color = g->pos[0].turn;
+        return true;
+    } else
+        return false;
 }
 
 void game_del(Game *g)

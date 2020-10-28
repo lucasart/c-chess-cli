@@ -54,14 +54,21 @@ static void *thread_start(void *arg)
             engines[1] = engine_new(w, eo[e2].cmd.buf, eo[e2].name.buf, eo[e2].options);
         }
 
-        printf("[%d] Started game %zu of %zu (%s vs %s)\n", w->id, idx + 1, count,
-            engines[0].name.buf, engines[1].name.buf);
-
         // Choose opening position
         openings_next(&openings, &fen, options.repeat ? idx / 2 : idx, w->id);
 
         // Play 1 game
-        Game game = game_new(w, fen.buf);
+        Game game = game_new();
+        int color = WHITE;
+
+        if (!game_load_fen(&game, fen.buf, &color))
+            DIE("[%d] illegal FEN '%s'\n", w->id, fen.buf);
+
+        const int whiteIdx = color ^ j.reverse;
+
+        printf("[%d] Started game %zu of %zu (%s vs %s)\n", w->id, idx + 1, count,
+            engines[whiteIdx].name.buf, engines[opposite(whiteIdx)].name.buf);
+
         const EngineOptions *eoPair[2] = {&eo[0], &eo[1]};
         const int wld = game_play(w, &game, &go, engines, eoPair, j.reverse);
 
@@ -89,8 +96,8 @@ static void *thread_start(void *arg)
         scope(str_del) str_t result = str_new(), reason = str_new();
         game_decode_state(&game, &result, &reason);
 
-        printf("[%d] Finished game %zu (%s vs %s): %s {%s}\n", w->id, idx + 1, engines[0].name.buf,
-            engines[1].name.buf, result.buf, reason.buf);
+        printf("[%d] Finished game %zu (%s vs %s): %s {%s}\n", w->id, idx + 1,
+            engines[whiteIdx].name.buf, engines[opposite(whiteIdx)].name.buf, result.buf, reason.buf);
 
         // Update on global score (across workers)
         int wldCount[3] = {0};

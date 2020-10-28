@@ -167,11 +167,10 @@ static bool pos_move_is_capture(const Position *pos, move_t m)
     return bb_test(pos->byColor[opposite(pos->turn)], move_to(m));
 }
 
-bool pos_set(Position *pos, const char *fen, bool chess960, bool *sfen)
-// Set position from FEN string. chess960 is used only to force the value of pos.chess960:
-// chess960=false: pos.chess960 will be set based on auto-detection.
-// chess960=true: set pos.chess960=true, skipping auto-detection.
-// when sfen != NULL, *sfen is set based on auto-detection.
+bool pos_set(Position *pos, const char *fen, bool force960, bool *sfen)
+// Set position from FEN string.
+// force960: if true, set pos.chess60=true, else auto-detect.
+// sfen: if != NULL, auto-detect S-FEN.
 {
     *pos = (Position){0};
     scope(str_del) str_t token = str_new();
@@ -248,7 +247,7 @@ bool pos_set(Position *pos, const char *fen, bool chess960, bool *sfen)
     pos->key ^= zobrist_castling(pos->castleRooks);
 
     // Chess960 auto-detect
-    pos->chess960 = chess960;
+    pos->chess960 = force960;
     bitboard_t rooks = pos->castleRooks;
 
     while (rooks && !pos->chess960) {
