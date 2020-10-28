@@ -36,9 +36,9 @@ static void options_parse_sample(const char *s, Options *o, GameOptions *go)
 
     // Parse filename (default sample.csv if omitted)
     if ((tail = str_tok(tail, &token, ",")))
-        o->sampleFileName = str_new_from(token);
+        str_cpy(&o->sampleFileName, token);
     else
-        o->sampleFileName = str_new_from_c("sample.csv");
+        str_cpy_c(&o->sampleFileName, "sample.csv");
 }
 
 // Parse time control. Expects 'mtg/time+inc' or 'time+inc'. Note that time and inc are provided by
@@ -74,9 +74,9 @@ static void options_parse_eo(int argc, const char **argv, int *i, EngineOptions 
         const char *tail = NULL;
 
         if (!strcmp(key.buf, "cmd"))
-            eo->cmd = str_new_from(value);
+            str_cpy(&eo->cmd, value);
         else if (!strcmp(key.buf, "name"))
-            eo->name = str_new_from(value);
+            str_cpy(&eo->name, value);
         else if ((tail = str_prefix(key.buf, "option."))) {
             str_t s = str_new();
             str_cat_fmt(&s, "%s value %S", tail, value);

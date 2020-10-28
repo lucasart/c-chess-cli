@@ -120,8 +120,8 @@ Engine engine_new(Worker *w, const char *cmd, const char *name, const str_t *opt
     // Spawn child process and plug pipes
     engine_spawn(w, &e, cwd.buf, run.buf, argv, w->log != NULL);
 
-    // Free memory for string elements in the vector, then for the vector itself
     vec_del_rec(args, str_del);
+    free(argv);
 
     // Start the uci..uciok dialogue
     deadline_set(w, e.name.buf, system_msec() + 2000);
