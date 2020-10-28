@@ -77,6 +77,9 @@ const char *str_tok(const char *s, str_t *token, const char *delim);
 // s = "alice\ bob charlie", delim=' ', esc='\' => token="alice bob", returns tail="charlie"
 const char *str_tok_esc(const char *s, str_t *token, char delim, char esc);
 
+//If s starts with prefix, return the tail (from s = prefix + tail), otherwise return NULL.
+const char *str_prefix(const char *s, const char *prefix);
+
 // reads a line from file 'in', into valid string 'out', and return the number of characters read
 // (including the '\n' if any). The '\n' is discarded from the output, but still counted.
 size_t str_getline(str_t *out, FILE *in);

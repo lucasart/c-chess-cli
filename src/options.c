@@ -71,13 +71,15 @@ static void options_parse_eo(int argc, const char **argv, int *i, EngineOptions 
         if (!value.len)
             DIE("invalid syntax '%s'\n", key.buf);
 
+        const char *tail = NULL;
+
         if (!strcmp(key.buf, "cmd"))
             eo->cmd = str_new_from(value);
         else if (!strcmp(key.buf, "name"))
             eo->name = str_new_from(value);
-        else if (!strncmp(key.buf, "option.", strlen("option."))) {
+        else if ((tail = str_prefix(key.buf, "option."))) {
             str_t s = str_new();
-            str_cat_fmt(&s, "%s value %S", key.buf + strlen("option."), value);
+            str_cat_fmt(&s, "%s value %S", tail, value);
             vec_push(eo->options, s);  // not calling str_del(&s) is intentional: s is moved
         } else if (!strcmp(key.buf, "depth"))
             eo->depth = atoi(value.buf);

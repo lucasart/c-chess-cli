@@ -291,6 +291,12 @@ const char *str_tok_esc(const char *s, str_t *token, char delim, char esc)
     return token->len ? tail : NULL;
 }
 
+const char *str_prefix(const char *s, const char *prefix)
+{
+    size_t len = strlen(prefix);
+    return strncmp(s, prefix, len) ? NULL : s + len;
+}
+
 size_t str_getline(str_t *out, FILE *in)
 {
     assert(str_ok(*out) && in);

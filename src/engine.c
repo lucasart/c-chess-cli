@@ -130,11 +130,10 @@ Engine engine_new(Worker *w, const char *cmd, const char *name, const str_t *opt
 
     do {
         engine_readln(w, &e, &line);
-        const char *tail = line.buf;
+        const char *tail = NULL;
 
-        // Set e.name, by parsing "id name %s", only if no name was provided (*name == '\0')
-        if (!*name && (tail = str_tok(tail, &token, " ")) && !strcmp(token.buf, "id")
-                && (tail = str_tok(tail, &token, " ")) && !strcmp(token.buf, "name") && tail)
+        // If no name was provided, parse it from "id name %s"
+        if (!*name && (tail = str_prefix(line.buf, "id name ")))
             str_cpy_c(&e.name, tail + strspn(tail, " "));
     } while (strcmp(line.buf, "uciok"));
 
@@ -248,7 +247,7 @@ bool engine_bestmove(Worker *w, const Engine *e, int *score, int64_t *timeLeft, 
 
         do {
             engine_readln(w, e, &line);
-        } while (strncmp(line.buf, "bestmove ", strlen("bestmove ")));
+        } while (!str_prefix(line.buf, "bestmove "));
     }
 
     deadline_clear(w);
