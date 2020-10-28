@@ -370,8 +370,10 @@ void pos_get(const Position *pos, str_t *fen, bool sfen)
         for (int color = WHITE; color <= BLACK; color++) {
             // Castling rook(s) for color
             const int king = pos_king_square(pos, color);
-            const bitboard_t left = pos->castleRooks & pos->byColor[color] & Ray[king][king + LEFT];
-            const bitboard_t right = pos->castleRooks & pos->byColor[color] & Ray[king][king + RIGHT];
+            const bitboard_t left = file_of(king) == FILE_A ? 0
+                : pos->castleRooks & pos->byColor[color] & Ray[king][king + LEFT];
+            const bitboard_t right = file_of(king) == FILE_H ? 0
+                : pos->castleRooks & pos->byColor[color] & Ray[king][king + RIGHT];
             assert(!bb_several(left) && !bb_several(right));
 
             if (right)
