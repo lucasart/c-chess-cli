@@ -19,22 +19,7 @@
 
 Worker *Workers;
 static pthread_mutex_t mtxWorkers = PTHREAD_MUTEX_INITIALIZER;
-
 _Atomic(int) WorkersBusy = 0;
-
-Deadline deadline_new(void)
-{
-    Deadline d = {0};
-    pthread_mutex_init(&d.mtx, NULL);
-    d.engineName = str_new();
-    return d;
-}
-
-void deadline_del(Deadline *d)
-{
-    str_del(&d->engineName);
-    pthread_mutex_destroy(&d->mtx);
-}
 
 void deadline_set(Worker *w, const char *engineName, int64_t timeLimit)
 {
@@ -98,19 +83,21 @@ Worker worker_new(int i, const char *logName)
     Worker w = {0};
     w.seed = (uint64_t)i;
     w.id = i + 1;
+    pthread_mutex_init(&w.deadline.mtx, NULL);
+    w.deadline.engineName = str_new();
 
     if (*logName) {
         w.log = fopen(logName, "w");
         DIE_IF(0, !w.log);
     }
 
-    w.deadline = deadline_new();
     return w;
 }
 
 void worker_del(Worker *w)
 {
-    deadline_del(&w->deadline);
+    str_del(&w->deadline.engineName);
+    pthread_mutex_destroy(&w->deadline.mtx);
 
     if (w->log) {
         DIE_IF(0, fclose(w->log) < 0);

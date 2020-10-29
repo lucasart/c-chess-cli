@@ -36,20 +36,15 @@ typedef struct {
     char pad[7];
 } GameOptions;
 
-typedef struct {
-    pthread_mutex_t mtx;
-    int64_t timeLimit;
-    str_t engineName;
-    bool set;
-    char pad[7];
-} Deadline;
-
-Deadline deadline_new(void);
-void deadline_del(Deadline *d);
-
 // Per thread data
 typedef struct {
-    Deadline deadline;
+    struct {
+        pthread_mutex_t mtx;
+        int64_t timeLimit;
+        str_t engineName;
+        bool set;
+        char pad[7];
+    } deadline;
     FILE *log;
     uint64_t seed;  // seed for prng()
     int id;  // starts at 1 (0 is for main thread)
