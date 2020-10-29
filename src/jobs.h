@@ -16,6 +16,13 @@
 #include <pthread.h>
 #include <stdbool.h>
 
+// Result for each pair (e1, e2); e1 < e2. Stores count of game outcomes from e1's point of view.
+typedef struct {
+    pthread_mutex_t mtx;
+    int count[3];
+    char pad[4];
+} Result;
+
 // Job: instruction to play a single game
 typedef struct {
     int e1, e2;  // engine[e1] plays engine[e2]
@@ -28,9 +35,11 @@ typedef struct {
     pthread_mutex_t mtx;
     Job *jobs;
     size_t idx;
+    Result *results;
 } JobQueue;
 
 JobQueue job_queue_init(int engines, int rounds, int games);
 void job_queue_destroy(JobQueue *jq);
 
 bool job_queue_pop(JobQueue *jq, Job *j, size_t *idx, size_t *count);
+void job_queue_add_result(const JobQueue *jq, int pair, int outcome, int count[3]);

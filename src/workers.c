@@ -18,7 +18,6 @@
 #include "vec.h"
 
 Worker *Workers;
-static pthread_mutex_t mtxWorkers = PTHREAD_MUTEX_INITIALIZER;
 _Atomic(int) WorkersBusy = 0;
 
 void deadline_set(Worker *w, const char *engineName, int64_t timeLimit)
@@ -103,22 +102,4 @@ void worker_destroy(Worker *w)
         DIE_IF(0, fclose(w->log) < 0);
         w->log = NULL;
     }
-}
-
-// TODO: document this function...
-void workers_add_result(Worker *w, int result, int wldCount[3])
-{
-    pthread_mutex_lock(&mtxWorkers);
-
-    // Add wld result to specificied worker
-    w->wldCount[result]++;
-
-    // Refresh totals (across workers)
-    wldCount[0] = wldCount[1] = wldCount[2] = 0;
-
-    for (size_t i = 0; i < vec_size(Workers); i++)
-        for (int j = 0; j < 3; j++)
-            wldCount[j] += Workers[i].wldCount[j];
-
-    pthread_mutex_unlock(&mtxWorkers);
 }

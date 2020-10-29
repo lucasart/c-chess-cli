@@ -48,7 +48,7 @@ typedef struct {
     FILE *log;
     uint64_t seed;  // seed for prng()
     int id;  // starts at 1 (0 is for main thread)
-    int wldCount[NB_RESULT];  // counts wins, losses, and draws
+    char pad[4];
 } Worker;
 
 extern Worker *Workers;
@@ -60,8 +60,6 @@ void worker_destroy(Worker *w);
 void deadline_set(Worker *w, const char *engineName, int64_t timeLimit);
 void deadline_clear(Worker *w);
 int64_t deadline_overdue(Worker *w);
-
-void workers_add_result(Worker *worker, int result, int wld[3]);
 
 void workers_busy_add(int n);
 int workers_busy_count(void);

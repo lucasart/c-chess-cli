@@ -22,20 +22,25 @@ JobQueue job_queue_init(int engines, int rounds, int games)
     JobQueue jq = {0};
     pthread_mutex_init(&jq.mtx, NULL);
     jq.jobs = vec_init(Job);
+    jq.results = vec_init(Result);
 
     // Gauntlet
     for (int r = 0; r < rounds; r++)
-        for (int e = 1; e < engines; e++)
+        for (int e = 1; e < engines; e++) {
+            vec_push(jq.results, (Result){0});
+
             for (int g = 0; g < games; g++) {
                 const Job j = {.e1 = 0, .e2 = e, .reverse = g % 2};
                 vec_push(jq.jobs, j);
             }
+        }
 
     return jq;
 }
 
 void job_queue_destroy(JobQueue *jq)
 {
+    vec_destroy(jq->results);
     vec_destroy(jq->jobs);
     pthread_mutex_destroy(&jq->mtx);
 }
@@ -55,4 +60,17 @@ bool job_queue_pop(JobQueue *jq, Job *j, size_t *idx, size_t *count)
     pthread_mutex_unlock(&jq->mtx);
 
     return ok;
+}
+
+// Add game outcome, and return updated totals
+void job_queue_add_result(const JobQueue *jq, int pair, int outcome, int count[3])
+{
+    pthread_mutex_lock(&jq->results[pair].mtx);
+
+    jq->results[pair].count[outcome]++;
+    // memcpy(count, jq->results[pair].count, sizeof(count));
+    for (size_t i = 0; i < 3; i++)
+        count[i] = jq->results[pair].count[i];
+
+    pthread_mutex_unlock(&jq->results[pair].mtx);
 }
