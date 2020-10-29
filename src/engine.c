@@ -143,7 +143,9 @@ Engine engine_new(Worker *w, const char *cmd, const char *name, const str_t *opt
     deadline_clear(w);
 
     for (size_t i = 0; i < vec_size(options); i++) {
-        str_cpy_fmt(&line, "setoption name %S", options[i]);
+        scope(str_del) str_t oname = str_new(), ovalue = str_new();
+        str_tok(str_tok(options[i].buf, &oname, "="), &ovalue, "=");
+        str_cpy_fmt(&line, "setoption name %S value %S", oname, ovalue);
         engine_writeln(w, &e, line.buf);
     }
 

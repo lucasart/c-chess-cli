@@ -64,33 +64,24 @@ static void options_parse_tc(const char *s, EngineOptions *eo)
 static void options_parse_eo(int argc, const char **argv, int *i, EngineOptions *eo)
 {
     for (int j = *i + 1; j < argc && argv[j][0] != '-'; j++) {
-        scope(str_del) str_t key = str_new(), value = str_new();
-        str_tok_esc(str_tok(argv[j], &key, "="), &value, '=', '\\');
-        assert(key.len);
-
-        if (!value.len)
-            DIE("invalid syntax '%s'\n", key.buf);
-
         const char *tail = NULL;
 
-        if (!strcmp(key.buf, "cmd"))
-            str_cpy(&eo->cmd, value);
-        else if (!strcmp(key.buf, "name"))
-            str_cpy(&eo->name, value);
-        else if ((tail = str_prefix(key.buf, "option."))) {
-            str_t s = str_new();
-            str_cat_fmt(&s, "%s value %S", tail, value);
-            vec_push(eo->options, s);  // not calling str_del(&s) is intentional: s is moved
-        } else if (!strcmp(key.buf, "depth"))
-            eo->depth = atoi(value.buf);
-        else if (!strcmp(key.buf, "nodes"))
-            eo->nodes = atoll(value.buf);
-        else if (!strcmp(key.buf, "st"))
-            eo->movetime = (int64_t)(atof(value.buf) * 1000);
-        else if (!strcmp(key.buf, "tc"))
-            options_parse_tc(value.buf, eo);
+        if ((tail = str_prefix(argv[j], "cmd=")))
+            str_cpy_c(&eo->cmd, tail);
+        else if ((tail = str_prefix(argv[j], "name=")))
+            str_cpy_c(&eo->name, tail);
+        else if ((tail = str_prefix(argv[j], "option.")))
+            vec_push(eo->options, str_new_from_c(tail));  // store "name=value" string
+        else if ((tail = str_prefix(argv[j], "depth=")))
+            eo->depth = atoi(tail);
+        else if ((tail = str_prefix(argv[j], "nodes=")))
+            eo->nodes = atoll(tail);
+        else if ((tail = str_prefix(argv[j], "st=")))
+            eo->movetime = (int64_t)(atof(tail) * 1000);
+        else if ((tail = str_prefix(argv[j], "tc=")))
+            options_parse_tc(tail, eo);
         else
-            DIE("illegal key '%s'\n", key.buf);
+            DIE("illegal syntax '%s'\n", argv[j]);
 
         (*i)++;
     }
