@@ -25,7 +25,7 @@ const vec_t *vec_cptr(const void *v)
     return (const vec_t *)((const char *)(v) - offsetof(vec_t, buf));
 }
 
-void *vec_do_new(size_t capacity, size_t esize)
+void *vec_do_init(size_t capacity, size_t esize)
 {
     vec_t *p = malloc(sizeof(vec_t) + capacity * esize);
     p->capacity = capacity;

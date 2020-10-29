@@ -52,8 +52,8 @@ typedef struct {
     char pad[7];
 } Game;
 
-Game game_new(void);
-void game_del(Game *g);
+Game game_init(void);
+void game_destroy(Game *g);
 
 bool game_load_fen(Game *g, const char *fen, int *color);
 

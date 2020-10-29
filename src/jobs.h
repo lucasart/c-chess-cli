@@ -30,7 +30,7 @@ typedef struct {
     size_t idx;
 } JobQueue;
 
-JobQueue job_queue_new(int engines, int rounds, int games);
-void job_queue_del(JobQueue *jq);
+JobQueue job_queue_init(int engines, int rounds, int games);
+void job_queue_destroy(JobQueue *jq);
 
 bool job_queue_pop(JobQueue *jq, Job *j, size_t *idx, size_t *count);

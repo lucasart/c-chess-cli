@@ -32,20 +32,20 @@ bool str_eq(str_t s1, str_t s2);
 str_t str_ref(const char *src);
 
 // constructors
-str_t str_new(void);  // empty string ""
-str_t str_new_from(str_t src);  // copy from string
-#define str_new_from_c(c_str) str_new_from(str_ref(c_str))  // copy from C-string
+str_t str_init(void);  // empty string ""
+str_t str_init_from(str_t src);  // copy from string
+#define str_init_from_c(c_str) str_init_from(str_ref(c_str))  // copy from C-string
 
 // set s = "", but faster than using str_cpy_c(s, "")
 void str_clear(str_t *s);
 
-void str_del(str_t *s);
+void str_destroy(str_t *s);
 #define scope(func) __attribute__ ((cleanup(func)))
 
-#define str_del_n(...) do { \
+#define str_destroy_n(...) do { \
     str_t *_s[] = {__VA_ARGS__}; \
     for (size_t _i = 0; _i < sizeof(_s) / sizeof(*_s); _i++) \
-        str_del(_s[_i]); \
+        str_destroy(_s[_i]); \
 } while (0)
 
 // copies 'src' into 'dest'

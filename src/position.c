@@ -173,7 +173,7 @@ bool pos_set(Position *pos, const char *fen, bool force960, bool *sfen)
 // sfen: if != NULL, auto-detect S-FEN.
 {
     *pos = (Position){0};
-    scope(str_del) str_t token = str_new();
+    scope(str_destroy) str_t token = str_init();
 
     // Piece placement
     fen = str_tok(fen, &token, " ");
@@ -691,11 +691,11 @@ void pos_print(const Position *pos)
         puts(line);
     }
 
-    scope(str_del) str_t fen = str_new();
+    scope(str_destroy) str_t fen = str_init();
     pos_get(pos, &fen, false);
     puts(fen.buf);
 
-    scope(str_del) str_t lan = str_new();
+    scope(str_destroy) str_t lan = str_init();
     pos_move_to_lan(pos, pos->lastMove, &lan);
     printf("Last move: %s\n", lan.buf);
 }

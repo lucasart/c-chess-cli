@@ -30,9 +30,9 @@ typedef struct {
     int depth, movestogo;
 } EngineOptions;
 
-EngineOptions engine_options_new(void);
-void engine_options_del(EngineOptions *eo);
+EngineOptions engine_options_init(void);
+void engine_options_destroy(EngineOptions *eo);
 
-Options options_new(void);
+Options options_init(void);
 void options_parse(int argc, const char **argv, Options *o, GameOptions *go, EngineOptions **eo);
-void options_del(Options *o);
+void options_destroy(Options *o);

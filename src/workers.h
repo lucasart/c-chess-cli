@@ -54,8 +54,8 @@ typedef struct {
 extern Worker *Workers;
 extern _Atomic(int) WorkersBusy;  // how many workers are busy
 
-Worker worker_new(int id, const char *logName);
-void worker_del(Worker *w);
+Worker worker_init(int id, const char *logName);
+void worker_destroy(Worker *w);
 
 void deadline_set(Worker *w, const char *engineName, int64_t timeLimit);
 void deadline_clear(Worker *w);

@@ -25,12 +25,12 @@ static void uci_position_command(const Game *g, str_t *cmd)
     // Index of the starting FEN, where rule50 was last reset
     const int ply0 = max(g->ply - g->pos[g->ply].rule50, 0);
 
-    scope(str_del) str_t fen = str_new();
+    scope(str_destroy) str_t fen = str_init();
     pos_get(&g->pos[ply0], &fen, g->sfen);
     str_cpy_fmt(cmd, "position fen %S", fen);
 
     if (ply0 < g->ply) {
-        scope(str_del) str_t lan = str_new();
+        scope(str_destroy) str_t lan = str_init();
         str_cat_c(cmd, " moves");
 
         for (int ply = ply0 + 1; ply <= g->ply; ply++) {
@@ -104,7 +104,7 @@ static bool illegal_move(move_t move, const move_t *moves)
 
 static Position resolve_pv(const Worker *w, const Game *g, const char *pv)
 {
-    scope(str_del) str_t token = str_new();
+    scope(str_destroy) str_t token = str_init();
     const char *tail = pv;
 
     // Start with current position. We can't guarantee that the resolved position won't be in check,
@@ -114,8 +114,8 @@ static Position resolve_pv(const Worker *w, const Game *g, const char *pv)
     Position p[2];
     p[0] = resolved;
     int idx = 0;
-    move_t *moves = vec_new_reserve(64, move_t);
-    scope(str_del) str_t fen = str_new();
+    move_t *moves = vec_init_reserve(64, move_t);
+    scope(str_destroy) str_t fen = str_init();
 
     while ((tail = str_tok(tail, &token, " "))) {
         const move_t m = pos_lan_to_move(&p[idx], token.buf);
@@ -141,19 +141,19 @@ static Position resolve_pv(const Worker *w, const Game *g, const char *pv)
             resolved = p[idx];
     }
 
-    vec_del(moves);
+    vec_destroy(moves);
     return resolved;
 }
 
-Game game_new(void)
+Game game_init(void)
 {
     Game g = {0};
 
-    g.names[WHITE] = str_new();
-    g.names[BLACK] = str_new();
+    g.names[WHITE] = str_init();
+    g.names[BLACK] = str_init();
 
-    g.pos = vec_new(Position);
-    g.samples = vec_new(Sample);
+    g.pos = vec_init(Position);
+    g.samples = vec_init(Sample);
 
     return g;
 }
@@ -169,13 +169,13 @@ bool game_load_fen(Game *g, const char *fen, int *color)
         return false;
 }
 
-void game_del(Game *g)
+void game_destroy(Game *g)
 {
     assert(g);
 
-    vec_del(g->pos);
-    vec_del(g->samples);
-    str_del_n(&g->names[WHITE], &g->names[BLACK]);
+    vec_destroy(g->pos);
+    vec_destroy(g->samples);
+    str_destroy_n(&g->names[WHITE], &g->names[BLACK]);
 }
 
 int game_play(Worker *w, Game *g, const GameOptions *go, const Engine engines[2],
@@ -202,14 +202,14 @@ int game_play(Worker *w, Game *g, const GameOptions *go, const Engine engines[2]
         engine_sync(w, &engines[i]);
     }
 
-    scope(str_del) str_t posCmd = str_new(), goCmd = str_new(), best = str_new();
+    scope(str_destroy) str_t posCmd = str_init(), goCmd = str_init(), best = str_init();
     move_t played = 0;
     int drawPlyCount = 0;
     int resignCount[NB_COLOR] = {0};
     int ei = reverse;  // engines[ei] has the move
     int64_t timeLeft[2] = {eo[0]->time, eo[1]->time};
-    scope(str_del) str_t pv = str_new();
-    move_t *legalMoves = vec_new_reserve(64, move_t);
+    scope(str_destroy) str_t pv = str_init();
+    move_t *legalMoves = vec_init_reserve(64, move_t);
 
     for (g->ply = 0; ; ei = 1 - ei, g->ply++) {
         if (played)
@@ -301,7 +301,7 @@ int game_play(Worker *w, Game *g, const GameOptions *go, const Engine engines[2]
     }
 
     assert(g->state != STATE_NONE);
-    vec_del(legalMoves);
+    vec_destroy(legalMoves);
 
     // Signed result from white's pov: -1 (loss), 0 (draw), +1 (win)
     const int wpov = g->state < STATE_SEPARATOR
@@ -357,12 +357,12 @@ void game_pgn(const Game *g, str_t *pgn)
     str_cat_fmt(pgn, "[Black \"%S\"]\n", g->names[BLACK]);
 
     // Result in PGN format "1-0", "0-1", "1/2-1/2" (from white pov)
-    scope(str_del) str_t result = str_new(), reason = str_new();
+    scope(str_destroy) str_t result = str_init(), reason = str_init();
     game_decode_state(g, &result, &reason);
     str_cat_fmt(pgn, "[Result \"%S\"]\n", result);
     str_cat_fmt(pgn, "[Termination \"%S\"]\n", reason);
 
-    scope(str_del) str_t fen = str_new();
+    scope(str_destroy) str_t fen = str_init();
     pos_get(&g->pos[0], &fen, g->sfen);
     str_cat_fmt(pgn, "[FEN \"%S\"]\n", fen);
 
@@ -370,7 +370,7 @@ void game_pgn(const Game *g, str_t *pgn)
         str_cat_c(pgn, "[Variant \"Chess960\"]\n");
 
     str_cat_fmt(pgn, "[PlyCount \"%i\"]\n\n", g->ply);
-    scope(str_del) str_t san = str_new();
+    scope(str_destroy) str_t san = str_init();
 
     for (int ply = 1; ply <= g->ply; ply++) {
         // Write move number

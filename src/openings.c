@@ -17,17 +17,17 @@
 #include "util.h"
 #include "vec.h"
 
-Openings openings_new(const char *fileName, bool random, int threadId)
+Openings openings_init(const char *fileName, bool random, int threadId)
 {
     Openings o = {0};
-    o.index = vec_new(size_t);
+    o.index = vec_init(size_t);
 
     if (*fileName)
         DIE_IF(threadId, !(o.file = fopen(fileName, "r")));
 
     if (o.file) {
         // Fill o.index[] to record file offsets for each lines
-        scope(str_del) str_t line = str_new();
+        scope(str_destroy) str_t line = str_init();
 
         do {
             vec_push(o.index, ftell(o.file));
@@ -53,13 +53,13 @@ Openings openings_new(const char *fileName, bool random, int threadId)
     return o;
 }
 
-void openings_delete(Openings *o, int threadId)
+void openings_destroyete(Openings *o, int threadId)
 {
     if (o->file)
         DIE_IF(threadId, fclose(o->file) < 0);
 
     pthread_mutex_destroy(&o->mtx);
-    vec_del(o->index);
+    vec_destroy(o->index);
 }
 
 void openings_next(Openings *o, str_t *fen, size_t idx, int threadId)
@@ -70,7 +70,7 @@ void openings_next(Openings *o, str_t *fen, size_t idx, int threadId)
     }
 
     // Read 'fen' from file
-    scope(str_del) str_t line = str_new();
+    scope(str_destroy) str_t line = str_init();
 
     pthread_mutex_lock(&o->mtx);
     DIE_IF(threadId, fseek(o->file, o->index[idx % vec_size(o->index)], SEEK_SET) < 0);

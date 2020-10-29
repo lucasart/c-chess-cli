@@ -60,7 +60,7 @@ int64_t deadline_overdue(Worker *w)
     pthread_mutex_lock(&w->deadline.mtx);
     const int64_t timeLimit = w->deadline.timeLimit;
     const bool set = w->deadline.set;
-    scope(str_del) str_t engineName = str_new_from(w->deadline.engineName);
+    scope(str_destroy) str_t engineName = str_init_from(w->deadline.engineName);
     pthread_mutex_unlock(&w->deadline.mtx);
 
     const int64_t time = system_msec();
@@ -76,7 +76,7 @@ int64_t deadline_overdue(Worker *w)
         return 0;
 }
 
-Worker worker_new(int i, const char *logName)
+Worker worker_init(int i, const char *logName)
 {
     assert(logName);
 
@@ -84,7 +84,7 @@ Worker worker_new(int i, const char *logName)
     w.seed = (uint64_t)i;
     w.id = i + 1;
     pthread_mutex_init(&w.deadline.mtx, NULL);
-    w.deadline.engineName = str_new();
+    w.deadline.engineName = str_init();
 
     if (*logName) {
         w.log = fopen(logName, "w");
@@ -94,9 +94,9 @@ Worker worker_new(int i, const char *logName)
     return w;
 }
 
-void worker_del(Worker *w)
+void worker_destroy(Worker *w)
 {
-    str_del(&w->deadline.engineName);
+    str_destroy(&w->deadline.engineName);
     pthread_mutex_destroy(&w->deadline.mtx);
 
     if (w->log) {

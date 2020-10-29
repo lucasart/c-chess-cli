@@ -25,21 +25,21 @@ typedef struct {
 vec_t *vec_ptr(void *v);
 const vec_t *vec_cptr(const void *v);
 
-void *vec_do_new(size_t capacity, size_t esize);
-#define vec_new(etype) vec_do_new(0, sizeof(etype))
-#define vec_new_reserve(capacity, etype) vec_do_new(capacity, sizeof(etype))
+void *vec_do_init(size_t capacity, size_t esize);
+#define vec_init(etype) vec_do_init(0, sizeof(etype))
+#define vec_init_reserve(capacity, etype) vec_do_init(capacity, sizeof(etype))
 
-#define vec_del(v) ({ \
+#define vec_destroy(v) ({ \
     assert(v); \
     free(vec_ptr(v)); \
     v = NULL; \
 })
 
 // delete elements using dtor(&elt), then delete vector
-#define vec_del_rec(v, dtor) ({ \
+#define vec_destroy_rec(v, dtor) ({ \
     for (size_t _i = 0; _i < vec_size(v); _i++) \
         dtor(&v[_i]); \
-    vec_del(v); \
+    vec_destroy(v); \
 })
 
 size_t vec_size(const void *v);

@@ -87,14 +87,14 @@ static str_t *do_str_cat(str_t *dest, const char *src, size_t n)
     return dest;
 }
 
-str_t str_new(void)
+str_t str_init(void)
 {
     str_t s = {0};
     str_resize(&s, 0);
     return s;
 }
 
-str_t str_new_from(const str_t src)
+str_t str_init_from(const str_t src)
 {
     str_t s = {0};
     str_resize(&s, src.len);
@@ -103,7 +103,7 @@ str_t str_new_from(const str_t src)
     return s;
 }
 
-void str_del(str_t *s)
+void str_destroy(str_t *s)
 {
     free(s->buf);
     s->buf = NULL;

@@ -21,7 +21,7 @@
 
 static void options_parse_sample(const char *s, Options *o, GameOptions *go)
 {
-    scope(str_del) str_t token = str_new();
+    scope(str_destroy) str_t token = str_init();
     const char *tail = str_tok(s, &token, ",");
     assert(tail);
 
@@ -71,7 +71,7 @@ static void options_parse_eo(int argc, const char **argv, int *i, EngineOptions 
         else if ((tail = str_prefix(argv[j], "name=")))
             str_cpy_c(&eo->name, tail);
         else if ((tail = str_prefix(argv[j], "option.")))
-            vec_push(eo->options, str_new_from_c(tail));  // store "name=value" string
+            vec_push(eo->options, str_init_from_c(tail));  // store "name=value" string
         else if ((tail = str_prefix(argv[j], "depth=")))
             eo->depth = atoi(tail);
         else if ((tail = str_prefix(argv[j], "nodes=")))
@@ -87,27 +87,27 @@ static void options_parse_eo(int argc, const char **argv, int *i, EngineOptions 
     }
 }
 
-EngineOptions engine_options_new(void)
+EngineOptions engine_options_init(void)
 {
     EngineOptions eo = {0};
-    eo.cmd = str_new();
-    eo.name = str_new();
-    eo.options = vec_new(str_t);
+    eo.cmd = str_init();
+    eo.name = str_init();
+    eo.options = vec_init(str_t);
     return eo;
 }
 
-void engine_options_del(EngineOptions *eo)
+void engine_options_destroy(EngineOptions *eo)
 {
-    str_del_n(&eo->cmd, &eo->name);
-    vec_del_rec(eo->options, str_del);
+    str_destroy_n(&eo->cmd, &eo->name);
+    vec_destroy_rec(eo->options, str_destroy);
 }
 
-Options options_new(void)
+Options options_init(void)
 {
     Options o = {0};
-    o.openings = str_new();
-    o.pgnOut = str_new();
-    o.sampleFileName = str_new();
+    o.openings = str_init();
+    o.pgnOut = str_init();
+    o.sampleFileName = str_init();
     return o;
 }
 
@@ -122,7 +122,7 @@ void options_parse(int argc, const char **argv, Options *o, GameOptions *go, Eng
     o->games = o->rounds = 1;
     o->alpha = o->beta = 0.05;
 
-    scope(engine_options_del) EngineOptions each = engine_options_new();
+    scope(engine_options_destroy) EngineOptions each = engine_options_init();
     bool eachSet = false;
 
     bool expectValue = false;  // pattern: '-tag [value]'. should next arg be a value or tag ?
@@ -142,9 +142,9 @@ void options_parse(int argc, const char **argv, Options *o, GameOptions *go, Eng
             if (!expectValue) {
                 // process tag without value (bool)
                 if (!strcmp(argv[i], "-engine")) {
-                    EngineOptions new = engine_options_new();
+                    EngineOptions new = engine_options_init();
                     options_parse_eo(argc, argv, &i, &new);
-                    vec_push(*eo, new);  // new is moved here (engine_options_del(&new) not called)
+                    vec_push(*eo, new);  // new is moved here (engine_options_destroy(&new) not called)
                 } else if (!strcmp(argv[i], "-each")) {
                     options_parse_eo(argc, argv, &i, &each);
                     eachSet = true;
@@ -200,7 +200,7 @@ void options_parse(int argc, const char **argv, Options *o, GameOptions *go, Eng
                 str_cpy(&(*eo)[i].name, each.name);
 
             for (size_t j = 0; j < vec_size(each.options); j++)
-                vec_push((*eo)[i].options, str_new_from(each.options[j]));
+                vec_push((*eo)[i].options, str_init_from(each.options[j]));
 
             if (each.time)
                 (*eo)[i].time = each.time;
@@ -226,7 +226,7 @@ void options_parse(int argc, const char **argv, Options *o, GameOptions *go, Eng
         DIE("at least 2 engines are needed\n");
 }
 
-void options_del(Options *o)
+void options_destroy(Options *o)
 {
-    str_del_n(&o->openings, &o->pgnOut, &o->sampleFileName);
+    str_destroy_n(&o->openings, &o->pgnOut, &o->sampleFileName);
 }

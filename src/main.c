@@ -30,19 +30,65 @@ static Openings openings;
 static FILE *pgnOut, *sampleFile;
 static JobQueue jq;
 
+static void main_init(int argc, const char **argv)
+{
+    eo = vec_init(EngineOptions);
+    options = options_init();
+    options_parse(argc, argv, &options, &go, &eo);
+
+    jq = job_queue_init(vec_size(eo), options.rounds, options.games);
+    openings = openings_init(options.openings.buf, options.random, 0);
+
+    pgnOut = NULL;
+    if (options.pgnOut.len)
+        DIE_IF(0, !(pgnOut = fopen(options.pgnOut.buf, "a")));
+
+    sampleFile = NULL;
+    if (options.sampleFileName.len)
+        DIE_IF(0, !(sampleFile = fopen(options.sampleFileName.buf, "a")));
+
+    // Prepare Workers[]
+    Workers = vec_init_reserve((size_t)options.concurrency, Worker);
+
+    for (int i = 0; i < options.concurrency; i++) {
+        scope(str_destroy) str_t logName = str_init();
+
+        if (options.log)
+            str_cat_fmt(&logName, "c-chess-cli.%i.log", i + 1);
+
+        vec_push(Workers, worker_init(i, logName.buf));
+    }
+}
+
+static void main_destroy(void)
+{
+    vec_destroy_rec(Workers, worker_destroy);
+
+    if (pgnOut)
+        DIE_IF(0, fclose(pgnOut) < 0);
+
+    if (sampleFile)
+        DIE_IF(0, fclose(sampleFile) < 0);
+
+    openings_destroyete(&openings, 0);
+    job_queue_destroy(&jq);
+    options_destroy(&options);
+    vec_destroy_rec(eo, engine_options_destroy);
+}
+
 static void *thread_start(void *arg)
 {
     Worker *w = arg;
     Engine engines[2] = {0};
 
-    scope(str_del) str_t fen = str_new();
+    scope(str_destroy) str_t fen = str_init();
     Job j = {0};
     int e1 = 0, e2 = 1;  // eo[e1] plays eo[e2]
     size_t idx = 0, count = 0;  // game idx and count (shared across workers)
 
     // Prepare engines[]
-    engines[0] = engine_new(w, eo[e1].cmd.buf, eo[e1].name.buf, eo[e1].options);
-    engines[1] = engine_new(w, eo[e2].cmd.buf, eo[e2].name.buf, eo[e2].options);
+    engines[0] = engine_init(w, eo[e1].cmd.buf, eo[e1].name.buf, eo[e1].options);
+    engines[1] = engine_init(w, eo[e2].cmd.buf, eo[e2].name.buf, eo[e2].options);
 
     while (job_queue_pop(&jq, &j, &idx, &count)) {
         // Engine switching (if needed)
@@ -50,15 +96,15 @@ static void *thread_start(void *arg)
 
         if (j.e2 != e2) {
             e2 = j.e2;
-            engine_del(w, &engines[1]);
-            engines[1] = engine_new(w, eo[e2].cmd.buf, eo[e2].name.buf, eo[e2].options);
+            engine_destroy(w, &engines[1]);
+            engines[1] = engine_init(w, eo[e2].cmd.buf, eo[e2].name.buf, eo[e2].options);
         }
 
         // Choose opening position
         openings_next(&openings, &fen, options.repeat ? idx / 2 : idx, w->id);
 
         // Play 1 game
-        Game game = game_new();
+        Game game = game_init();
         int color = WHITE;
 
         if (!game_load_fen(&game, fen.buf, &color))
@@ -74,14 +120,14 @@ static void *thread_start(void *arg)
 
         // Write to PGN file
         if (pgnOut) {
-            scope(str_del) str_t pgn = str_new();
+            scope(str_destroy) str_t pgn = str_init();
             game_pgn(&game, &pgn);
             DIE_IF(w->id, fputs(pgn.buf, pgnOut) < 0);
         }
 
         // Write to Sample file
         if (sampleFile) {
-            scope(str_del) str_t lines = str_new(), sampleFen = str_new();
+            scope(str_destroy) str_t lines = str_init(), sampleFen = str_init();
 
             for (size_t i = 0; i < vec_size(game.samples); i++) {
                 pos_get(&game.samples[i].pos, &sampleFen, false);
@@ -93,7 +139,7 @@ static void *thread_start(void *arg)
         }
 
         // Write to stdout a one line summary of the game
-        scope(str_del) str_t result = str_new(), reason = str_new();
+        scope(str_destroy) str_t result = str_init(), reason = str_init();
         game_decode_state(&game, &result, &reason);
 
         printf("[%d] Finished game %zu (%s vs %s): %s {%s}\n", w->id, idx + 1,
@@ -125,11 +171,11 @@ static void *thread_start(void *arg)
                 printf("SPRT: LLR = %.3f [%.3f,%.3f]\n", llr, llrLbound, llrUbound);
         }
 
-        game_del(&game);
+        game_destroy(&game);
     }
 
     for (int i = 0; i < 2; i++)
-        engine_del(w, &engines[i]);
+        engine_destroy(w, &engines[i]);
 
     WorkersBusy--;
     return NULL;
@@ -137,32 +183,7 @@ static void *thread_start(void *arg)
 
 int main(int argc, const char **argv)
 {
-    eo = vec_new(EngineOptions);
-    options = options_new();
-    options_parse(argc, argv, &options, &go, &eo);
-
-    jq = job_queue_new(vec_size(eo), options.rounds, options.games);
-    openings = openings_new(options.openings.buf, options.random, 0);
-
-    pgnOut = NULL;
-    if (options.pgnOut.len)
-        DIE_IF(0, !(pgnOut = fopen(options.pgnOut.buf, "a")));
-
-    sampleFile = NULL;
-    if (options.sampleFileName.len)
-        DIE_IF(0, !(sampleFile = fopen(options.sampleFileName.buf, "a")));
-
-    // Prepare Workers[]
-    Workers = vec_new_reserve((size_t)options.concurrency, Worker);
-
-    for (int i = 0; i < options.concurrency; i++) {
-        scope(str_del) str_t logName = str_new();
-
-        if (options.log)
-            str_cat_fmt(&logName, "c-chess-cli.%i.log", i + 1);
-
-        vec_push(Workers, worker_new(i, logName.buf));
-    }
+    main_init(argc, argv);
 
     // Start threads[]
     pthread_t threads[options.concurrency];
@@ -195,19 +216,6 @@ int main(int argc, const char **argv)
     for (int i = 0; i < options.concurrency; i++)
         pthread_join(threads[i], NULL);
 
-    // Cleanup
-    vec_del_rec(Workers, worker_del);
-
-    if (pgnOut)
-        DIE_IF(0, fclose(pgnOut) < 0);
-
-    if (sampleFile)
-        DIE_IF(0, fclose(sampleFile) < 0);
-
-    openings_delete(&openings, 0);
-    job_queue_del(&jq);
-    options_del(&options);
-    vec_del_rec(eo, engine_options_del);
-
+    main_destroy();
     return 0;
 }

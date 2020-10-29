@@ -26,7 +26,7 @@ typedef struct {
 
 static void parse_go(const char *tail, Go *go)
 {
-    scope(str_del) str_t token = str_new();
+    scope(str_destroy) str_t token = str_init();
     tail = str_tok(tail, &token, " ");
     assert(tail);
 
@@ -36,7 +36,7 @@ static void parse_go(const char *tail, Go *go)
 
 static void parse_option(const char *tail, bool *uciChess960)
 {
-    scope(str_del) str_t token = str_new();
+    scope(str_destroy) str_t token = str_init();
 
     if ((tail = str_tok(tail, &token, " ")) && !strcmp(token.buf, "name")
             && (tail = str_tok(tail, &token, " ")) && !strcmp(token.buf, "UCI_Chess960")
@@ -47,7 +47,7 @@ static void parse_option(const char *tail, bool *uciChess960)
 
 static void parse_position(const char *tail, Position *pos, bool uciChess960)
 {
-    scope(str_del) str_t token = str_new();
+    scope(str_destroy) str_t token = str_init();
     tail = str_tok(tail, &token, " ");
     assert(tail);
 
@@ -55,7 +55,7 @@ static void parse_position(const char *tail, Position *pos, bool uciChess960)
         pos_set(pos, "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", uciChess960, NULL);
         tail = str_tok(tail, &token, " ");
     } else if (!strcmp(token.buf, "fen")) {
-        scope(str_del) str_t fen = str_new();
+        scope(str_destroy) str_t fen = str_init();
 
         while ((tail = str_tok(tail, &token, " ")) && strcmp(token.buf, "moves"))
             str_push(str_cat(&fen, token), ' ');
@@ -85,8 +85,8 @@ static void random_pv(const Position *pos, uint64_t *seed, int len, str_t *pv)
     str_clear(pv);
     Position p[2];
     p[0] = *pos;
-    move_t *moves = vec_new_reserve(64, move_t);
-    scope(str_del) str_t lan = str_new();
+    move_t *moves = vec_init_reserve(64, move_t);
+    scope(str_destroy) str_t lan = str_init();
 
     for (int ply = 0; ply < len; ply++) {
         // Generate and count legal moves
@@ -102,12 +102,12 @@ static void random_pv(const Position *pos, uint64_t *seed, int len, str_t *pv)
         pos_move(&p[(ply + 1) % 2], &p[ply % 2], m);
     }
 
-    vec_del(moves);
+    vec_destroy(moves);
 }
 
 static void run_go(const Position *pos, const Go *go, uint64_t *seed)
 {
-    scope(str_del) str_t pv = str_new();
+    scope(str_destroy) str_t pv = str_init();
 
     for (int depth = 1; depth <= go->depth; depth++) {
         random_pv(pos, seed, depth, &pv);
@@ -115,7 +115,7 @@ static void run_go(const Position *pos, const Go *go, uint64_t *seed)
             pv.buf);
     }
 
-    scope(str_del) str_t token = str_new();
+    scope(str_destroy) str_t token = str_init();
     str_tok(pv.buf, &token, " ");
     uci_printf("bestmove %s\n", token.buf);
 }
@@ -127,7 +127,7 @@ int main(int argc, char **argv)
     bool uciChess960 = false;
     uint64_t seed = argc > 1 ? (uint64_t)atoll(argv[1]) : 0;
 
-    scope(str_del) str_t line = str_new(), token = str_new();
+    scope(str_destroy) str_t line = str_init(), token = str_init();
 
     while (str_getline(&line, stdin)) {
         const char *tail = str_tok(line.buf, &token, " ");

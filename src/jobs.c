@@ -15,13 +15,13 @@
 #include "jobs.h"
 #include "vec.h"
 
-JobQueue job_queue_new(int engines, int rounds, int games)
+JobQueue job_queue_init(int engines, int rounds, int games)
 {
     assert(engines >= 2 && rounds >= 1 && games >= 1);
 
     JobQueue jq = {0};
     pthread_mutex_init(&jq.mtx, NULL);
-    jq.jobs = vec_new(Job);
+    jq.jobs = vec_init(Job);
 
     // Gauntlet
     for (int r = 0; r < rounds; r++)
@@ -34,9 +34,9 @@ JobQueue job_queue_new(int engines, int rounds, int games)
     return jq;
 }
 
-void job_queue_del(JobQueue *jq)
+void job_queue_destroy(JobQueue *jq)
 {
-    vec_del(jq->jobs);
+    vec_destroy(jq->jobs);
     pthread_mutex_destroy(&jq->mtx);
 }
 

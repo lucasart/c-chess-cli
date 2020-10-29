@@ -70,7 +70,7 @@ static void engine_spawn(const Worker *w, Engine *e, const char *cwd, const char
 static void engine_parse_cmd(const char *cmd, str_t *cwd, str_t *run, str_t **args)
 {
     // Isolate the first token being the command to run.
-    scope(str_del) str_t token = str_new();
+    scope(str_destroy) str_t token = str_init();
     const char *tail = cmd;
     tail = str_tok_esc(tail, &token, ' ', '\\');
 
@@ -89,13 +89,13 @@ static void engine_parse_cmd(const char *cmd, str_t *cwd, str_t *run, str_t **ar
     }
 
     // Collect the arguments into a vec of str_t, args[]
-    vec_push(*args, str_new_from(*run));  // argv[0] is the executed command
+    vec_push(*args, str_init_from(*run));  // argv[0] is the executed command
 
     while ((tail = str_tok_esc(tail, &token, ' ', '\\')))
-        vec_push(*args, str_new_from(token));
+        vec_push(*args, str_init_from(token));
 }
 
-Engine engine_new(Worker *w, const char *cmd, const char *name, const str_t *options)
+Engine engine_init(Worker *w, const char *cmd, const char *name, const str_t *options)
 {
     assert(w && options);
 
@@ -103,11 +103,11 @@ Engine engine_new(Worker *w, const char *cmd, const char *name, const str_t *opt
         DIE("[%d] missing command to start engine.\n", w->id);
 
     Engine e = {0};
-    e.name = str_new_from_c(*name ? name : cmd); // default value
+    e.name = str_init_from_c(*name ? name : cmd); // default value
 
     // Parse cmd into (cwd, run, args): we want to execute run from cwd with args.
-    scope(str_del) str_t cwd = str_new(), run = str_new();
-    str_t *args = vec_new(str_t);
+    scope(str_destroy) str_t cwd = str_init(), run = str_init();
+    str_t *args = vec_init(str_t);
     engine_parse_cmd(cmd, &cwd, &run, &args);
 
     // execvp() needs NULL terminated char **, not vec of str_t. Prepare a char **, whose elements
@@ -120,13 +120,13 @@ Engine engine_new(Worker *w, const char *cmd, const char *name, const str_t *opt
     // Spawn child process and plug pipes
     engine_spawn(w, &e, cwd.buf, run.buf, argv, w->log != NULL);
 
-    vec_del_rec(args, str_del);
+    vec_destroy_rec(args, str_destroy);
     free(argv);
 
     // Start the uci..uciok dialogue
     deadline_set(w, e.name.buf, system_msec() + 2000);
     engine_writeln(w, &e, "uci");
-    scope(str_del) str_t line = str_new();
+    scope(str_destroy) str_t line = str_init();
 
     do {
         engine_readln(w, &e, &line);
@@ -143,7 +143,7 @@ Engine engine_new(Worker *w, const char *cmd, const char *name, const str_t *opt
     deadline_clear(w);
 
     for (size_t i = 0; i < vec_size(options); i++) {
-        scope(str_del) str_t oname = str_new(), ovalue = str_new();
+        scope(str_destroy) str_t oname = str_init(), ovalue = str_init();
         str_tok(str_tok(options[i].buf, &oname, "="), &ovalue, "=");
         str_cpy_fmt(&line, "setoption name %S value %S", oname, ovalue);
         engine_writeln(w, &e, line.buf);
@@ -152,12 +152,12 @@ Engine engine_new(Worker *w, const char *cmd, const char *name, const str_t *opt
     return e;
 }
 
-void engine_del(const Worker *w, Engine *e)
+void engine_destroy(const Worker *w, Engine *e)
 {
     (void)w;  // silence compiler warning (unused variable)
     assert(w);
 
-    str_del(&e->name);
+    str_destroy(&e->name);
     DIE_IF(w->id, fclose(e->in) < 0);
     DIE_IF(w->id, fclose(e->out) < 0);
     DIE_IF(w->id, kill(e->pid, SIGTERM) < 0);
@@ -194,7 +194,7 @@ void engine_sync(Worker *w, const Engine *e)
 
     deadline_set(w, e->name.buf, system_msec() + 1000);
     engine_writeln(w, e, "isready");
-    scope(str_del) str_t line = str_new();
+    scope(str_destroy) str_t line = str_init();
 
     do {
         engine_readln(w, e, &line);
@@ -210,7 +210,7 @@ bool engine_bestmove(Worker *w, const Engine *e, int *score, int64_t *timeLeft, 
 
     int result = false;
     *score = 0;
-    scope(str_del) str_t line = str_new(), token = str_new();
+    scope(str_destroy) str_t line = str_init(), token = str_init();
     str_clear(pv);
 
     const int64_t start = system_msec(), timeLimit = start + *timeLeft;
