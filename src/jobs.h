@@ -25,7 +25,7 @@ typedef struct {
 
 // Job: instruction to play a single game
 typedef struct {
-    int e1, e2;  // engine[e1] plays engine[e2]
+    int e1, e2, pair;  // engine[e1] plays engine[e2]
     bool reverse;  // if true, e1 plays second
     char pad[3];
 } Job;

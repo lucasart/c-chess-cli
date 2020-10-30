@@ -147,7 +147,7 @@ static void *thread_start(void *arg)
 
         // Update on global score (across workers)
         int wldCount[3] = {0};
-        job_queue_add_result(&jq, j.e2 - 1, wld, wldCount);
+        job_queue_add_result(&jq, j.pair, wld, wldCount);
 
         const int n = wldCount[RESULT_WIN] + wldCount[RESULT_LOSS] + wldCount[RESULT_DRAW];
 

@@ -31,7 +31,7 @@ JobQueue job_queue_init(int engines, int rounds, int games)
     for (int r = 0; r < rounds; r++)
         for (int i = 1; i < engines; i++)
             for (int g = 0; g < games; g++) {
-                const Job j = {.e1 = 0, .e2 = i, .reverse = g % 2};
+                const Job j = {.e1 = 0, .e2 = i, .pair = i - 1, .reverse = g % 2};
                 vec_push(jq.jobs, j);
             }
 
