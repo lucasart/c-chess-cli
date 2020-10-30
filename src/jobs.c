@@ -24,16 +24,16 @@ JobQueue job_queue_init(int engines, int rounds, int games)
     jq.jobs = vec_init(Job);
     jq.results = vec_init(Result);
 
-    // Gauntlet
-    for (int r = 0; r < rounds; r++)
-        for (int e = 1; e < engines; e++) {
-            vec_push(jq.results, (Result){0});
+    // Gauntlet: N - 1 pairs (0, i) with 0 < i
+    for (int i = 1; i < engines; i++)
+        vec_push(jq.results, (Result){0});
 
+    for (int r = 0; r < rounds; r++)
+        for (int i = 1; i < engines; i++)
             for (int g = 0; g < games; g++) {
-                const Job j = {.e1 = 0, .e2 = e, .reverse = g % 2};
+                const Job j = {.e1 = 0, .e2 = i, .reverse = g % 2};
                 vec_push(jq.jobs, j);
             }
-        }
 
     return jq;
 }
