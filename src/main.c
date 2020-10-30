@@ -177,7 +177,6 @@ static void *thread_start(void *arg)
     for (int i = 0; i < 2; i++)
         engine_destroy(w, &engines[i]);
 
-    WorkersBusy--;
     return NULL;
 }
 
@@ -188,10 +187,8 @@ int main(int argc, const char **argv)
     // Start threads[]
     pthread_t threads[options.concurrency];
 
-    for (int i = 0; i < options.concurrency; i++) {
-        WorkersBusy++;
+    for (int i = 0; i < options.concurrency; i++)
         pthread_create(&threads[i], NULL, thread_start, &Workers[i]);
-    }
 
     // Main thread loop: check deadline overdue at regular intervals
     do {
@@ -210,7 +207,7 @@ int main(int argc, const char **argv)
             if (delay > 1000)
                 DIE("[%d] engine %s is unresponsive\n", i, Workers[i].deadline.engineName.buf);
         }
-    } while (WorkersBusy > 0);
+    } while (!job_queue_done(&jq));
 
     // Join threads[]
     for (int i = 0; i < options.concurrency; i++)

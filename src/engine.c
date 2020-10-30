@@ -220,11 +220,9 @@ bool engine_bestmove(Worker *w, const Engine *e, int *score, int64_t *timeLeft, 
         engine_readln(w, e, &line);
         *timeLeft = timeLimit - system_msec();
 
-        const char *tail = str_tok(line.buf, &token, " ");
+        const char *tail = NULL;
 
-        if (!tail)
-            ;  // empty line, nothing to do
-        else if (!strcmp(token.buf, "info")) {
+        if ((tail = str_prefix(line.buf, "info "))) {
             while ((tail = str_tok(tail, &token, " ")) && strcmp(token.buf, "score"));
 
             if ((tail = str_tok(tail, &token, " "))) {
@@ -239,7 +237,8 @@ bool engine_bestmove(Worker *w, const Engine *e, int *score, int64_t *timeLeft, 
             // update last pv (if available)
             if (tail && (tail = strstr(tail, "pv ")))
                 str_cpy_c(pv, tail + 3);
-        } else if (!strcmp(token.buf, "bestmove") && str_tok(tail, &token, " ")) {
+        } else if ((tail = str_prefix(line.buf, "bestmove "))) {
+            str_tok(tail, &token, " ");
             str_cpy(best, token);
             result = true;
         }

@@ -52,7 +52,6 @@ typedef struct {
 } Worker;
 
 extern Worker *Workers;
-extern _Atomic(int) WorkersBusy;  // how many workers are busy
 
 Worker worker_init(int id, const char *logName);
 void worker_destroy(Worker *w);

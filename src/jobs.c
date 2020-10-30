@@ -68,9 +68,19 @@ void job_queue_add_result(const JobQueue *jq, int pair, int outcome, int count[3
     pthread_mutex_lock(&jq->results[pair].mtx);
 
     jq->results[pair].count[outcome]++;
-    // memcpy(count, jq->results[pair].count, sizeof(count));
+
     for (size_t i = 0; i < 3; i++)
         count[i] = jq->results[pair].count[i];
 
     pthread_mutex_unlock(&jq->results[pair].mtx);
+}
+
+bool job_queue_done(JobQueue *jq)
+{
+    pthread_mutex_lock(&jq->mtx);
+    assert(jq->idx <= vec_size(jq->jobs));
+    const bool done = jq->idx == vec_size(jq->jobs);
+    pthread_mutex_unlock(&jq->mtx);
+
+    return done;
 }

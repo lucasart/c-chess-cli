@@ -15,7 +15,6 @@ cflags = '-I./src -std=gnu11 -mpopcnt {}'.format('-DNDEBUG -Ofast -flto -s' if n
 wflags = '-Wfatal-errors -Wall -Wextra -Wstrict-prototypes -Wsign-conversion -Wshadow -Wpadded'
 lflags ='-lpthread -lm'
 if args.static: lflags += ' -static'
-if 'ANDROID_DATA' in os.environ: lflags += ' -latomic'
 
 def run(cmd):
     print('% ' + cmd)

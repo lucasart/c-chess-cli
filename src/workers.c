@@ -18,7 +18,6 @@
 #include "vec.h"
 
 Worker *Workers;
-_Atomic(int) WorkersBusy = 0;
 
 void deadline_set(Worker *w, const char *engineName, int64_t timeLimit)
 {
