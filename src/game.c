@@ -145,9 +145,12 @@ static Position resolve_pv(const Worker *w, const Game *g, const char *pv)
     return resolved;
 }
 
-Game game_init(void)
+Game game_init(int round, int game)
 {
     Game g = {0};
+
+    g.round = round;
+    g.game = game;
 
     g.names[WHITE] = str_init();
     g.names[BLACK] = str_init();
@@ -353,7 +356,9 @@ void game_decode_state(const Game *g, str_t *result, str_t *reason)
 
 void game_pgn(const Game *g, str_t *pgn)
 {
-    str_cpy_fmt(pgn, "[White \"%S\"]\n", g->names[WHITE]);
+    str_cpy_fmt(pgn, "[Round \"%i.%i\"]\n", g->round + 1, g->game + 1);
+
+    str_cat_fmt(pgn, "[White \"%S\"]\n", g->names[WHITE]);
     str_cat_fmt(pgn, "[Black \"%S\"]\n", g->names[BLACK]);
 
     // Result in PGN format "1-0", "0-1", "1/2-1/2" (from white pov)

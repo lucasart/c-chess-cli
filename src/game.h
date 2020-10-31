@@ -47,12 +47,12 @@ typedef struct {
     str_t names[NB_COLOR];  // names of players, by color
     Position *pos;  // list of positions (including moves) since game start
     Sample *samples;  // list of samples when generating training data
-    int ply, state;
+    int round, game, ply, state;
     bool sfen;  // use S-FEN for this game (ie. HAha instead of KQkq)
     char pad[7];
 } Game;
 
-Game game_init(void);
+Game game_init(int round, int game);
 void game_destroy(Game *g);
 
 bool game_load_fen(Game *g, const char *fen, int *color);

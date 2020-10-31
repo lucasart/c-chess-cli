@@ -108,7 +108,7 @@ static void *thread_start(void *arg)
         openings_next(&openings, &fen, options.repeat ? idx / 2 : idx, w->id);
 
         // Play 1 game
-        Game game = game_init();
+        Game game = game_init(j.round, j.game);
         int color = WHITE;
 
         if (!game_load_fen(&game, fen.buf, &color))
