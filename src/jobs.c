@@ -21,13 +21,11 @@ static void job_queue_init_pair(int games, int e1, int e2, int pair, int *added,
     for (int g = 0; g < games; g++) {
         const Job j = {
             .e1 = e1, .e2 = e2, .pair = pair,
-            .round = round, .game = g + *added,
+            .round = round, .game = (*added)++,
             .reverse = g % 2
         };
         vec_push(*jobs, j);
     }
-
-    *added += games;
 }
 
 JobQueue job_queue_init(int engines, int rounds, int games, bool gauntlet)

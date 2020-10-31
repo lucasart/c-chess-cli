@@ -70,7 +70,7 @@ static void main_destroy(void)
     if (sampleFile)
         DIE_IF(0, fclose(sampleFile) < 0);
 
-    openings_destroyete(&openings, 0);
+    openings_destroy(&openings, 0);
     job_queue_destroy(&jq);
     options_destroy(&options);
     vec_destroy_rec(eo, engine_options_destroy);

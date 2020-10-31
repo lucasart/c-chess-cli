@@ -11,6 +11,6 @@ typedef struct {
 } Openings;
 
 Openings openings_init(const char *fileName, bool random, int threadId);
-void openings_destroyete(Openings *openings, int threadId);
+void openings_destroy(Openings *openings, int threadId);
 
 void openings_next(Openings *o, str_t *fen, size_t idx, int threadId);

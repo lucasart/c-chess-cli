@@ -53,7 +53,7 @@ Openings openings_init(const char *fileName, bool random, int threadId)
     return o;
 }
 
-void openings_destroyete(Openings *o, int threadId)
+void openings_destroy(Openings *o, int threadId)
 {
     if (o->file)
         DIE_IF(threadId, fclose(o->file) < 0);
