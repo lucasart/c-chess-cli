@@ -33,11 +33,12 @@ c-chess-cli [-each [eng_options]] -engine [eng_options] -engine [eng_options] ..
  * `resign COUNT,SCORE`: Adjudicate the game as a loss, if an engine's score is at least `SCORE` centipawns below zero, for at least `COUNT` consecutive moves.
  * `games N`: Play N games per encounter (default value 1). This value should be set to an even number in tournaments with more than two players to make sure that each player plays an equal number of games with white and black pieces.
  * `rounds N`: Multiply the number of rounds to play by `N` (default value 1).
+ * `gauntlet`: Play a gauntlet tournament (first engine against the others). The default is to play a round-robin.
  * `sprt elo0,elo1[,alpha,beta]`: Performs a Sequential Probability Ratio Test for `H1: elo=elo1` vs `H0: elo=elo0`, where `alpha` is the type I error probability (false positive), and `beta` is type II error probability (false negative). Note that `alpha` and `beta` are optional, and their default value is 0.05. This can only be used in matches between two players.
  * `log`: Write all I/O communication with engines to file(s). This produces `c-chess-cli.id.log`, where `id` is the thread id (range `1..concurrency`). Note that all communications (including error messages) starting with `[id]` mean within the context of thread number `id`, which tells you which log file to inspect (id = 0 is the main thread, which does not product a log file, but simply writes to stdout).
- * `openings file`: Input file, in EPD format, where opening positions are read. Note that Chess960 is auto-detected by analysing each FEN, so there is no command line parameter for it.
- * `random`: shuffle the opening set (play shuffled set sequentially, no repetitions).
- * `pgnout file`: Output file, in PGN format, where games are written.
+ * `openings FILE`: Read opening positions from `FILE`, in EPD format. Note that Chess960 is auto-detected, at position level (not at file level), and `FILE` can mix Chess and Chess960 positions. Both X-FEN (KQkq) and S-FEN (HAha) are supported for Chess960.
+ * `random`: Shuffle the opening set (play shuffled set sequentially, no repetitions).
+ * `pgnout FILE`: Save games to FILE, in PGN format.
  * `repeat`: Repeat each opening twice, with each engine playing both sides.
  * `sample freq[,resolvePv[,file]]`. See below.
 

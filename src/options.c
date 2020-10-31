@@ -152,6 +152,8 @@ void options_parse(int argc, const char **argv, Options *o, GameOptions *go, Eng
                     o->random = true;
                 else if (!strcmp(argv[i], "-repeat"))
                     o->repeat = true;
+                else if (!strcmp(argv[i], "-gauntlet"))
+                    o->gauntlet = true;
                 else if (!strcmp(argv[i], "-log"))
                     o->log = true;
                 else

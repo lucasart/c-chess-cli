@@ -15,7 +15,15 @@
 #include "jobs.h"
 #include "vec.h"
 
-JobQueue job_queue_init(int engines, int rounds, int games)
+static void job_queue_init_pair(int games, int e1, int e2, int pair, Job **jobs)
+{
+    for (int g = 0; g < games; g++) {
+        const Job j = {.e1 = e1, .e2 = e2, .pair = pair, .reverse = g % 2};
+        vec_push(*jobs, j);
+    }
+}
+
+JobQueue job_queue_init(int engines, int rounds, int games, bool gauntlet)
 {
     assert(engines >= 2 && rounds >= 1 && games >= 1);
 
@@ -24,16 +32,28 @@ JobQueue job_queue_init(int engines, int rounds, int games)
     jq.jobs = vec_init(Job);
     jq.results = vec_init(Result);
 
-    // Gauntlet: N - 1 pairs (0, i) with 0 < i
-    for (int i = 1; i < engines; i++)
-        vec_push(jq.results, (Result){0});
+    if (gauntlet) {
+        // Gauntlet: N-1 pairs (0, e2) with 0 < e2
+        for (int e2 = 1; e2 < engines; e2++)
+            vec_push(jq.results, (Result){0});
 
-    for (int r = 0; r < rounds; r++)
-        for (int i = 1; i < engines; i++)
-            for (int g = 0; g < games; g++) {
-                const Job j = {.e1 = 0, .e2 = i, .pair = i - 1, .reverse = g % 2};
-                vec_push(jq.jobs, j);
-            }
+        for (int r = 0; r < rounds; r++)
+            for (int e2 = 1; e2 < engines; e2++)
+                job_queue_init_pair(games, 0, e2, e2 - 1, &jq.jobs);
+    } else {
+        // Round robin: N(N-1)/2 pairs (e1, e2) with e1 < e2
+        for (int e1 = 0; e1 < engines - 1; e1++)
+            for (int e2 = e1 + 1; e2 < engines; e2++)
+                vec_push(jq.results, (Result){0});
+
+        for (int r = 0; r < rounds; r++) {
+            int pair = 0;
+
+            for (int e1 = 0; e1 < engines - 1; e1++)
+                for (int e2 = e1 + 1; e2 < engines; e2++)
+                    job_queue_init_pair(games, e1, e2, pair++, &jq.jobs);
+        }
+    }
 
     return jq;
 }

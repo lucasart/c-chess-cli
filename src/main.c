@@ -36,7 +36,7 @@ static void main_init(int argc, const char **argv)
     options = options_init();
     options_parse(argc, argv, &options, &go, &eo);
 
-    jq = job_queue_init(vec_size(eo), options.rounds, options.games);
+    jq = job_queue_init(vec_size(eo), options.rounds, options.games, options.gauntlet);
     openings = openings_init(options.openings.buf, options.random, 0);
 
     pgnOut = NULL;
@@ -92,7 +92,11 @@ static void *thread_start(void *arg)
 
     while (job_queue_pop(&jq, &j, &idx, &count)) {
         // Engine switching (if needed)
-        assert(j.e1 == 0);  // gauntlet only for now
+        if (j.e1 != e1) {
+            e1 = j.e1;
+            engine_destroy(w, &engines[0]);
+            engines[0] = engine_init(w, eo[e1].cmd.buf, eo[e1].name.buf, eo[e1].options);
+        }
 
         if (j.e2 != e2) {
             e2 = j.e2;
