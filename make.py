@@ -32,19 +32,24 @@ def compile(program, output):
 
 if args.task == 'test':
     if compile('engine', './test/engine') == 0 and compile('main', './c-chess-cli') == 0:
-        run('rm stdout1 stdout2 out1.pgn out2.pgn training.csv c-chess-cli.1.log')
+        run('rm stdout* out*.pgn training.csv c-chess-cli.*.log log*')
+
+        print('\nRun tests:')
         run('./c-chess-cli -each cmd=./test/engine depth=6 option.Hash=4 ' \
             '-engine name=engine=1 option.Threads=2 -engine name=engine2 depth=5 ' \
             '-sample 0.5,y,training.csv -openings test/chess960.epd -repeat ' \
             '-resign 4,9000 -draw 2,10000 -games 1925 -log -pgn out1.pgn > stdout1')
+        run('grep -v ^deadline c-chess-cli.1.log > log1')
+
         run('./c-chess-cli -each "cmd=./test/engine 123" depth=3 ' \
-            '-engine -engine name=e2 -engine name=e3 ' \
-            '-openings test/chess960.epd -rounds 3 -games 50 -pgn out2.pgn > stdout2')
+            '-engine option.Hash=2 tc=10/0 -engine name=e2 tc=20/0 -engine name=e3 ' \
+            '-openings test/chess960.epd -rounds 3 -games 50 -pgn out2.pgn -log > stdout2')
+        run('grep -v ^deadline c-chess-cli.1.log > log2')
+
         print('\nFile signatures:')
-        run('shasum stdout1 stdout2 out1.pgn out2.pgn training.csv')
-        run('grep -v ^deadline: c-chess-cli.1.log |shasum')
+        run('shasum stdout1 stdout2 out1.pgn out2.pgn log1 log2 training.csv')
         print('\nOverall signature:')
-        run('grep -v ^deadline: c-chess-cli.1.log |cat - stdout1 stdout2 out1.pgn out2.pgn training.csv |shasum')
+        run('cat stdout1 stdout2 out1.pgn out2.pgn log1 log2 training.csv |shasum')
 
 elif args.task == 'main':
     if args.output == '': args.output = './c-chess-cli'
