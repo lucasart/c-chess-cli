@@ -119,7 +119,7 @@ static void *thread_start(void *arg)
         printf("[%d] Started game %zu of %zu (%s vs %s)\n", w->id, idx + 1, count,
             engines[whiteIdx].name.buf, engines[opposite(whiteIdx)].name.buf);
 
-        const EngineOptions *eoPair[2] = {&eo[0], &eo[1]};
+        const EngineOptions *eoPair[2] = {&eo[e1], &eo[e2]};
         const int wld = game_play(w, &game, &go, engines, eoPair, j.reverse);
 
         // Write to PGN file
