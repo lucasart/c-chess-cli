@@ -13,6 +13,10 @@
  * not, see <http://www.gnu.org/licenses/>.
 */
 #pragma once
+#include "workers.h"
 
-void sprt_bounds(double alpha, double beta, double *lbound, double *ubound);
-double sprt_llr(int wld[3], double elo0, double elo1);
+typedef struct {
+    double elo0, elo1, alpha, beta;
+} SPRTParam;
+
+bool sprt_done(int wldCount[NB_RESULT], const SPRTParam *sp);

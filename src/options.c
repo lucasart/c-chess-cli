@@ -121,7 +121,7 @@ void options_parse(int argc, const char **argv, Options *o, EngineOptions **eo)
     // Default values
     o->concurrency = 1;
     o->games = o->rounds = 1;
-    o->alpha = o->beta = 0.05;
+    o->sprtParam.alpha = o->sprtParam.beta = 0.05;
 
     scope(engine_options_destroy) EngineOptions each = engine_options_init();
     bool eachSet = false;
@@ -181,7 +181,8 @@ void options_parse(int argc, const char **argv, Options *o, EngineOptions **eo)
                 sscanf(argv[i], "%i,%i", &o->drawCount, &o->drawScore);
             else if (!strcmp(argv[i - 1], "-sprt")) {
                 o->sprt = true;
-                sscanf(argv[i], "%lf,%lf,%lf,%lf", &o->elo0, &o->elo1, &o->alpha, &o->beta);
+                sscanf(argv[i], "%lf,%lf,%lf,%lf", &o->sprtParam.elo0, &o->sprtParam.elo1,
+                    &o->sprtParam.alpha, &o->sprtParam.beta);
             } else if (!strcmp(argv[i - 1], "-sample"))
                 options_parse_sample(argv[i], o);
             else

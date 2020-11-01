@@ -14,31 +14,42 @@
 */
 #include <math.h>
 #include "sprt.h"
-#include "workers.h"
 
 static double elo_to_score(double elo)
 {
     return 1 / (1 + exp(-elo * log(10) / 400));
 }
 
-void sprt_bounds(double alpha, double beta, double *lbound, double *ubound)
-// Standard SPRT stuff
-{
-    *lbound = log(beta / (1 - alpha));
-    *ubound = log((1 - beta) / alpha);
-}
-
-double sprt_llr(int wld[3], double elo0, double elo1)
-// Uses GPSRT approximation by Michel Van Den Bergh:
+// Uses asymptotic LLR approximation in the trinomial GSPRT model. See:
 // http://hardy.uhasselt.be/Toga/GSPRT_approximation.pdf
+static double sprt_llr(int wldCount[NB_RESULT], double elo0, double elo1)
 {
-    if (!!wld[0] + !!wld[1] + !!wld[2] < 2)  // at least 2 among 3 must be non zero
+    if (!!wldCount[0] + !!wldCount[1] + !!wldCount[2] < 2)  // at least 2 among 3 must be non zero
         return 0;
 
-    const int n = wld[RESULT_WIN] + wld[RESULT_LOSS] + wld[RESULT_DRAW];
-    const double w = (double)wld[RESULT_WIN] / n, l = (double)wld[RESULT_LOSS] / n, d = 1 - w - l;
+    const int n = wldCount[RESULT_WIN] + wldCount[RESULT_LOSS] + wldCount[RESULT_DRAW];
+    const double w = (double)wldCount[RESULT_WIN] / n, l = (double)wldCount[RESULT_LOSS] / n,
+        d = 1 - w - l;
     const double s = w + d / 2, var = (w + d / 4) - s * s;
     const double s0 = elo_to_score(elo0), s1 = elo_to_score(elo1);
 
     return (s1 - s0) * (2 * s - s0 - s1) / (2 * var / n);
+}
+
+bool sprt_done(int wldCount[NB_RESULT], const SPRTParam *sp)
+{
+    const double lbound = log(sp->beta / (1 - sp->alpha));
+    const double ubound = log((1 - sp->beta) / sp->alpha);
+    const double llr = sprt_llr(wldCount, sp->elo0, sp->elo1);
+
+    if (llr > ubound) {
+        printf("SPRT: LLR = %.3f [%.3f,%.3f]. H1 accepted.\n", llr, lbound, ubound);
+        return true;
+    } else if (llr < lbound) {
+        printf("SPRT: LLR = %.3f [%.3f,%.3f]. H0 accepted.\n", llr, lbound, ubound);
+        return true;
+    } else
+        printf("SPRT: LLR = %.3f [%.3f,%.3f]\n", llr, lbound, ubound);
+
+    return false;
 }

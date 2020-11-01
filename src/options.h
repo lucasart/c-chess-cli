@@ -15,11 +15,13 @@
 #pragma once
 #include <inttypes.h>
 #include "workers.h"
+#include "sprt.h"
 #include "str.h"
 
 typedef struct {
     str_t openings, pgn, sampleFileName;
-    double elo0, elo1, alpha, beta, sampleFrequency;
+    SPRTParam sprtParam;
+    double sampleFrequency;
     int concurrency, games, rounds;
     int resignCount, resignScore;
     int drawCount, drawScore;

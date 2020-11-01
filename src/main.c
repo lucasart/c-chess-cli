@@ -161,25 +161,8 @@ static void *thread_start(void *arg)
             engines[1].name.buf, wldCount[RESULT_WIN], wldCount[RESULT_LOSS], wldCount[RESULT_DRAW],
             (wldCount[RESULT_WIN] + 0.5 * wldCount[RESULT_DRAW]) / n, n);
 
-        if (options.sprt) {
-            double llrLbound = 0, llrUbound = 0;
-            sprt_bounds(options.alpha, options.beta, &llrLbound, &llrUbound);
-
-            const double llr = sprt_llr(wldCount, options.elo0, options.elo1);
-
-            if (llr > llrUbound) {
-                printf("SPRT: LLR = %.3f [%.3f,%.3f]. H1 accepted.\n", llr, llrLbound, llrUbound);
-                job_queue_stop(&jq);
-            }
-
-            if (llr < llrLbound) {
-                printf("SPRT: LLR = %.3f [%.3f,%.3f]. H0 accepted.\n", llr, llrLbound, llrUbound);
-                job_queue_stop(&jq);
-            }
-
-            if (j.reverse)
-                printf("SPRT: LLR = %.3f [%.3f,%.3f]\n", llr, llrLbound, llrUbound);
-        }
+        if (options.sprt && sprt_done(wldCount, &options.sprtParam))
+            job_queue_stop(&jq);
 
         game_destroy(&game);
     }
