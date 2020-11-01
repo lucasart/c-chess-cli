@@ -113,3 +113,10 @@ bool job_queue_done(JobQueue *jq)
 
     return done;
 }
+
+void job_queue_stop(JobQueue *jq)
+{
+    pthread_mutex_lock(&jq->mtx);
+    jq->idx = vec_size(jq->jobs);
+    pthread_mutex_unlock(&jq->mtx);
+}

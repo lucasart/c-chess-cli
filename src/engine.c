@@ -26,7 +26,7 @@
 static void engine_spawn(const Worker *w, Engine *e, const char *cwd, const char *run, char **argv,
     bool readStdErr)
 {
-    assert(e && cwd && run && argv && argv[0]);
+    assert(argv[0]);
 
     // Pipe diagram: Parent -> [1]into[0] -> Child -> [1]outof[0] -> Parent
     // 'into' and 'outof' are pipes, each with 2 ends: read=0, write=1
@@ -97,8 +97,6 @@ static void engine_parse_cmd(const char *cmd, str_t *cwd, str_t *run, str_t **ar
 
 Engine engine_init(Worker *w, const char *cmd, const char *name, const str_t *options)
 {
-    assert(w && options);
-
     if (!*cmd)
         DIE("[%d] missing command to start engine.\n", w->id);
 
@@ -154,9 +152,6 @@ Engine engine_init(Worker *w, const char *cmd, const char *name, const str_t *op
 
 void engine_destroy(const Worker *w, Engine *e)
 {
-    (void)w;  // silence compiler warning (unused variable)
-    assert(w);
-
     str_destroy(&e->name);
     DIE_IF(w->id, fclose(e->in) < 0);
     DIE_IF(w->id, fclose(e->out) < 0);
@@ -165,8 +160,6 @@ void engine_destroy(const Worker *w, Engine *e)
 
 void engine_readln(const Worker *w, const Engine *e, str_t *line)
 {
-    assert(w);
-
     if (!str_getline(line, e->in))
         DIE("[%d] could not read from %s\n", w->id, e->name.buf);
 
@@ -176,8 +169,6 @@ void engine_readln(const Worker *w, const Engine *e, str_t *line)
 
 void engine_writeln(const Worker *w, const Engine *e, char *buf)
 {
-    assert(w);
-
     DIE_IF(w->id, fputs(buf, e->out) < 0);
     DIE_IF(w->id, fputc('\n', e->out) < 0);
     DIE_IF(w->id, fflush(e->out) < 0);
@@ -190,8 +181,6 @@ void engine_writeln(const Worker *w, const Engine *e, char *buf)
 
 void engine_sync(Worker *w, const Engine *e)
 {
-    assert(w);
-
     deadline_set(w, e->name.buf, system_msec() + 1000);
     engine_writeln(w, e, "isready");
     scope(str_destroy) str_t line = str_init();
@@ -206,8 +195,6 @@ void engine_sync(Worker *w, const Engine *e)
 bool engine_bestmove(Worker *w, const Engine *e, int *score, int64_t *timeLeft, str_t *best,
     str_t *pv)
 {
-    assert(w);
-
     int result = false;
     *score = 0;
     scope(str_destroy) str_t line = str_init(), token = str_init();

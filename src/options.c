@@ -226,6 +226,9 @@ void options_parse(int argc, const char **argv, Options *o, GameOptions *go, Eng
 
     if (vec_size(*eo) < 2)
         DIE("at least 2 engines are needed\n");
+
+    if (vec_size(*eo) > 2 && o->sprt)
+        DIE("only 2 engines for SPRT\n");
 }
 
 void options_destroy(Options *o)

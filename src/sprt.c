@@ -14,6 +14,7 @@
 */
 #include <math.h>
 #include "sprt.h"
+#include "workers.h"
 
 static double elo_to_score(double elo)
 {
@@ -34,8 +35,8 @@ double sprt_llr(int wld[3], double elo0, double elo1)
     if (!!wld[0] + !!wld[1] + !!wld[2] < 2)  // at least 2 among 3 must be non zero
         return 0;
 
-    const int n = wld[0] + wld[1] + wld[2];
-    const double w = (double)wld[0] / n, l = (double)wld[1] / n, d = 1 - w - l;
+    const int n = wld[RESULT_WIN] + wld[RESULT_LOSS] + wld[RESULT_DRAW];
+    const double w = (double)wld[RESULT_WIN] / n, l = (double)wld[RESULT_LOSS] / n, d = 1 - w - l;
     const double s = w + d / 2, var = (w + d / 4) - s * s;
     const double s0 = elo_to_score(elo0), s1 = elo_to_score(elo1);
 

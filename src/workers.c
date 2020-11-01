@@ -21,7 +21,7 @@ Worker *Workers;
 
 void deadline_set(Worker *w, const char *engineName, int64_t timeLimit)
 {
-    assert(w && engineName && timeLimit > 0);
+    assert(timeLimit > 0);
 
     pthread_mutex_lock(&w->deadline.mtx);
 
@@ -29,17 +29,15 @@ void deadline_set(Worker *w, const char *engineName, int64_t timeLimit)
     str_cpy_c(&w->deadline.engineName, engineName);
     w->deadline.timeLimit = timeLimit;
 
-    if (w->log)
-        DIE_IF(w->id, fprintf(w->log, "deadline: %s must respond by %" PRId64 "\n",
-            w->deadline.engineName.buf, w->deadline.timeLimit) < 0);
-
     pthread_mutex_unlock(&w->deadline.mtx);
+
+    if (w->log)
+        DIE_IF(w->id, fprintf(w->log, "deadline: %s must respond by %" PRId64 "\n", engineName,
+            timeLimit) < 0);
 }
 
 void deadline_clear(Worker *w)
 {
-    assert(w);
-
     pthread_mutex_lock(&w->deadline.mtx);
 
     w->deadline.set = false;
@@ -53,12 +51,12 @@ void deadline_clear(Worker *w)
 
 int64_t deadline_overdue(Worker *w)
 {
-    assert(w);
-
     pthread_mutex_lock(&w->deadline.mtx);
+
     const int64_t timeLimit = w->deadline.timeLimit;
     const bool set = w->deadline.set;
     scope(str_destroy) str_t engineName = str_init_from(w->deadline.engineName);
+
     pthread_mutex_unlock(&w->deadline.mtx);
 
     const int64_t time = system_msec();
@@ -76,8 +74,6 @@ int64_t deadline_overdue(Worker *w)
 
 Worker worker_init(int i, const char *logName)
 {
-    assert(logName);
-
     Worker w = {0};
     w.seed = (uint64_t)i;
     w.id = i + 1;

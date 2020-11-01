@@ -174,8 +174,6 @@ bool game_load_fen(Game *g, const char *fen, int *color)
 
 void game_destroy(Game *g)
 {
-    assert(g);
-
     vec_destroy(g->pos);
     vec_destroy(g->samples);
     str_destroy_n(&g->names[WHITE], &g->names[BLACK]);
@@ -188,8 +186,6 @@ int game_play(Worker *w, Game *g, const GameOptions *go, const Engine engines[2]
 // - sets g->state value: see enum STATE_* codes
 // - returns RESULT_LOSS/DRAW/WIN from engines[0] pov
 {
-    assert(w && g && go);
-
     for (int color = WHITE; color <= BLACK; color++)
         str_cpy(&g->names[color], engines[color ^ g->pos[0].turn ^ reverse].name);
 
@@ -321,7 +317,6 @@ int game_play(Worker *w, Game *g, const GameOptions *go, const Engine engines[2]
 
 void game_decode_state(const Game *g, str_t *result, str_t *reason)
 {
-    assert(g && result && reason);
     str_cpy_c(result, "1/2-1/2");
     str_clear(reason);
 

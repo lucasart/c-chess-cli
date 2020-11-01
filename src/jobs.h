@@ -45,3 +45,4 @@ void job_queue_destroy(JobQueue *jq);
 bool job_queue_pop(JobQueue *jq, Job *j, size_t *idx, size_t *count);
 void job_queue_add_result(const JobQueue *jq, int pair, int outcome, int count[3]);
 bool job_queue_done(JobQueue *jq);
+void job_queue_stop(JobQueue *jq);

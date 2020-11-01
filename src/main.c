@@ -48,7 +48,7 @@ static void main_init(int argc, const char **argv)
         DIE_IF(0, !(sampleFile = fopen(options.sampleFileName.buf, "a")));
 
     // Prepare Workers[]
-    Workers = vec_init_reserve((size_t)options.concurrency, Worker);
+    Workers = vec_init(Worker);
 
     for (int i = 0; i < options.concurrency; i++) {
         scope(str_destroy) str_t logName = str_init();
@@ -165,11 +165,15 @@ static void *thread_start(void *arg)
 
             const double llr = sprt_llr(wldCount, options.elo0, options.elo1);
 
-            if (llr > llrUbound)
-                DIE("SPRT: LLR = %.3f [%.3f,%.3f]. H1 accepted.\n", llr, llrLbound, llrUbound);
+            if (llr > llrUbound) {
+                printf("SPRT: LLR = %.3f [%.3f,%.3f]. H1 accepted.\n", llr, llrLbound, llrUbound);
+                job_queue_stop(&jq);
+            }
 
-            if (llr < llrLbound)
-                DIE("SPRT: LLR = %.3f [%.3f,%.3f]. H0 accepted.\n", llr, llrLbound, llrUbound);
+            if (llr < llrLbound) {
+                printf("SPRT: LLR = %.3f [%.3f,%.3f]. H0 accepted.\n", llr, llrLbound, llrUbound);
+                job_queue_stop(&jq);
+            }
 
             if (j.reverse)
                 printf("SPRT: LLR = %.3f [%.3f,%.3f]\n", llr, llrLbound, llrUbound);
