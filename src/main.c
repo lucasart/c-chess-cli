@@ -27,7 +27,7 @@ static Options options;
 static EngineOptions *eo;
 static GameOptions go;
 static Openings openings;
-static FILE *pgnOut, *sampleFile;
+static FILE *pgn, *sampleFile;
 static JobQueue jq;
 
 static void main_init(int argc, const char **argv)
@@ -39,9 +39,9 @@ static void main_init(int argc, const char **argv)
     jq = job_queue_init(vec_size(eo), options.rounds, options.games, options.gauntlet);
     openings = openings_init(options.openings.buf, options.random, 0);
 
-    pgnOut = NULL;
-    if (options.pgnOut.len)
-        DIE_IF(0, !(pgnOut = fopen(options.pgnOut.buf, "a")));
+    pgn = NULL;
+    if (options.pgn.len)
+        DIE_IF(0, !(pgn = fopen(options.pgn.buf, "a")));
 
     sampleFile = NULL;
     if (options.sampleFileName.len)
@@ -64,8 +64,8 @@ static void main_destroy(void)
 {
     vec_destroy_rec(Workers, worker_destroy);
 
-    if (pgnOut)
-        DIE_IF(0, fclose(pgnOut) < 0);
+    if (pgn)
+        DIE_IF(0, fclose(pgn) < 0);
 
     if (sampleFile)
         DIE_IF(0, fclose(sampleFile) < 0);
@@ -123,10 +123,10 @@ static void *thread_start(void *arg)
         const int wld = game_play(w, &game, &go, engines, eoPair, j.reverse);
 
         // Write to PGN file
-        if (pgnOut) {
-            scope(str_destroy) str_t pgn = str_init();
-            game_pgn(&game, &pgn);
-            DIE_IF(w->id, fputs(pgn.buf, pgnOut) < 0);
+        if (pgn) {
+            scope(str_destroy) str_t pgnText = str_init();
+            game_pgn(&game, &pgnText);
+            DIE_IF(w->id, fputs(pgnText.buf, pgn) < 0);
         }
 
         // Write to Sample file

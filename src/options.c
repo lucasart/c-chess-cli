@@ -106,7 +106,7 @@ Options options_init(void)
 {
     Options o = {0};
     o.openings = str_init();
-    o.pgnOut = str_init();
+    o.pgn = str_init();
     o.sampleFileName = str_init();
     return o;
 }
@@ -114,7 +114,7 @@ Options options_init(void)
 void options_parse(int argc, const char **argv, Options *o, GameOptions *go, EngineOptions **eo)
 {
     // List options that expect a value
-    static const char *options[] = {"-concurrency", "-games", "-rounds", "-openings", "-pgnout",
+    static const char *options[] = {"-concurrency", "-games", "-rounds", "-openings", "-pgn",
         "-nodes", "-depth", "-draw", "-resign", "-st", "-tc", "-sprt", "-sample"};
 
     // Default values
@@ -172,8 +172,8 @@ void options_parse(int argc, const char **argv, Options *o, GameOptions *go, Eng
                 o->rounds = atoi(argv[i]);
             else if (!strcmp(argv[i - 1], "-openings"))
                 str_cpy_c(&o->openings, argv[i]);
-            else if (!strcmp(argv[i - 1], "-pgnout"))
-                str_cpy_c(&o->pgnOut, argv[i]);
+            else if (!strcmp(argv[i - 1], "-pgn"))
+                str_cpy_c(&o->pgn, argv[i]);
             else if (!strcmp(argv[i - 1], "-resign"))
                 sscanf(argv[i], "%i,%i", &go->resignCount, &go->resignScore);
             else if (!strcmp(argv[i - 1], "-draw"))
@@ -233,5 +233,5 @@ void options_parse(int argc, const char **argv, Options *o, GameOptions *go, Eng
 
 void options_destroy(Options *o)
 {
-    str_destroy_n(&o->openings, &o->pgnOut, &o->sampleFileName);
+    str_destroy_n(&o->openings, &o->pgn, &o->sampleFileName);
 }

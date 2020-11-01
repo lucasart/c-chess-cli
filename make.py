@@ -36,10 +36,10 @@ if args.task == 'test':
         run('./c-chess-cli -each cmd=./test/engine depth=6 option.Hash=4 ' \
             '-engine name=engine=1 option.Threads=2 -engine name=engine2 depth=5 ' \
             '-sample 0.5,y,training.csv -openings test/chess960.epd -repeat ' \
-            '-resign 4,9000 -draw 2,10000 -games 1925 -log -pgnout out1.pgn > stdout1')
+            '-resign 4,9000 -draw 2,10000 -games 1925 -log -pgn out1.pgn > stdout1')
         run('./c-chess-cli -each "cmd=./test/engine 123" depth=3 ' \
             '-engine -engine name=e2 -engine name=e3 ' \
-            '-openings test/chess960.epd -rounds 3 -games 50 -pgnout out2.pgn > stdout2')
+            '-openings test/chess960.epd -rounds 3 -games 50 -pgn out2.pgn > stdout2')
         print('\nFile signatures:')
         run('shasum stdout1 stdout2 out1.pgn out2.pgn training.csv')
         run('grep -v ^deadline: c-chess-cli.1.log |shasum')

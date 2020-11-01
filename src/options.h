@@ -18,7 +18,7 @@
 #include "str.h"
 
 typedef struct {
-    str_t openings, pgnOut, sampleFileName;
+    str_t openings, pgn, sampleFileName;
     double elo0, elo1, alpha, beta;
     int concurrency, games, rounds;
     bool log, random, repeat, sprt, gauntlet;
