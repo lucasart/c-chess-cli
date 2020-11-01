@@ -16,7 +16,7 @@
 #include "position.h"
 #include "engine.h"
 #include "options.h"
-#include "vec.h"
+#include "str.h"
 
 enum {
     STATE_NONE,
@@ -57,7 +57,7 @@ void game_destroy(Game *g);
 
 bool game_load_fen(Game *g, const char *fen, int *color);
 
-int game_play(Worker *w, Game *g, const GameOptions *go, const Engine engines[2],
+int game_play(Worker *w, Game *g, const Options *o, const Engine engines[2],
     const EngineOptions *eo[2], bool reverse);
 
 void game_decode_state(const Game *g, str_t *result, str_t *reason);

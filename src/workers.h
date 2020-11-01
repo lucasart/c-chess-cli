@@ -27,15 +27,6 @@ enum {
     NB_RESULT
 };
 
-typedef struct {
-    // Per engine, by index in engines[] array (not the same as color)
-    double sampleFrequency;
-    int resignCount, resignScore;
-    int drawCount, drawScore;
-    bool sampleResolvePv;
-    char pad[7];
-} GameOptions;
-
 // Per thread data
 typedef struct {
     struct {

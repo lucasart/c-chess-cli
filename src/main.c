@@ -21,11 +21,11 @@
 #include "options.h"
 #include "sprt.h"
 #include "util.h"
+#include "vec.h"
 #include "workers.h"
 
 static Options options;
 static EngineOptions *eo;
-static GameOptions go;
 static Openings openings;
 static FILE *pgn, *sampleFile;
 static JobQueue jq;
@@ -34,16 +34,18 @@ static void main_init(int argc, const char **argv)
 {
     eo = vec_init(EngineOptions);
     options = options_init();
-    options_parse(argc, argv, &options, &go, &eo);
+    options_parse(argc, argv, &options, &eo);
 
     jq = job_queue_init(vec_size(eo), options.rounds, options.games, options.gauntlet);
     openings = openings_init(options.openings.buf, options.random, 0);
 
     pgn = NULL;
+
     if (options.pgn.len)
         DIE_IF(0, !(pgn = fopen(options.pgn.buf, "a")));
 
     sampleFile = NULL;
+
     if (options.sampleFileName.len)
         DIE_IF(0, !(sampleFile = fopen(options.sampleFileName.buf, "a")));
 
@@ -120,7 +122,7 @@ static void *thread_start(void *arg)
             engines[whiteIdx].name.buf, engines[opposite(whiteIdx)].name.buf);
 
         const EngineOptions *eoPair[2] = {&eo[e1], &eo[e2]};
-        const int wld = game_play(w, &game, &go, engines, eoPair, j.reverse);
+        const int wld = game_play(w, &game, &options, engines, eoPair, j.reverse);
 
         // Write to PGN file
         if (pgn) {

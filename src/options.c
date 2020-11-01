@@ -19,20 +19,21 @@
 #include "util.h"
 #include "vec.h"
 
-static void options_parse_sample(const char *s, Options *o, GameOptions *go)
+static void options_parse_sample(const char *s, Options *o)
 {
     scope(str_destroy) str_t token = str_init();
     const char *tail = str_tok(s, &token, ",");
     assert(tail);
 
     // Parse sample frequency (and check range)
-    go->sampleFrequency = atof(token.buf);
-    if (go->sampleFrequency > 1.0 || go->sampleFrequency < 0.0)
-        DIE("Sample frequency '%f' must be between 0 and 1\n", go->sampleFrequency);
+    o->sampleFrequency = atof(token.buf);
+
+    if (o->sampleFrequency > 1.0 || o->sampleFrequency < 0.0)
+        DIE("Sample frequency '%f' must be between 0 and 1\n", o->sampleFrequency);
 
     // Parse resolve flag
     if ((tail = str_tok(tail, &token, ",")))
-        go->sampleResolvePv = !strcmp(token.buf, "y");
+        o->sampleResolvePv = !strcmp(token.buf, "y");
 
     // Parse filename (default sample.csv if omitted)
     if ((tail = str_tok(tail, &token, ",")))
@@ -111,7 +112,7 @@ Options options_init(void)
     return o;
 }
 
-void options_parse(int argc, const char **argv, Options *o, GameOptions *go, EngineOptions **eo)
+void options_parse(int argc, const char **argv, Options *o, EngineOptions **eo)
 {
     // List options that expect a value
     static const char *options[] = {"-concurrency", "-games", "-rounds", "-openings", "-pgn",
@@ -175,14 +176,14 @@ void options_parse(int argc, const char **argv, Options *o, GameOptions *go, Eng
             else if (!strcmp(argv[i - 1], "-pgn"))
                 str_cpy_c(&o->pgn, argv[i]);
             else if (!strcmp(argv[i - 1], "-resign"))
-                sscanf(argv[i], "%i,%i", &go->resignCount, &go->resignScore);
+                sscanf(argv[i], "%i,%i", &o->resignCount, &o->resignScore);
             else if (!strcmp(argv[i - 1], "-draw"))
-                sscanf(argv[i], "%i,%i", &go->drawCount, &go->drawScore);
+                sscanf(argv[i], "%i,%i", &o->drawCount, &o->drawScore);
             else if (!strcmp(argv[i - 1], "-sprt")) {
                 o->sprt = true;
                 sscanf(argv[i], "%lf,%lf,%lf,%lf", &o->elo0, &o->elo1, &o->alpha, &o->beta);
             } else if (!strcmp(argv[i - 1], "-sample"))
-                options_parse_sample(argv[i], o, go);
+                options_parse_sample(argv[i], o);
             else
                 assert(false);
 

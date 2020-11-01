@@ -14,8 +14,8 @@
 */
 #include "game.h"
 #include "gen.h"
-#include "str.h"
 #include "util.h"
+#include "vec.h"
 
 static void uci_position_command(const Game *g, str_t *cmd)
 // Builds a string of the form "position fen ... [moves ...]". Implements rule50 pruning: start from
@@ -179,7 +179,7 @@ void game_destroy(Game *g)
     str_destroy_n(&g->names[WHITE], &g->names[BLACK]);
 }
 
-int game_play(Worker *w, Game *g, const GameOptions *go, const Engine engines[2],
+int game_play(Worker *w, Game *g, const Options *o, const Engine engines[2],
     const EngineOptions *eo[2], bool reverse)
 // Play a game:
 // - engines[reverse] plays the first move (which does not mean white, that depends on the FEN)
@@ -265,8 +265,8 @@ int game_play(Worker *w, Game *g, const GameOptions *go, const Engine engines[2]
         }
 
         // Apply draw adjudication rule
-        if (go->drawCount && abs(score) <= go->drawScore) {
-            if (++drawPlyCount >= 2 * go->drawCount) {
+        if (o->drawCount && abs(score) <= o->drawScore) {
+            if (++drawPlyCount >= 2 * o->drawCount) {
                 g->state = STATE_DRAW_ADJUDICATION;
                 break;
             }
@@ -274,8 +274,8 @@ int game_play(Worker *w, Game *g, const GameOptions *go, const Engine engines[2]
             drawPlyCount = 0;
 
         // Apply resign rule
-        if (go->resignCount && score <= -go->resignScore) {
-            if (++resignCount[ei] >= go->resignCount) {
+        if (o->resignCount && score <= -o->resignScore) {
+            if (++resignCount[ei] >= o->resignCount) {
                 g->state = STATE_RESIGN;
                 break;
             }
@@ -283,16 +283,16 @@ int game_play(Worker *w, Game *g, const GameOptions *go, const Engine engines[2]
             resignCount[ei] = 0;
 
         // Write sample: position (compactly encoded) + score
-        if (prngf(&w->seed) <= go->sampleFrequency) {
+        if (prngf(&w->seed) <= o->sampleFrequency) {
             Sample sample = {
-                .pos = go->sampleResolvePv ? resolved : g->pos[g->ply],
+                .pos = o->sampleResolvePv ? resolved : g->pos[g->ply],
                 .score = score,
                 .result = NB_RESULT // unknown yet (use invalid state for now)
             };
 
             // Record sample, except if resolvePv=true and the position is in check (becuase PV
             // resolution couldn't avoid it), in which case the sample is discarded.
-            if (!go->sampleResolvePv || !sample.pos.checkers)
+            if (!o->sampleResolvePv || !sample.pos.checkers)
                 vec_push(g->samples, sample);
         }
 

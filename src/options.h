@@ -19,10 +19,12 @@
 
 typedef struct {
     str_t openings, pgn, sampleFileName;
-    double elo0, elo1, alpha, beta;
+    double elo0, elo1, alpha, beta, sampleFrequency;
     int concurrency, games, rounds;
-    bool log, random, repeat, sprt, gauntlet;
-    char pad[7];
+    int resignCount, resignScore;
+    int drawCount, drawScore;
+    bool log, random, repeat, sprt, gauntlet, sampleResolvePv;
+    char pad[6];
 } Options;
 
 typedef struct {
@@ -35,5 +37,5 @@ EngineOptions engine_options_init(void);
 void engine_options_destroy(EngineOptions *eo);
 
 Options options_init(void);
-void options_parse(int argc, const char **argv, Options *o, GameOptions *go, EngineOptions **eo);
+void options_parse(int argc, const char **argv, Options *o, EngineOptions **eo);
 void options_destroy(Options *o);
