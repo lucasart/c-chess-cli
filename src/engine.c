@@ -122,7 +122,7 @@ Engine engine_init(Worker *w, const char *cmd, const char *name, const str_t *op
     free(argv);
 
     // Start the uci..uciok dialogue
-    deadline_set(w, e.name.buf, system_msec() + 2000);
+    deadline_set(w, e.name.buf, system_msec() + 4000);
     engine_writeln(w, &e, "uci");
     scope(str_destroy) str_t line = str_init();
 
