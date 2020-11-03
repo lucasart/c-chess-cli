@@ -61,4 +61,5 @@ int game_play(Worker *w, Game *g, const Options *o, const Engine engines[2],
     const EngineOptions *eo[2], bool reverse);
 
 void game_decode_state(const Game *g, str_t *result, str_t *reason);
-void game_pgn(const Game *g, str_t *pgn);
+void game_export_pgn(const Game *g, str_t *out);
+void game_export_samples(const Game *g, str_t *out);

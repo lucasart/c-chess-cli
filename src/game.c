@@ -349,50 +349,60 @@ void game_decode_state(const Game *g, str_t *result, str_t *reason)
         assert(false);
 }
 
-void game_pgn(const Game *g, str_t *pgn)
+void game_export_pgn(const Game *g, str_t *out)
 {
-    str_cpy_fmt(pgn, "[Round \"%i.%i\"]\n", g->round + 1, g->game + 1);
-
-    str_cat_fmt(pgn, "[White \"%S\"]\n", g->names[WHITE]);
-    str_cat_fmt(pgn, "[Black \"%S\"]\n", g->names[BLACK]);
+    str_cpy_fmt(out, "[Round \"%i.%i\"]\n", g->round + 1, g->game + 1);
+    str_cat_fmt(out, "[White \"%S\"]\n", g->names[WHITE]);
+    str_cat_fmt(out, "[Black \"%S\"]\n", g->names[BLACK]);
 
     // Result in PGN format "1-0", "0-1", "1/2-1/2" (from white pov)
     scope(str_destroy) str_t result = str_init(), reason = str_init();
     game_decode_state(g, &result, &reason);
-    str_cat_fmt(pgn, "[Result \"%S\"]\n", result);
-    str_cat_fmt(pgn, "[Termination \"%S\"]\n", reason);
+    str_cat_fmt(out, "[Result \"%S\"]\n", result);
+    str_cat_fmt(out, "[Termination \"%S\"]\n", reason);
 
     scope(str_destroy) str_t fen = str_init();
     pos_get(&g->pos[0], &fen, g->sfen);
-    str_cat_fmt(pgn, "[FEN \"%S\"]\n", fen);
+    str_cat_fmt(out, "[FEN \"%S\"]\n", fen);
 
     if (g->pos[0].chess960)
-        str_cat_c(pgn, "[Variant \"Chess960\"]\n");
+        str_cat_c(out, "[Variant \"Chess960\"]\n");
 
-    str_cat_fmt(pgn, "[PlyCount \"%i\"]\n\n", g->ply);
+    str_cat_fmt(out, "[PlyCount \"%i\"]\n\n", g->ply);
     scope(str_destroy) str_t san = str_init();
 
     for (int ply = 1; ply <= g->ply; ply++) {
         // Write move number
         if (g->pos[ply - 1].turn == WHITE || ply == 1)
-            str_cat_fmt(pgn, g->pos[ply - 1].turn == WHITE ? "%i. " : "%i... ",
+            str_cat_fmt(out, g->pos[ply - 1].turn == WHITE ? "%i. " : "%i... ",
                 g->pos[ply - 1].fullMove);
 
         // Append SAN move
         pos_move_to_san(&g->pos[ply - 1], g->pos[ply].lastMove, &san);
-        str_cat(pgn, san);
+        str_cat(out, san);
 
         // Append check marker
         if (g->pos[ply].checkers) {
             if (ply == g->ply && g->state == STATE_CHECKMATE)
-                str_push(pgn, '#');  // checkmate
+                str_push(out, '#');  // checkmate
             else
-                str_push(pgn, '+');  // normal check
+                str_push(out, '+');  // normal check
         }
 
         // Append delimiter
-        str_push(pgn, ply % 10 == 0 ? '\n' : ' ');
+        str_push(out, ply % 10 == 0 ? '\n' : ' ');
     }
 
-    str_cat_c(str_cat(pgn, result), "\n\n");
+    str_cat_c(str_cat(out, result), "\n\n");
+}
+
+void game_export_samples(const Game *g, str_t *out)
+{
+    str_clear(out);
+    scope(str_destroy) str_t fen = str_init();
+
+    for (size_t i = 0; i < vec_size(g->samples); i++) {
+        pos_get(&g->samples[i].pos, &fen, g->sfen);
+        str_cat_fmt(out, "%S,%i,%i\n", fen, g->samples[i].score, g->samples[i].result);
+    }
 }

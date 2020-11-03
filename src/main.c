@@ -27,7 +27,7 @@
 static Options options;
 static EngineOptions *eo;
 static Openings openings;
-static FILE *pgn, *sampleFile;
+static FILE *pgnFile, *sampleFile;
 static JobQueue jq;
 
 static void main_init(int argc, const char **argv)
@@ -39,10 +39,10 @@ static void main_init(int argc, const char **argv)
     jq = job_queue_init(vec_size(eo), options.rounds, options.games, options.gauntlet);
     openings = openings_init(options.openings.buf, options.random, 0);
 
-    pgn = NULL;
+    pgnFile = NULL;
 
     if (options.pgn.len)
-        DIE_IF(0, !(pgn = fopen(options.pgn.buf, "a")));
+        DIE_IF(0, !(pgnFile = fopen(options.pgn.buf, "a")));
 
     sampleFile = NULL;
 
@@ -66,8 +66,8 @@ static void main_destroy(void)
 {
     vec_destroy_rec(Workers, worker_destroy);
 
-    if (pgn)
-        DIE_IF(0, fclose(pgn) < 0);
+    if (pgnFile)
+        DIE_IF(0, fclose(pgnFile) < 0);
 
     if (sampleFile)
         DIE_IF(0, fclose(sampleFile) < 0);
@@ -125,23 +125,17 @@ static void *thread_start(void *arg)
         const int wld = game_play(w, &game, &options, engines, eoPair, j.reverse);
 
         // Write to PGN file
-        if (pgn) {
+        if (pgnFile) {
             scope(str_destroy) str_t pgnText = str_init();
-            game_pgn(&game, &pgnText);
-            DIE_IF(w->id, fputs(pgnText.buf, pgn) < 0);
+            game_export_pgn(&game, &pgnText);
+            DIE_IF(w->id, fputs(pgnText.buf, pgnFile) < 0);
         }
 
         // Write to Sample file
         if (sampleFile) {
-            scope(str_destroy) str_t lines = str_init(), sampleFen = str_init();
-
-            for (size_t i = 0; i < vec_size(game.samples); i++) {
-                pos_get(&game.samples[i].pos, &sampleFen, game.sfen);
-                str_cat_fmt(&lines, "%S,%i,%i\n", sampleFen, game.samples[i].score,
-                    game.samples[i].result);
-            }
-
-            DIE_IF(w->id, fputs(lines.buf, sampleFile) < 0);
+            scope(str_destroy) str_t sampleText = str_init();
+            game_export_samples(&game, &sampleText);
+            DIE_IF(w->id, fputs(sampleText.buf, sampleFile) < 0);
         }
 
         // Write to stdout a one line summary of the game
