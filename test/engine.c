@@ -24,27 +24,6 @@ typedef struct {
     int depth;
 } Go;
 
-static void parse_go(const char *tail, Go *go)
-{
-    scope(str_destroy) str_t token = str_init();
-    tail = str_tok(tail, &token, " ");
-    assert(tail);
-
-    if (!strcmp(token.buf, "depth") && (tail = str_tok(tail, &token, " ")))
-        go->depth = atoi(token.buf);
-}
-
-static void parse_option(const char *tail, bool *uciChess960)
-{
-    scope(str_destroy) str_t token = str_init();
-
-    if ((tail = str_tok(tail, &token, " ")) && !strcmp(token.buf, "name")
-            && (tail = str_tok(tail, &token, " ")) && !strcmp(token.buf, "UCI_Chess960")
-            && (tail = str_tok(tail, &token, " ")) && !strcmp(token.buf, "value")
-            && (tail = str_tok(tail, &token, " ")))
-        *uciChess960 = !strcmp(token.buf, "true");
-}
-
 static void parse_position(const char *tail, Position *pos, bool uciChess960)
 {
     scope(str_destroy) str_t token = str_init();
@@ -130,23 +109,25 @@ int main(int argc, char **argv)
     scope(str_destroy) str_t line = str_init(), token = str_init();
 
     while (str_getline(&line, stdin)) {
-        const char *tail = str_tok(line.buf, &token, " ");
+        const char *tail = NULL;
 
-        if (!strcmp(token.buf, "uci")) {
+        if (!strcmp(line.buf, "uci")) {
             uci_puts("id name engine");
             uci_printf("option name UCI_Chess960 type check default %s\n",
                 uciChess960 ? "true" : "false");
             uci_puts("uciok");
-        } else if (!strcmp(token.buf, "isready"))
+        } else if (!strcmp(line.buf, "isready"))
             uci_puts("readyok");
-        else if (!strcmp(token.buf, "setoption"))
-            parse_option(tail, &uciChess960);
-        else if (!strcmp(token.buf, "position"))
+        else if ((tail = str_prefix(line.buf, "setoption "))) {
+            tail = str_prefix(tail, "name UCI_Chess960 value ");
+            uciChess960 = tail && !strcmp(tail, "true");
+        } else if ((tail = str_prefix(line.buf, "position ")))
             parse_position(tail, &pos, uciChess960);
-        else if (!strcmp(token.buf, "go")) {
-            parse_go(tail, &go);
+        else if ((tail = str_prefix(line.buf, "go "))) {
+            tail = str_prefix(tail, "depth ");
+            go.depth = tail ? atoi(tail) : 0;
             run_go(&pos, &go, &seed);
-        } else if (!strcmp(token.buf, "quit"))
+        } else if (!strcmp(line.buf, "quit"))
             break;
     }
 }
