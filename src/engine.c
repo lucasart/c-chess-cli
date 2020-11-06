@@ -52,6 +52,9 @@ static void engine_spawn(const Worker *w, Engine *e, const char *cwd, const char
         DIE_IF(w->id, close(into[0]) < 0);
         DIE_IF(w->id, close(outof[1]) > 0);
 
+        for(int fd = 3; fd < sysconf(FOPEN_MAX); fd++)
+            close(fd);
+
         // Set cwd as current directory, and execute run
         DIE_IF(w->id, chdir(cwd) < 0);
         DIE_IF(w->id, execvp(run, argv) < 0);
