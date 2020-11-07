@@ -204,11 +204,10 @@ void engine_sync(Worker *w, const Engine *e)
     deadline_clear(w);
 }
 
-bool engine_bestmove(Worker *w, const Engine *e, int *score, int64_t *timeLeft, str_t *best,
-    str_t *pv)
+bool engine_bestmove(Worker *w, const Engine *e, int64_t *timeLeft, str_t *best, str_t *pv,
+    Info *info)
 {
     int result = false;
-    *score = 0;
     scope(str_destroy) str_t line = str_init(), token = str_init();
     str_clear(pv);
 
@@ -217,25 +216,30 @@ bool engine_bestmove(Worker *w, const Engine *e, int *score, int64_t *timeLeft, 
 
     while (*timeLeft >= 0 && !result) {
         engine_readln(w, e, &line);
-        *timeLeft = timeLimit - system_msec();
+
+        const int64_t now = system_msec();
+        info->time = now - start;
+        *timeLeft = timeLimit - now;
 
         const char *tail = NULL;
 
         if ((tail = str_prefix(line.buf, "info "))) {
-            while ((tail = str_tok(tail, &token, " ")) && strcmp(token.buf, "score"));
-
-            if ((tail = str_tok(tail, &token, " "))) {
-                if (!strcmp(token.buf, "cp") && (tail = str_tok(tail, &token, " ")))
-                    *score = atoi(token.buf);
-                else if (!strcmp(token.buf, "mate") && (tail = str_tok(tail, &token, " ")))
-                    *score = atoi(token.buf) < 0 ? INT_MIN : INT_MAX;
-                else
-                    DIE("illegal syntax after 'score' in '%s'\n", line.buf);
+            while ((tail = str_tok(tail, &token, " "))) {
+                if (!strcmp(token.buf, "depth")) {
+                    if ((tail = str_tok(tail, &token, " ")))
+                        info->depth = atoi(token.buf);
+                } else if (!strcmp(token.buf, "score")) {
+                    if ((tail = str_tok(tail, &token, " "))) {
+                        if (!strcmp(token.buf, "cp") && (tail = str_tok(tail, &token, " ")))
+                            info->score = atoi(token.buf);
+                        else if (!strcmp(token.buf, "mate") && (tail = str_tok(tail, &token, " ")))
+                            info->score = atoi(token.buf) < 0 ? INT_MIN : INT_MAX;
+                        else
+                            DIE("illegal syntax after 'score' in '%s'\n", line.buf);
+                    }
+                } else if (!strcmp(token.buf, "pv"))
+                    str_cpy_c(pv, tail + 1);
             }
-
-            // update last pv (if available)
-            if (tail && (tail = strstr(tail, "pv ")))
-                str_cpy_c(pv, tail + 3);
         } else if ((tail = str_prefix(line.buf, "bestmove "))) {
             str_tok(tail, &token, " ");
             str_cpy(best, token);

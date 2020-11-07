@@ -239,8 +239,8 @@ int game_play(Worker *w, Game *g, const Options *o, const Engine engines[2],
         uci_go_command(g, eo, ei, timeLeft, &goCmd);
         engine_writeln(w, &engines[ei], goCmd.buf);
 
-        int score = 0;
-        const bool ok = engine_bestmove(w, &engines[ei], &score, &timeLeft[ei], &best, &pv);
+        Info info = {0};
+        const bool ok = engine_bestmove(w, &engines[ei], &timeLeft[ei], &best, &pv, &info);
 
         // Parses the last PV sent. An invalid PV is not fatal, but logs some warnings. Keep track
         // of the resolved position, which is the last in the PV that is not in check (or the
@@ -265,7 +265,7 @@ int game_play(Worker *w, Game *g, const Options *o, const Engine engines[2],
         }
 
         // Apply draw adjudication rule
-        if (o->drawCount && abs(score) <= o->drawScore) {
+        if (o->drawCount && abs(info.score) <= o->drawScore) {
             if (++drawPlyCount >= 2 * o->drawCount) {
                 g->state = STATE_DRAW_ADJUDICATION;
                 break;
@@ -274,7 +274,7 @@ int game_play(Worker *w, Game *g, const Options *o, const Engine engines[2],
             drawPlyCount = 0;
 
         // Apply resign rule
-        if (o->resignCount && score <= -o->resignScore) {
+        if (o->resignCount && info.score <= -o->resignScore) {
             if (++resignCount[ei] >= o->resignCount) {
                 g->state = STATE_RESIGN;
                 break;
@@ -286,7 +286,7 @@ int game_play(Worker *w, Game *g, const Options *o, const Engine engines[2],
         if (prngf(&w->seed) <= o->sampleFrequency) {
             Sample sample = {
                 .pos = o->sampleResolvePv ? resolved : g->pos[g->ply],
-                .score = score,
+                .score = info.score,
                 .result = NB_RESULT // unknown yet (use invalid state for now)
             };
 

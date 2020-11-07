@@ -29,6 +29,12 @@ typedef struct {
     char pad[3];
 } Engine;
 
+// Elements remembered from parsing info lines (for writing PGN comments)
+typedef struct {
+    int score, depth;
+    int64_t time;
+} Info;
+
 Engine engine_init(Worker *w, const char *cmd, const char *name, const str_t *options);
 void engine_destroy(Worker *w, Engine *e);
 
@@ -36,5 +42,5 @@ void engine_readln(const Worker *w, const Engine *e, str_t *line);
 void engine_writeln(const Worker *w, const Engine *e, char *buf);
 
 void engine_sync(Worker *w, const Engine *e);
-bool engine_bestmove(Worker *w, const Engine *e, int *score, int64_t *timeLeft, str_t *best,
-    str_t *pv);
+bool engine_bestmove(Worker *w, const Engine *e, int64_t *timeLeft, str_t *best, str_t *pv,
+    Info *info);
