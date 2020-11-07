@@ -90,7 +90,8 @@ static void run_go(const Position *pos, const Go *go, uint64_t *seed)
 
     for (int depth = 1; depth <= go->depth; depth++) {
         random_pv(pos, seed, depth, &pv);
-        uci_printf("info depth %d score cp %d pv %s\n", depth, (int)(prng(seed) % 65536) - 32768,
+        uci_printf("info depth %d score cp %d pv %s\n", depth,
+            (int)((prng(seed) & 0xFFFFFFFF) - 0x80000000),
             pv.buf);
     }
 
