@@ -12,6 +12,7 @@
  * You should have received a copy of the GNU General Public License along with this program. If
  * not, see <http://www.gnu.org/licenses/>.
 */
+#include <limits.h>
 #include "game.h"
 #include "gen.h"
 #include "util.h"
@@ -394,7 +395,12 @@ void game_export_pgn(const Game *g, str_t *out)
         }
 
         // Write PGN comment
-        str_cat_fmt(out, " {%i/%i}", g->info[ply - 1].score, g->info[ply - 1].depth);
+        if (g->info[ply - 1].score > INT_MAX / 2)
+            str_cat_fmt(out, " {M%i/%i}", INT_MAX - g->info[ply - 1].score, g->info[ply - 1].depth);
+        else if (g->info[ply - 1].score < INT_MIN / 2)
+            str_cat_fmt(out, " {-M%i/%i}", g->info[ply - 1].score - INT_MIN, g->info[ply - 1].depth);
+        else
+            str_cat_fmt(out, " {%i/%i}", g->info[ply - 1].score, g->info[ply - 1].depth);
 
         // Append delimiter
         str_push(out, ply % 10 == 0 ? '\n' : ' ');

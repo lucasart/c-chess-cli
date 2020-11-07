@@ -232,9 +232,10 @@ bool engine_bestmove(Worker *w, const Engine *e, int64_t *timeLeft, str_t *best,
                     if ((tail = str_tok(tail, &token, " "))) {
                         if (!strcmp(token.buf, "cp") && (tail = str_tok(tail, &token, " ")))
                             info->score = atoi(token.buf);
-                        else if (!strcmp(token.buf, "mate") && (tail = str_tok(tail, &token, " ")))
-                            info->score = atoi(token.buf) < 0 ? INT_MIN : INT_MAX;
-                        else
+                        else if (!strcmp(token.buf, "mate") && (tail = str_tok(tail, &token, " "))) {
+                            const int movesToMate = atoi(token.buf);
+                            info->score = movesToMate < 0 ? INT_MIN - movesToMate : INT_MAX - movesToMate;
+                        } else
                             DIE("illegal syntax after 'score' in '%s'\n", line.buf);
                     }
                 } else if (!strcmp(token.buf, "pv"))
