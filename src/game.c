@@ -156,6 +156,7 @@ Game game_init(int round, int game)
     g.names[BLACK] = str_init();
 
     g.pos = vec_init(Position);
+    g.info = vec_init(Info);
     g.samples = vec_init(Sample);
 
     return g;
@@ -174,8 +175,10 @@ bool game_load_fen(Game *g, const char *fen, int *color)
 
 void game_destroy(Game *g)
 {
-    vec_destroy(g->pos);
     vec_destroy(g->samples);
+    vec_destroy(g->info);
+    vec_destroy(g->pos);
+
     str_destroy_n(&g->names[WHITE], &g->names[BLACK]);
 }
 
@@ -241,6 +244,7 @@ int game_play(Worker *w, Game *g, const Options *o, const Engine engines[2],
 
         Info info = {0};
         const bool ok = engine_bestmove(w, &engines[ei], &timeLeft[ei], &best, &pv, &info);
+        vec_push(g->info, info);
 
         // Parses the last PV sent. An invalid PV is not fatal, but logs some warnings. Keep track
         // of the resolved position, which is the last in the PV that is not in check (or the
@@ -388,6 +392,9 @@ void game_export_pgn(const Game *g, str_t *out)
             else
                 str_push(out, '+');  // normal check
         }
+
+        // Write PGN comment
+        str_cat_fmt(out, " {%i/%i}", g->info[ply - 1].score, g->info[ply - 1].depth);
 
         // Append delimiter
         str_push(out, ply % 10 == 0 ? '\n' : ' ');
