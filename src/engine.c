@@ -239,7 +239,7 @@ bool engine_bestmove(Worker *w, const Engine *e, int64_t *timeLeft, str_t *best,
                             DIE("illegal syntax after 'score' in '%s'\n", line.buf);
                     }
                 } else if (!strcmp(token.buf, "pv"))
-                    str_cpy_c(pv, tail + 1);
+                    str_cpy_c(pv, tail + strspn(tail, " "));
             }
         } else if ((tail = str_prefix(line.buf, "bestmove "))) {
             str_tok(tail, &token, " ");
