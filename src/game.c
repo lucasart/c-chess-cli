@@ -125,11 +125,9 @@ static Position resolve_pv(const Worker *w, const Game *g, const char *pv)
         if (illegal_move(m, moves)) {
             if (w->log) {
                 pos_get(&g->pos[g->ply], &fen, g->sfen);
-                DIE_IF(w->id, fprintf(w->log, "WARNING: invalid PV\n") < 0);
-                DIE_IF(w->id, fprintf(w->log, "\tfen: '%s'\n", fen.buf) < 0);
-                DIE_IF(w->id, fprintf(w->log, "\tpv: '%s'\n", pv) < 0);
-                DIE_IF(w->id, fprintf(w->log, "\t'%s%s' starts with an illegal move\n", token.buf,
+                DIE_IF(w->id, fprintf(w->log, "WARNING: illegal move in PV '%s%s'\n", token.buf,
                     tail) < 0);
+                printf("[%d] WARNING: Illegal move in PV '%s%s'\n", w->id, token.buf, tail);
             }
 
             break;
