@@ -55,6 +55,9 @@ static void engine_spawn(const Worker *w, Engine *e, const char *cwd, const char
         for(int fd = 3; fd < sysconf(FOPEN_MAX); fd++)
             close(fd);
 
+        // Inherit process ID and group ID from parent
+        setpgid(0, 0);
+
         // Set cwd as current directory, and execute run
         DIE_IF(w->id, chdir(cwd) < 0);
         DIE_IF(w->id, execvp(run, argv) < 0);

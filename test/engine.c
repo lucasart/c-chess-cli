@@ -106,7 +106,7 @@ int main(int argc, char **argv)
     bool uciChess960 = false;
     uint64_t seed = argc > 1 ? (uint64_t)atoll(argv[1]) : 0;
 
-    scope(str_destroy) str_t line = str_init(), token = str_init();
+    scope(str_destroy) str_t line = str_init();
 
     while (str_getline(&line, stdin)) {
         const char *tail = NULL;
