@@ -18,6 +18,7 @@
 #include <signal.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/wait.h>
 #include <unistd.h>
 #include "engine.h"
 #include "util.h"
@@ -156,12 +157,17 @@ Engine engine_init(Worker *w, const char *cmd, const char *name, const str_t *op
     return e;
 }
 
-void engine_destroy(const Worker *w, Engine *e)
+void engine_destroy(Worker *w, Engine *e)
 {
+    // Order the engine to quit, and grant 1s deadline for obeying
+    deadline_set(w, e->name.buf, system_msec() + 1000);
+    engine_writeln(w, e, "quit");
+    waitpid(e->pid, NULL, 0);
+    deadline_clear(w);
+
     str_destroy(&e->name);
     DIE_IF(w->id, fclose(e->in) < 0);
     DIE_IF(w->id, fclose(e->out) < 0);
-    DIE_IF(w->id, kill(e->pid, SIGTERM) < 0);
 }
 
 void engine_readln(const Worker *w, const Engine *e, str_t *line)

@@ -30,7 +30,7 @@ typedef struct {
 } Engine;
 
 Engine engine_init(Worker *w, const char *cmd, const char *name, const str_t *options);
-void engine_destroy(const Worker *w, Engine *e);
+void engine_destroy(Worker *w, Engine *e);
 
 void engine_readln(const Worker *w, const Engine *e, str_t *line);
 void engine_writeln(const Worker *w, const Engine *e, char *buf);
