@@ -62,30 +62,30 @@ static void options_parse_tc(const char *s, EngineOptions *eo)
     eo->increment = (int64_t)(increment * 1000);
 }
 
-static void options_parse_eo(int argc, const char **argv, int *i, EngineOptions *eo)
+static int options_parse_eo(int argc, const char **argv, int i, EngineOptions *eo)
 {
-    for (int j = *i + 1; j < argc && argv[j][0] != '-'; j++) {
+    while (++i, i < argc && argv[i][0] != '-') {
         const char *tail = NULL;
 
-        if ((tail = str_prefix(argv[j], "cmd=")))
+        if ((tail = str_prefix(argv[i], "cmd=")))
             str_cpy_c(&eo->cmd, tail);
-        else if ((tail = str_prefix(argv[j], "name=")))
+        else if ((tail = str_prefix(argv[i], "name=")))
             str_cpy_c(&eo->name, tail);
-        else if ((tail = str_prefix(argv[j], "option.")))
+        else if ((tail = str_prefix(argv[i], "option.")))
             vec_push(eo->options, str_init_from_c(tail));  // store "name=value" string
-        else if ((tail = str_prefix(argv[j], "depth=")))
+        else if ((tail = str_prefix(argv[i], "depth=")))
             eo->depth = atoi(tail);
-        else if ((tail = str_prefix(argv[j], "nodes=")))
+        else if ((tail = str_prefix(argv[i], "nodes=")))
             eo->nodes = atoll(tail);
-        else if ((tail = str_prefix(argv[j], "st=")))
+        else if ((tail = str_prefix(argv[i], "st=")))
             eo->movetime = (int64_t)(atof(tail) * 1000);
-        else if ((tail = str_prefix(argv[j], "tc=")))
+        else if ((tail = str_prefix(argv[i], "tc=")))
             options_parse_tc(tail, eo);
         else
-            DIE("illegal syntax '%s'\n", argv[j]);
-
-        (*i)++;
+            DIE("illegal syntax '%s'\n", argv[i]);
     }
+
+    return i - 1;
 }
 
 EngineOptions engine_options_init(void)
@@ -144,10 +144,10 @@ void options_parse(int argc, const char **argv, Options *o, EngineOptions **eo)
                 // process tag without value (bool)
                 if (!strcmp(argv[i], "-engine")) {
                     EngineOptions new = engine_options_init();
-                    options_parse_eo(argc, argv, &i, &new);
+                    i = options_parse_eo(argc, argv, i, &new);
                     vec_push(*eo, new);  // new is moved here (engine_options_destroy(&new) not called)
                 } else if (!strcmp(argv[i], "-each")) {
-                    options_parse_eo(argc, argv, &i, &each);
+                    i = options_parse_eo(argc, argv, i, &each);
                     eachSet = true;
                 } else if (!strcmp(argv[i], "-random"))
                     o->random = true;
