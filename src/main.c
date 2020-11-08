@@ -127,7 +127,7 @@ static void *thread_start(void *arg)
         // Write to PGN file
         if (pgnFile) {
             scope(str_destroy) str_t pgnText = str_init();
-            game_export_pgn(&game, &pgnText);
+            game_export_pgn(&game, options.pgnVerbosity, &pgnText);
             DIE_IF(w->id, fputs(pgnText.buf, pgnFile) < 0);
         }
 

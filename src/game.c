@@ -352,7 +352,7 @@ void game_decode_state(const Game *g, str_t *result, str_t *reason)
         assert(false);
 }
 
-void game_export_pgn(const Game *g, str_t *out)
+void game_export_pgn(const Game *g, int verbosity, str_t *out)
 {
     str_cpy_fmt(out, "[Round \"%i.%i\"]\n", g->round + 1, g->game + 1);
     str_cat_fmt(out, "[White \"%S\"]\n", g->names[WHITE]);
@@ -374,6 +374,10 @@ void game_export_pgn(const Game *g, str_t *out)
     str_cat_fmt(out, "[PlyCount \"%i\"]\n\n", g->ply);
     scope(str_destroy) str_t san = str_init();
 
+    const int pliesPerLine = verbosity == 1 ? 6
+        : verbosity == 2 ? 5
+        : 16;
+
     for (int ply = 1; ply <= g->ply; ply++) {
         // Write move number
         if (g->pos[ply - 1].turn == WHITE || ply == 1)
@@ -393,15 +397,28 @@ void game_export_pgn(const Game *g, str_t *out)
         }
 
         // Write PGN comment
-        if (g->info[ply - 1].score > INT_MAX / 2)
-            str_cat_fmt(out, " {M%i/%i}", INT_MAX - g->info[ply - 1].score, g->info[ply - 1].depth);
-        else if (g->info[ply - 1].score < INT_MIN / 2)
-            str_cat_fmt(out, " {-M%i/%i}", g->info[ply - 1].score - INT_MIN, g->info[ply - 1].depth);
-        else
-            str_cat_fmt(out, " {%i/%i}", g->info[ply - 1].score, g->info[ply - 1].depth);
+        const int depth = g->info[ply - 1].depth, score = g->info[ply - 1].score;
+
+        if (verbosity == 1) {
+            if (score > INT_MAX / 2)
+                str_cat_fmt(out, " {M%i/%i}", INT_MAX - score, depth);
+            else if (score < INT_MIN / 2)
+                str_cat_fmt(out, " {-M%i/%i}", score - INT_MIN, depth);
+            else
+                str_cat_fmt(out, " {%i/%i}", score, depth);
+        } else if (verbosity == 2) {
+            const int64_t time = g->info[ply - 1].time;
+
+            if (score > INT_MAX / 2)
+                str_cat_fmt(out, " {M%i/%i %Ims}", INT_MAX - score, depth, time);
+            else if (score < INT_MIN / 2)
+                str_cat_fmt(out, " {-M%i/%i %Ims}", score - INT_MIN, depth, time);
+            else
+                str_cat_fmt(out, " {%i/%i %Ims}", score, depth, time);
+        }
 
         // Append delimiter
-        str_push(out, ply % 10 == 0 ? '\n' : ' ');
+        str_push(out, ply % pliesPerLine == 0 ? '\n' : ' ');
     }
 
     str_cat_c(str_cat(out, result), "\n\n");

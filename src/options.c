@@ -122,6 +122,7 @@ void options_parse(int argc, const char **argv, Options *o, EngineOptions **eo)
     o->concurrency = 1;
     o->games = o->rounds = 1;
     o->sprtParam.alpha = o->sprtParam.beta = 0.05;
+    o->pgnVerbosity = 1;
 
     scope(engine_options_destroy) EngineOptions each = engine_options_init();
     bool eachSet = false;
@@ -173,9 +174,12 @@ void options_parse(int argc, const char **argv, Options *o, EngineOptions **eo)
                 o->rounds = atoi(argv[i]);
             else if (!strcmp(argv[i - 1], "-openings"))
                 str_cpy_c(&o->openings, argv[i]);
-            else if (!strcmp(argv[i - 1], "-pgn"))
+            else if (!strcmp(argv[i - 1], "-pgn")) {
                 str_cpy_c(&o->pgn, argv[i]);
-            else if (!strcmp(argv[i - 1], "-resign"))
+
+                if (i + 1 < argc && argv[i + 1][0] != '-')
+                    o->pgnVerbosity = atoi(argv[++i]);
+            } else if (!strcmp(argv[i - 1], "-resign"))
                 sscanf(argv[i], "%i,%i", &o->resignCount, &o->resignScore);
             else if (!strcmp(argv[i - 1], "-draw"))
                 sscanf(argv[i], "%i,%i", &o->drawCount, &o->drawScore);
