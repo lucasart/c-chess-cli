@@ -19,6 +19,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/wait.h>
+#ifdef __linux__
+    #include <sys/prctl.h>
+#endif
 #include <unistd.h>
 #include "engine.h"
 #include "util.h"
@@ -38,6 +41,9 @@ static void engine_spawn(const Worker *w, Engine *e, const char *cwd, const char
     DIE_IF(w->id, (e->pid = fork()) < 0);
 
     if (e->pid == 0) {
+#ifdef __linux__
+        prctl(PR_SET_PDEATHSIG, SIGTERM);  // delegate zombie purge to the kernel
+#endif
         // in the child process
         DIE_IF(w->id, close(into[1]) < 0);
         DIE_IF(w->id, close(outof[0]) < 0);
@@ -55,9 +61,6 @@ static void engine_spawn(const Worker *w, Engine *e, const char *cwd, const char
 
         for(int fd = 3; fd < sysconf(FOPEN_MAX); fd++)
             close(fd);
-
-        // Inherit process ID and group ID from parent
-        setpgid(0, 0);
 
         // Set cwd as current directory, and execute run
         DIE_IF(w->id, chdir(cwd) < 0);
