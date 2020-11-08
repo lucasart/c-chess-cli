@@ -42,7 +42,7 @@ static void engine_spawn(const Worker *w, Engine *e, const char *cwd, const char
 
     if (e->pid == 0) {
 #ifdef __linux__
-        prctl(PR_SET_PDEATHSIG, SIGTERM);  // delegate zombie purge to the kernel
+        prctl(PR_SET_PDEATHSIG, SIGHUP);  // delegate zombie purge to the kernel
 #endif
         // in the child process
         DIE_IF(w->id, close(into[1]) < 0);
