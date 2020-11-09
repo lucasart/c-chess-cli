@@ -122,7 +122,7 @@ void options_parse(int argc, const char **argv, Options *o, EngineOptions **eo)
     o->concurrency = 1;
     o->games = o->rounds = 1;
     o->sprtParam.alpha = o->sprtParam.beta = 0.05;
-    o->pgnVerbosity = 1;
+    o->pgnVerbosity = 2;
 
     scope(engine_options_destroy) EngineOptions each = engine_options_init();
     bool eachSet = false;

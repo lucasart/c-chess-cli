@@ -38,12 +38,12 @@ if args.task == 'test':
         run('./c-chess-cli -each cmd=./test/engine depth=6 option.Hash=4 ' \
             '-engine name=engine=1 option.Threads=2 -engine name=engine2 depth=5 ' \
             '-sample 0.5,y,training.csv -openings test/chess960.epd ' \
-            '-resign 5,900000000 -draw 3,700000000 -games 965 -log -pgn out1.pgn > stdout1')
+            '-resign 5,900000000 -draw 3,700000000 -games 965 -log -pgn out1.pgn 1 > stdout1')
         run('grep -v ^deadline c-chess-cli.1.log > log1')
 
         run('./c-chess-cli -each "cmd=./test/engine 123" depth=3 ' \
             '-engine option.Hash=2 tc=10/0 -engine name=e2 tc=20/0 -engine name=e3 ' \
-            '-openings test/chess960.epd -repeat -rounds 3 -games 50 -pgn out2.pgn -log > stdout2')
+            '-openings test/chess960.epd -repeat -rounds 3 -games 50 -pgn out2.pgn 1 -log > stdout2')
         run('grep -v ^deadline c-chess-cli.1.log > log2')
 
         print('\nFile signatures:')

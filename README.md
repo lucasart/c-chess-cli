@@ -38,7 +38,7 @@ c-chess-cli [-each [eng_options]] -engine [eng_options] -engine [eng_options] ..
  * `log`: Write all I/O communication with engines to file(s). This produces `c-chess-cli.id.log`, where `id` is the thread id (range `1..concurrency`). Note that all communications (including error messages) starting with `[id]` mean within the context of thread number `id`, which tells you which log file to inspect (id = 0 is the main thread, which does not product a log file, but simply writes to stdout).
  * `openings FILE`: Read opening positions from `FILE`, in EPD format. Note that Chess960 is auto-detected, at position level (not at file level), and `FILE` can mix Chess and Chess960 positions. Both X-FEN (KQkq) and S-FEN (HAha) are supported for Chess960.
  * `random`: Shuffle the opening set (play shuffled set sequentially, no repetitions).
- * `pgn FILE [VERBOSITY]`: Save games to `FILE`, in PGN format. `VERBOSITY` is optional (default value 1): 0 for no comments, 1 for `{score/deph}` comments, or 2 for `{score/depth time}` comments.
+ * `pgn FILE [VERBOSITY]`: Save games to `FILE`, in PGN format. `VERBOSITY` is optional: 0 for no comments, 1 for `{score/deph}` comments, or 2 (default value) for `{score/depth time}` comments.
  * `repeat`: Repeat each opening twice, with each engine playing both sides.
  * `sample freq[,resolvePv[,file]]`. See below.
 
