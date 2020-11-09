@@ -12,6 +12,16 @@
  * You should have received a copy of the GNU General Public License along with this program. If
  * not, see <http://www.gnu.org/licenses/>.
 */
+#ifdef __linux__
+    #define _GNU_SOURCE
+    #include <unistd.h>
+    #undef _GNU_SOURCE
+    #include <fcntl.h>
+    #include <sys/prctl.h>
+#else
+    #include <unistd.h>
+#endif
+
 #include <assert.h>
 #include <limits.h>
 #include <pthread.h>
@@ -19,10 +29,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/wait.h>
-#ifdef __linux__
-    #include <sys/prctl.h>
-#endif
-#include <unistd.h>
+
 #include "engine.h"
 #include "util.h"
 #include "vec.h"
@@ -36,8 +43,14 @@ static void engine_spawn(const Worker *w, Engine *e, const char *cwd, const char
     // 'into' and 'outof' are pipes, each with 2 ends: read=0, write=1
     int outof[2] = {0}, into[2] = {0};
 
+#ifdef __linux__
+    DIE_IF(w->id, pipe2(outof, O_CLOEXEC) < 0);
+    DIE_IF(w->id, pipe2(into, O_CLOEXEC) < 0);
+#else
     DIE_IF(w->id, pipe(outof) < 0);
     DIE_IF(w->id, pipe(into) < 0);
+#endif
+
     DIE_IF(w->id, (e->pid = fork()) < 0);
 
     if (e->pid == 0) {
@@ -59,8 +72,11 @@ static void engine_spawn(const Worker *w, Engine *e, const char *cwd, const char
         DIE_IF(w->id, close(into[0]) < 0);
         DIE_IF(w->id, close(outof[1]) > 0);
 
-        for(int fd = 3; fd < sysconf(FOPEN_MAX); fd++)
-            close(fd);
+#ifndef __linux__
+        // Ugly (and slow) workaround for non-Linux POSIX systems that lack the ability to
+        // atomically set O_CLOEXEC when creating pipes.
+        for(int fd = 3; fd < sysconf(FOPEN_MAX); close(fd++));
+#endif
 
         // Set cwd as current directory, and execute run
         DIE_IF(w->id, chdir(cwd) < 0);
