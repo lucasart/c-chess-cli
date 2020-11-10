@@ -57,25 +57,25 @@ static void engine_spawn(const Worker *w, Engine *e, const char *cwd, const char
 #ifdef __linux__
         prctl(PR_SET_PDEATHSIG, SIGHUP);  // delegate zombie purge to the kernel
 #endif
-        // in the child process
-        DIE_IF(w->id, close(into[1]) < 0);
-        DIE_IF(w->id, close(outof[0]) < 0);
-
+        // Plug stdin and stdout
         DIE_IF(w->id, dup2(into[0], STDIN_FILENO) < 0);
         DIE_IF(w->id, dup2(outof[1], STDOUT_FILENO) < 0);
 
-        // When readStdErr, dump stderr into stdout, like doing '2>&1' in bash
+        // For stderr we have 2 choices:
+        // - readStdErr=true: dump it into stdout, like doing '2>&1' in bash. This is useful, if we
+        // want to see error messages from engines in their respective log file (notably assert()
+        // writes to stderr). Of course, such error messages should not be UCI commands, otherwise we
+        // will be fooled into parsing them as such.
+        // - readStdErr=false: do nothing, which means stderr is inherited from the parent process.
+        // Typcically, this means all engines write their error messages to the terminal (unless
+        // redirected otherwise).
         if (readStdErr)
             DIE_IF(w->id, dup2(outof[1], STDERR_FILENO) < 0);
-
-        // Close file descriptors that won't be needed anymore
-        DIE_IF(w->id, close(into[0]) < 0);
-        DIE_IF(w->id, close(outof[1]) > 0);
 
 #ifndef __linux__
         // Ugly (and slow) workaround for non-Linux POSIX systems that lack the ability to
         // atomically set O_CLOEXEC when creating pipes.
-        for(int fd = 3; fd < sysconf(FOPEN_MAX); close(fd++));
+        for (int fd = 3; fd < sysconf(FOPEN_MAX); close(fd++));
 #endif
 
         // Set cwd as current directory, and execute run
