@@ -37,7 +37,7 @@ static void main_init(int argc, const char **argv)
     options_parse(argc, argv, &options, &eo);
 
     jq = job_queue_init(vec_size(eo), options.rounds, options.games, options.gauntlet);
-    openings = openings_init(options.openings.buf, options.random, 0);
+    openings = openings_init(options.openings.buf, options.random, options.srand, 0);
 
     pgnFile = NULL;
 

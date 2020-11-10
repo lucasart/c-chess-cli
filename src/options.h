@@ -21,6 +21,7 @@
 typedef struct {
     str_t openings, pgn, sampleFileName;
     SPRTParam sprtParam;
+    uint64_t srand;
     double sampleFrequency;
     int concurrency, games, rounds;
     int resignCount, resignScore;

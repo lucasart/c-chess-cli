@@ -17,7 +17,7 @@
 #include "util.h"
 #include "vec.h"
 
-Openings openings_init(const char *fileName, bool random, int threadId)
+Openings openings_init(const char *fileName, bool random, uint64_t srand, int threadId)
 {
     Openings o = {0};
     o.index = vec_init(size_t);
@@ -40,7 +40,7 @@ Openings openings_init(const char *fileName, bool random, int threadId)
             // consistent treatment of random and !random, and guarantees no repetition N-cycles in
             // the random case, rather than sqrt(N) (birthday paradox) if random seek each time.
             const size_t n = vec_size(o.index);
-            uint64_t seed = (uint64_t)system_msec();
+            uint64_t seed = srand ? srand : (uint64_t)system_msec();
 
             for (size_t i = n - 1; i > 0; i--) {
                 const size_t j = prng(&seed) % (i + 1);

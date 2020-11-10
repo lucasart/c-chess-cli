@@ -36,10 +36,10 @@ c-chess-cli [-each [eng_options]] -engine [eng_options] -engine [eng_options] ..
  * `gauntlet`: Play a gauntlet tournament (first engine against the others). The default is to play a round-robin.
  * `sprt elo0,elo1[,alpha,beta]`: Performs a Sequential Probability Ratio Test for `H1: elo=elo1` vs `H0: elo=elo0`, where `alpha` is the type I error probability (false positive), and `beta` is type II error probability (false negative). Note that `alpha` and `beta` are optional, and their default value is 0.05. This can only be used in matches between two players.
  * `log`: Write all I/O communication with engines to file(s). This produces `c-chess-cli.id.log`, where `id` is the thread id (range `1..concurrency`). Note that all communications (including error messages) starting with `[id]` mean within the context of thread number `id`, which tells you which log file to inspect (id = 0 is the main thread, which does not product a log file, but simply writes to stdout).
- * `openings file=FILE [order=ORDER]`:
+ * `openings file=FILE [order=ORDER] [srand=N]`:
    * Read opening positions from `FILE`, in EPD format. Note that Chess960 is auto-detected, at position level (not at file level), and `FILE` can mix Chess and Chess960 positions. Both X-FEN (KQkq) and S-FEN (HAha) are supported for Chess960.
-   * `ORDER` can be `random` or `sequential` (default value).
- * `random`: Shuffle the opening set (play shuffled set sequentially, no repetitions).
+   * `order` can be `random` or `sequential` (default value).
+   * `srand` sets the seed of the random number generator to `N`. The default value `N=0` will set the seed automatically to an unpredictable number. Any non-zero number will generate a unique, reproducible random sequence.
  * `pgn FILE [VERBOSITY]`: Save games to `FILE`, in PGN format. `VERBOSITY` is optional: 0 for no comments, 1 for `{score/deph}` comments, or 2 (default value) for `{score/depth time}` comments.
  * `repeat`: Repeat each opening twice, with each engine playing both sides.
  * `sample freq[,resolvePv[,file]]`. See below.

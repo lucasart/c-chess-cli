@@ -116,19 +116,17 @@ static Position resolve_pv(const Worker *w, const Game *g, const char *pv)
     p[0] = resolved;
     int idx = 0;
     move_t *moves = vec_init_reserve(64, move_t);
-    scope(str_destroy) str_t fen = str_init();
 
     while ((tail = str_tok(tail, &token, " "))) {
         const move_t m = pos_lan_to_move(&p[idx], token.buf);
         moves = gen_all_moves(&p[idx], moves);
 
         if (illegal_move(m, moves)) {
-            if (w->log) {
-                pos_get(&g->pos[g->ply], &fen, g->sfen);
+            printf("[%d] WARNING: Illegal move in PV '%s%s'\n", w->id, token.buf, tail);
+
+            if (w->log)
                 DIE_IF(w->id, fprintf(w->log, "WARNING: illegal move in PV '%s%s'\n", token.buf,
                     tail) < 0);
-                printf("[%d] WARNING: Illegal move in PV '%s%s'\n", w->id, token.buf, tail);
-            }
 
             break;
         }

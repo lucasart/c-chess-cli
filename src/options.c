@@ -102,7 +102,9 @@ static int options_parse_openings(int argc, const char **argv, int i, Options *o
                 o->random = true;
             else if (strcmp(tail, "sequential"))
                 DIE("illegal syntax '%s'\n", argv[i]);
-        } else
+        } else if ((tail = str_prefix(argv[i], "srand=")))
+            o->srand = (uint64_t)atoll(tail);
+        else
             DIE("illegal syntax '%s'\n", argv[i]);
 
         i++;
