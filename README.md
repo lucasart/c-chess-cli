@@ -20,7 +20,7 @@ c-chess-cli [-each [eng_options]] -engine [eng_options] -engine [eng_options] ..
 ./c-chess-cli -each tc=4+0.04 option.Hash=8 option.Threads=1 \
     -engine cmd=demolito "option.Time Buffer=80" nodes=200000 \
     -engine cmd=../Engines/critter_1.6a depth=11 \
-    -games 1920 -concurrency 8 -openings test/chess960.epd -random -repeat \
+    -games 1920 -concurrency 8 -openings file=test/chess960.epd order=random -repeat \
     -resign 3,700 -draw 8,10 -pgn out.pgn 2
 ```
 
@@ -36,7 +36,9 @@ c-chess-cli [-each [eng_options]] -engine [eng_options] -engine [eng_options] ..
  * `gauntlet`: Play a gauntlet tournament (first engine against the others). The default is to play a round-robin.
  * `sprt elo0,elo1[,alpha,beta]`: Performs a Sequential Probability Ratio Test for `H1: elo=elo1` vs `H0: elo=elo0`, where `alpha` is the type I error probability (false positive), and `beta` is type II error probability (false negative). Note that `alpha` and `beta` are optional, and their default value is 0.05. This can only be used in matches between two players.
  * `log`: Write all I/O communication with engines to file(s). This produces `c-chess-cli.id.log`, where `id` is the thread id (range `1..concurrency`). Note that all communications (including error messages) starting with `[id]` mean within the context of thread number `id`, which tells you which log file to inspect (id = 0 is the main thread, which does not product a log file, but simply writes to stdout).
- * `openings FILE`: Read opening positions from `FILE`, in EPD format. Note that Chess960 is auto-detected, at position level (not at file level), and `FILE` can mix Chess and Chess960 positions. Both X-FEN (KQkq) and S-FEN (HAha) are supported for Chess960.
+ * `openings file=FILE [order=ORDER]`:
+   * Read opening positions from `FILE`, in EPD format. Note that Chess960 is auto-detected, at position level (not at file level), and `FILE` can mix Chess and Chess960 positions. Both X-FEN (KQkq) and S-FEN (HAha) are supported for Chess960.
+   * `ORDER` can be `random` or `sequential` (default value).
  * `random`: Shuffle the opening set (play shuffled set sequentially, no repetitions).
  * `pgn FILE [VERBOSITY]`: Save games to `FILE`, in PGN format. `VERBOSITY` is optional: 0 for no comments, 1 for `{score/deph}` comments, or 2 (default value) for `{score/depth time}` comments.
  * `repeat`: Repeat each opening twice, with each engine playing both sides.

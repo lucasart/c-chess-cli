@@ -64,7 +64,7 @@ static void options_parse_tc(const char *s, EngineOptions *eo)
 
 static int options_parse_eo(int argc, const char **argv, int i, EngineOptions *eo)
 {
-    while (++i, i < argc && argv[i][0] != '-') {
+    while (i < argc && argv[i][0] != '-') {
         const char *tail = NULL;
 
         if ((tail = str_prefix(argv[i], "cmd=")))
@@ -83,9 +83,33 @@ static int options_parse_eo(int argc, const char **argv, int i, EngineOptions *e
             options_parse_tc(tail, eo);
         else
             DIE("illegal syntax '%s'\n", argv[i]);
+
+        i++;
     }
 
     return i - 1;
+}
+
+static int options_parse_openings(int argc, const char **argv, int i, Options *o)
+{
+    while (i < argc && argv[i][0] != '-') {
+        const char *tail = NULL;
+
+        if ((tail = str_prefix(argv[i], "file=")))
+            str_cpy_c(&o->openings, tail);
+        else if ((tail = str_prefix(argv[i], "order="))) {
+            if (!strcmp(tail, "random"))
+                o->random = true;
+            else if (strcmp(tail, "sequential"))
+                DIE("illegal syntax '%s'\n", argv[i]);
+        } else
+            DIE("illegal syntax '%s'\n", argv[i]);
+
+        i++;
+    }
+
+    return i - 1;
+
 }
 
 EngineOptions engine_options_init(void)
@@ -115,8 +139,8 @@ Options options_init(void)
 void options_parse(int argc, const char **argv, Options *o, EngineOptions **eo)
 {
     // List options that expect a value
-    static const char *options[] = {"-concurrency", "-games", "-rounds", "-openings", "-pgn",
-        "-nodes", "-depth", "-draw", "-resign", "-st", "-tc", "-sprt", "-sample"};
+    static const char *options[] = {"-concurrency", "-draw", "-each", "-engine", "-games",
+        "-openings", "-pgn", "-resign", "-rounds", "-sample", "-sprt"};
 
     // Default values
     o->concurrency = 1;
@@ -143,16 +167,7 @@ void options_parse(int argc, const char **argv, Options *o, EngineOptions **eo)
 
             if (!expectValue) {
                 // process tag without value (bool)
-                if (!strcmp(argv[i], "-engine")) {
-                    EngineOptions new = engine_options_init();
-                    i = options_parse_eo(argc, argv, i, &new);
-                    vec_push(*eo, new);  // new is moved here (engine_options_destroy(&new) not called)
-                } else if (!strcmp(argv[i], "-each")) {
-                    i = options_parse_eo(argc, argv, i, &each);
-                    eachSet = true;
-                } else if (!strcmp(argv[i], "-random"))
-                    o->random = true;
-                else if (!strcmp(argv[i], "-repeat"))
+                if (!strcmp(argv[i], "-repeat"))
                     o->repeat = true;
                 else if (!strcmp(argv[i], "-gauntlet"))
                     o->gauntlet = true;
@@ -168,12 +183,19 @@ void options_parse(int argc, const char **argv, Options *o, EngineOptions **eo)
 
             if (!strcmp(argv[i - 1], "-concurrency"))
                 o->concurrency = atoi(argv[i]);
-            else if (!strcmp(argv[i - 1], "-games"))
+            else if (!strcmp(argv[i - 1], "-each")) {
+                i = options_parse_eo(argc, argv, i, &each);
+                eachSet = true;
+            } else if (!strcmp(argv[i - 1], "-engine")) {
+                EngineOptions new = engine_options_init();
+                i = options_parse_eo(argc, argv, i, &new);
+                vec_push(*eo, new);  // new is moved here (engine_options_destroy(&new) not called)
+            } else if (!strcmp(argv[i - 1], "-games"))
                 o->games = atoi(argv[i]);
             else if (!strcmp(argv[i - 1], "-rounds"))
                 o->rounds = atoi(argv[i]);
             else if (!strcmp(argv[i - 1], "-openings"))
-                str_cpy_c(&o->openings, argv[i]);
+                i = options_parse_openings(argc, argv, i, o);
             else if (!strcmp(argv[i - 1], "-pgn")) {
                 str_cpy_c(&o->pgn, argv[i]);
 
