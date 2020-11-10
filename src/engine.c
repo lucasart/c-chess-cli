@@ -15,7 +15,6 @@
 #ifdef __linux__
     #define _GNU_SOURCE
     #include <unistd.h>
-    #undef _GNU_SOURCE
     #include <fcntl.h>
     #include <sys/prctl.h>
 #else
@@ -27,6 +26,7 @@
 #include <pthread.h>
 #include <signal.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
 #include <sys/wait.h>
 
