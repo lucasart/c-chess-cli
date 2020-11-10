@@ -23,7 +23,7 @@ Openings openings_init(const char *fileName, bool random, int threadId)
     o.index = vec_init(size_t);
 
     if (*fileName)
-        DIE_IF(threadId, !(o.file = fopen(fileName, "r")));
+        DIE_IF(threadId, !(o.file = fopen(fileName, "re")));
 
     if (o.file) {
         // Fill o.index[] to record file offsets for each lines

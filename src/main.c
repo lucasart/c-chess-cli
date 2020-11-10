@@ -42,7 +42,7 @@ static void main_init(int argc, const char **argv)
     pgnFile = NULL;
 
     if (options.pgn.len)
-        DIE_IF(0, !(pgnFile = fopen(options.pgn.buf, "a")));
+        DIE_IF(0, !(pgnFile = fopen(options.pgn.buf, "ae")));
 
     sampleFile = NULL;
 
