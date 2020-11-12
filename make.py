@@ -38,7 +38,7 @@ if args.task == 'test':
         run('./c-chess-cli -each cmd=./test/engine depth=6 option.Hash=4 ' \
             '-engine name=engine=1 option.Threads=2 -engine name=engine2 depth=5 ' \
             '-sample 0.5,y,training.csv -openings file=test/chess960.epd order=random srand=1 ' \
-            '-resign 5,900000000 -draw 3,700000000 -games 965 -log -pgn out1.pgn 1 > stdout1')
+            '-resign 5 900000000 -draw 3 700000000 -games 965 -log -pgn out1.pgn 1 > stdout1')
         run('grep -v ^deadline c-chess-cli.1.log > log1')
 
         run('./c-chess-cli -each "cmd=./test/engine 123" depth=3 ' \

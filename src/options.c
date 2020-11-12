@@ -111,7 +111,17 @@ static int options_parse_openings(int argc, const char **argv, int i, Options *o
     }
 
     return i - 1;
+}
 
+static int options_parse_adjudication(int argc, const char **argv, int i, int *count, int *score)
+{
+    if (i + 1 < argc) {
+        *count = atoi(argv[i++]);
+        *score = atoi(argv[i]);
+    } else
+        DIE("Invalid syntax for '%s'\n", argv[i - 1]);
+
+    return i;
 }
 
 EngineOptions engine_options_init(void)
@@ -140,10 +150,6 @@ Options options_init(void)
 
 void options_parse(int argc, const char **argv, Options *o, EngineOptions **eo)
 {
-    // List options that expect a value
-    static const char *options[] = {"-concurrency", "-draw", "-each", "-engine", "-games",
-        "-openings", "-pgn", "-resign", "-rounds", "-sample", "-sprt"};
-
     // Default values
     o->concurrency = 1;
     o->games = o->rounds = 1;
@@ -153,74 +159,45 @@ void options_parse(int argc, const char **argv, Options *o, EngineOptions **eo)
     scope(engine_options_destroy) EngineOptions each = engine_options_init();
     bool eachSet = false;
 
-    bool expectValue = false;  // pattern: '-tag [value]'. should next arg be a value or tag ?
-
     for (int i = 1; i < argc; i++) {
-        if (argv[i][0] == '-' && isalpha((unsigned char)argv[i][1])) {
-            // process tag
-            if (expectValue)
-                DIE("value expected after '%s'. found tag '%s' instead.\n", argv[i - 1], argv[i]);
+        if (!strcmp(argv[i], "-repeat"))
+            o->repeat = true;
+        else if (!strcmp(argv[i], "-gauntlet"))
+            o->gauntlet = true;
+        else if (!strcmp(argv[i], "-log"))
+            o->log = true;
+        else if (!strcmp(argv[i], "-concurrency"))
+            o->concurrency = atoi(argv[++i]);
+        else if (!strcmp(argv[i], "-each")) {
+            i = options_parse_eo(argc, argv, i + 1, &each);
+            eachSet = true;
+        } else if (!strcmp(argv[i], "-engine")) {
+            EngineOptions new = engine_options_init();
+            i = options_parse_eo(argc, argv, i + 1, &new);
+            vec_push(*eo, new);  // new gets moved here
+        } else if (!strcmp(argv[i], "-games"))
+            o->games = atoi(argv[++i]);
+        else if (!strcmp(argv[i], "-rounds"))
+            o->rounds = atoi(argv[++i]);
+        else if (!strcmp(argv[i], "-openings"))
+            i = options_parse_openings(argc, argv, i + 1, o);
+        else if (!strcmp(argv[i], "-pgn")) {
+            str_cpy_c(&o->pgn, argv[++i]);
 
-            for (size_t j = 0; j < sizeof(options) / sizeof(*options); j++)
-                if (!strcmp(argv[i], options[j])) {
-                    expectValue = true;
-                    break;
-                }
-
-            if (!expectValue) {
-                // process tag without value (bool)
-                if (!strcmp(argv[i], "-repeat"))
-                    o->repeat = true;
-                else if (!strcmp(argv[i], "-gauntlet"))
-                    o->gauntlet = true;
-                else if (!strcmp(argv[i], "-log"))
-                    o->log = true;
-                else
-                    DIE("invalid tag '%s'\n", argv[i]);
-            }
-        } else {
-            // Process a value
-            if (!expectValue)
-                DIE("tag expected after '%s'. found value '%s' instead.\n", argv[i - 1], argv[i]);
-
-            if (!strcmp(argv[i - 1], "-concurrency"))
-                o->concurrency = atoi(argv[i]);
-            else if (!strcmp(argv[i - 1], "-each")) {
-                i = options_parse_eo(argc, argv, i, &each);
-                eachSet = true;
-            } else if (!strcmp(argv[i - 1], "-engine")) {
-                EngineOptions new = engine_options_init();
-                i = options_parse_eo(argc, argv, i, &new);
-                vec_push(*eo, new);  // new is moved here (engine_options_destroy(&new) not called)
-            } else if (!strcmp(argv[i - 1], "-games"))
-                o->games = atoi(argv[i]);
-            else if (!strcmp(argv[i - 1], "-rounds"))
-                o->rounds = atoi(argv[i]);
-            else if (!strcmp(argv[i - 1], "-openings"))
-                i = options_parse_openings(argc, argv, i, o);
-            else if (!strcmp(argv[i - 1], "-pgn")) {
-                str_cpy_c(&o->pgn, argv[i]);
-
-                if (i + 1 < argc && argv[i + 1][0] != '-')
-                    o->pgnVerbosity = atoi(argv[++i]);
-            } else if (!strcmp(argv[i - 1], "-resign"))
-                sscanf(argv[i], "%i,%i", &o->resignCount, &o->resignScore);
-            else if (!strcmp(argv[i - 1], "-draw"))
-                sscanf(argv[i], "%i,%i", &o->drawCount, &o->drawScore);
-            else if (!strcmp(argv[i - 1], "-sprt")) {
-                o->sprt = true;
-                sscanf(argv[i], "%lf,%lf,%lf,%lf", &o->sprtParam.elo0, &o->sprtParam.elo1,
-                    &o->sprtParam.alpha, &o->sprtParam.beta);
-            } else if (!strcmp(argv[i - 1], "-sample"))
-                options_parse_sample(argv[i], o);
-            else
-                assert(false);
-
-            expectValue = false;
-        }
-
-        if (expectValue && i == argc - 1)
-            DIE("value expected after '%s'\n", argv[i]);
+            if (i + 1 < argc && argv[i + 1][0] != '-')
+                o->pgnVerbosity = atoi(argv[++i]);
+        } else if (!strcmp(argv[i], "-resign"))
+            i = options_parse_adjudication(argc, argv, i + 1, &o->resignCount, &o->resignScore);
+        else if (!strcmp(argv[i], "-draw"))
+            i = options_parse_adjudication(argc, argv, i + 1, &o->drawCount, &o->drawScore);
+        else if (!strcmp(argv[i], "-sprt")) {
+            o->sprt = true;
+            sscanf(argv[++i], "%lf,%lf,%lf,%lf", &o->sprtParam.elo0, &o->sprtParam.elo1,
+                &o->sprtParam.alpha, &o->sprtParam.beta);
+        } else if (!strcmp(argv[i], "-sample"))
+            options_parse_sample(argv[++i], o);
+        else
+            DIE("Unknown option '%s'\n", argv[i]);
     }
 
     if (eachSet) {
