@@ -82,7 +82,7 @@ static int options_parse_eo(int argc, const char **argv, int i, EngineOptions *e
         else if ((tail = str_prefix(argv[i], "tc=")))
             options_parse_tc(tail, eo);
         else
-            DIE("illegal syntax '%s'\n", argv[i]);
+            DIE("Illegal syntax '%s'\n", argv[i]);
 
         i++;
     }
@@ -101,11 +101,11 @@ static int options_parse_openings(int argc, const char **argv, int i, Options *o
             if (!strcmp(tail, "random"))
                 o->random = true;
             else if (strcmp(tail, "sequential"))
-                DIE("illegal syntax '%s'\n", argv[i]);
+                DIE("Invalid order for -openings: '%s'\n", tail);
         } else if ((tail = str_prefix(argv[i], "srand=")))
             o->srand = (uint64_t)atoll(tail);
         else
-            DIE("illegal syntax '%s'\n", argv[i]);
+            DIE("Illegal token in -openings: '%s'\n", argv[i]);
 
         i++;
     }
@@ -119,9 +119,36 @@ static int options_parse_adjudication(int argc, const char **argv, int i, int *c
         *count = atoi(argv[i++]);
         *score = atoi(argv[i]);
     } else
-        DIE("Invalid syntax for '%s'\n", argv[i - 1]);
+        DIE("Missing parameter(s) for '%s'\n", argv[i - 1]);
 
     return i;
+}
+
+static int options_parse_sprt(int argc, const char **argv, int i, Options *o)
+{
+    o->sprt = true;
+
+    while (i < argc && argv[i][0] != '-') {
+        const char *tail = NULL;
+
+        if ((tail = str_prefix(argv[i], "elo0=")))
+            o->sprtParam.elo0 = atof(tail);
+        else if ((tail = str_prefix(argv[i], "elo1=")))
+            o->sprtParam.elo1 = atof(tail);
+        else if ((tail = str_prefix(argv[i], "alpha=")))
+            o->sprtParam.alpha = atof(tail);
+        else if ((tail = str_prefix(argv[i], "beta=")))
+            o->sprtParam.beta = atof(tail);
+        else
+            DIE("Illegal token in -sprt: '%s'\n", argv[i]);
+
+        i++;
+    }
+
+    if (!sprt_validate(&o->sprtParam))
+        DIE("Invalid SPRT parameters\n");
+
+    return i - 1;
 }
 
 EngineOptions engine_options_init(void)
@@ -190,11 +217,9 @@ void options_parse(int argc, const char **argv, Options *o, EngineOptions **eo)
             i = options_parse_adjudication(argc, argv, i + 1, &o->resignCount, &o->resignScore);
         else if (!strcmp(argv[i], "-draw"))
             i = options_parse_adjudication(argc, argv, i + 1, &o->drawCount, &o->drawScore);
-        else if (!strcmp(argv[i], "-sprt")) {
-            o->sprt = true;
-            sscanf(argv[++i], "%lf,%lf,%lf,%lf", &o->sprtParam.elo0, &o->sprtParam.elo1,
-                &o->sprtParam.alpha, &o->sprtParam.beta);
-        } else if (!strcmp(argv[i], "-sample"))
+        else if (!strcmp(argv[i], "-sprt"))
+            i = options_parse_sprt(argc, argv, i + 1, o);
+        else if (!strcmp(argv[i], "-sample"))
             options_parse_sample(argv[++i], o);
         else
             DIE("Unknown option '%s'\n", argv[i]);

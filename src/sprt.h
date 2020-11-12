@@ -19,4 +19,5 @@ typedef struct {
     double elo0, elo1, alpha, beta;
 } SPRTParam;
 
+bool sprt_validate(const SPRTParam *sp);
 bool sprt_done(int wldCount[NB_RESULT], const SPRTParam *sp);

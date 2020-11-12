@@ -36,6 +36,13 @@ static double sprt_llr(int wldCount[NB_RESULT], double elo0, double elo1)
     return (s1 - s0) * (2 * s - s0 - s1) / (2 * var / n);
 }
 
+bool sprt_validate(const SPRTParam *sp)
+{
+    return 0 < sp->alpha && sp->alpha < 1
+        && 0 < sp->beta && sp->beta < 1
+        && sp->elo0 < sp->elo1;
+}
+
 bool sprt_done(int wldCount[NB_RESULT], const SPRTParam *sp)
 {
     const double lbound = log(sp->beta / (1 - sp->alpha));

@@ -21,7 +21,7 @@ c-chess-cli [-each [eng_options]] -engine [eng_options] -engine [eng_options] ..
     -engine cmd=demolito "option.Time Buffer=80" nodes=200000 \
     -engine cmd=../Engines/critter_1.6a depth=11 \
     -games 1920 -concurrency 8 -openings file=test/chess960.epd order=random -repeat \
-    -resign 3 700 -draw 8 10 -pgn out.pgn 2
+    -sprt elo0=1 elo1=5 -resign 3 700 -draw 8 10 -pgn out.pgn 2
 ```
 
 ### Options
@@ -34,7 +34,7 @@ c-chess-cli [-each [eng_options]] -engine [eng_options] -engine [eng_options] ..
  * `games N`: Play N games per encounter (default value 1). This value should be set to an even number in tournaments with more than two players to make sure that each player plays an equal number of games with white and black pieces.
  * `rounds N`: Multiply the number of rounds to play by `N` (default value 1).
  * `gauntlet`: Play a gauntlet tournament (first engine against the others). The default is to play a round-robin.
- * `sprt elo0,elo1[,alpha,beta]`: Performs a Sequential Probability Ratio Test for `H1: elo=elo1` vs `H0: elo=elo0`, where `alpha` is the type I error probability (false positive), and `beta` is type II error probability (false negative). Note that `alpha` and `beta` are optional, and their default value is 0.05. This can only be used in matches between two players.
+ * `sprt [elo0=E0] elo1=E1 [alpha=A] [beta=B]`: Performs a Sequential Probability Ratio Test for `H1: elo=E1` vs `H0: elo=E0`, where `alpha` is the type I error probability (false positive), and `beta` is type II error probability (false negative). Default values are `elo0=0`, and `alpha=beta=0.05`. This can only be used in matches between two players.
  * `log`: Write all I/O communication with engines to file(s). This produces `c-chess-cli.id.log`, where `id` is the thread id (range `1..concurrency`). Note that all communications (including error messages) starting with `[id]` mean within the context of thread number `id`, which tells you which log file to inspect (id = 0 is the main thread, which does not product a log file, but simply writes to stdout).
  * `openings file=FILE [order=ORDER] [srand=N]`:
    * Read opening positions from `FILE`, in EPD format. Note that Chess960 is auto-detected, at position level (not at file level), and `FILE` can mix Chess and Chess960 positions. Both X-FEN (KQkq) and S-FEN (HAha) are supported for Chess960.
