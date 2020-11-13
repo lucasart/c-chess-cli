@@ -47,9 +47,9 @@ if args.task == 'test':
         run('grep -v ^deadline c-chess-cli.1.log > log2')
 
         print('\nFile signatures:')
-        run('shasum stdout1 stdout2 out1.pgn out2.pgn log1 log2 training.csv')
+        run('sha1sum stdout1 stdout2 out1.pgn out2.pgn log1 log2 training.csv')
         print('\nOverall signature:')
-        run('cat stdout1 stdout2 out1.pgn out2.pgn log1 log2 training.csv |shasum')
+        run('cat stdout1 stdout2 out1.pgn out2.pgn log1 log2 training.csv |sha1sum')
 
 elif args.task == 'main':
     if args.output == '': args.output = './c-chess-cli'
