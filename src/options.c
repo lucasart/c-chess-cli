@@ -172,17 +172,18 @@ Options options_init(void)
     o.openings = str_init();
     o.pgn = str_init();
     o.sampleFileName = str_init();
+
+    // non-zero default values
+    o.concurrency = 1;
+    o.games = o.rounds = 1;
+    o.sprtParam.alpha = o.sprtParam.beta = 0.05;
+    o.pgnVerbosity = 2;
+
     return o;
 }
 
 void options_parse(int argc, const char **argv, Options *o, EngineOptions **eo)
 {
-    // Default values
-    o->concurrency = 1;
-    o->games = o->rounds = 1;
-    o->sprtParam.alpha = o->sprtParam.beta = 0.05;
-    o->pgnVerbosity = 2;
-
     scope(engine_options_destroy) EngineOptions each = engine_options_init();
     bool eachSet = false;
 

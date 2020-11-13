@@ -201,7 +201,7 @@ int game_play(Worker *w, Game *g, const Options *o, const Engine engines[2],
         engine_sync(w, &engines[i]);
     }
 
-    scope(str_destroy) str_t posCmd = str_init(), goCmd = str_init(), best = str_init();
+    scope(str_destroy) str_t cmd = str_init(), best = str_init();
     move_t played = 0;
     int drawPlyCount = 0;
     int resignCount[NB_COLOR] = {0};
@@ -217,8 +217,8 @@ int game_play(Worker *w, Game *g, const Options *o, const Engine engines[2],
         if ((g->state = game_apply_chess_rules(g, &legalMoves)))
             break;
 
-        uci_position_command(g, &posCmd);
-        engine_writeln(w, &engines[ei], posCmd.buf);
+        uci_position_command(g, &cmd);
+        engine_writeln(w, &engines[ei], cmd.buf);
         engine_sync(w, &engines[ei]);
 
         // Prepare timeLeft[ei]
@@ -236,8 +236,8 @@ int game_play(Worker *w, Game *g, const Options *o, const Engine engines[2],
             // Only depth and/or nodes limit
             timeLeft[ei] = INT64_MAX / 2;  // HACK: system_msec() + timeLeft must not overflow
 
-        uci_go_command(g, eo, ei, timeLeft, &goCmd);
-        engine_writeln(w, &engines[ei], goCmd.buf);
+        uci_go_command(g, eo, ei, timeLeft, &cmd);
+        engine_writeln(w, &engines[ei], cmd.buf);
 
         Info info = {0};
         const bool ok = engine_bestmove(w, &engines[ei], &timeLeft[ei], &best, &pv, &info);
