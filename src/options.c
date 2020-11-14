@@ -48,15 +48,21 @@ static void options_parse_tc(const char *s, EngineOptions *eo)
 {
     double time = 0, increment = 0;
 
-    if (strchr(s, '/')) {
-        if (sscanf(s, "%i/%lf+%lf", &eo->movestogo, &time, &increment) < 2)
-            DIE("Cannot parse 'tc:%s'\n", s);
-    } else {
-        eo->movestogo = 0;
+    // s = left+increment
+    scope(str_destroy) str_t left = str_init(), right = str_init();
+    str_tok(str_tok(s, &left, "+"), &right, "+");
+    increment = atof(right.buf);
 
-        if (sscanf(s, "%lf+%lf", &time, &increment) < 1)
-            DIE("Cannot parse 'tc:%s'\n", s);
-    }
+    // parse left
+    if (strchr(left.buf, '/')) {
+        // left = movestogo/time
+        scope(str_destroy) str_t copy = str_init_from(left);
+        str_tok(str_tok(copy.buf, &left, "/"), &right, "/");
+        eo->movestogo = atoi(left.buf);
+        time = atof(right.buf);
+    } else
+        // left = time
+        time = atof(left.buf);
 
     eo->time = (int64_t)(time * 1000);
     eo->increment = (int64_t)(increment * 1000);
