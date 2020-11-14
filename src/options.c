@@ -15,6 +15,7 @@
 #include <assert.h>
 #include <ctype.h>
 #include <limits.h>
+#include <string.h>
 #include "options.h"
 #include "util.h"
 #include "vec.h"

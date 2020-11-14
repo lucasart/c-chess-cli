@@ -13,8 +13,10 @@
  * not, see <http://www.gnu.org/licenses/>.
 */
 #include <assert.h>
+#include <errno.h>
 #include <stdarg.h>
 #include <stdlib.h>
+#include <string.h>
 #include <time.h>
 #include "util.h"
 
@@ -44,4 +46,10 @@ void system_sleep(int64_t msec)
 {
     const struct timespec t = {.tv_sec = msec / 1000, .tv_nsec = (msec % 1000) * 1000000LL};
     nanosleep(&t, NULL);
+}
+
+_Noreturn void die_errno(const int threadId, const char *fileName, int line)
+{
+    fprintf(stderr, "[%d] error in %s: (%d). %s\n", threadId, fileName, line, strerror(errno));
+    exit(EXIT_FAILURE);
 }

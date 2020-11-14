@@ -13,12 +13,9 @@
  * not, see <http://www.gnu.org/licenses/>.
 */
 #pragma once
-#include <errno.h>
 #include <inttypes.h>
-#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 
 #define min(x, y) ({ \
     typeof(x) _x = (x), _y = (y); \
@@ -47,9 +44,9 @@ void system_sleep(int64_t msec);
     exit(EXIT_FAILURE); \
 } while (0)
 
-#define DIE_IF(id, v) do { \
-    if (v) { \
-        fprintf(stderr, "[%d] error in %s: (%d). %s\n", id, __FILE__, __LINE__, strerror(errno)); \
-        exit(EXIT_FAILURE); \
-    } \
-} while (0)
+_Noreturn void die_errno(const int threadId, const char *fileName, int line);
+
+#define DIE_IF(id, v) ({ \
+    if (v) \
+        die_errno(id, __FILE__, __LINE__); \
+})

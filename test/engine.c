@@ -13,6 +13,7 @@
  * not, see <http://www.gnu.org/licenses/>.
 */
 // Stand alone program: minimal UCI engine (random mover) used for testing and benchmarking
+#include <string.h>
 #include "gen.h"
 #include "util.h"
 #include "vec.h"
