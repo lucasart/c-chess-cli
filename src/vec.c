@@ -43,27 +43,31 @@ size_t vec_capacity(const void *v)
     return vec_cptr(v)->capacity;
 }
 
-void *vec_do_grow(void *v, size_t esize, size_t n)
+void *vec_do_grow(void *v, size_t esize, size_t additional)
 {
-    assert(v);
+    vec_t *p = vec_ptr(v);
+    size_t n = p->capacity;
 
-    if (n * esize < 2 * sizeof(size_t))
-        // First realloc must be at least 2 machine words, at least n=1 element, and the formula
-        // also gives a bonus to small esize.
-        n = (2 * sizeof(size_t) + esize) / esize;
-    else if (n * esize + sizeof(vec_t) < 4096)
-        // As long as we occupy less than a memory page, double the size
-        n += n;
-    else {
-        // Otherwise, multiply by 1.5 (rounding up as n must strictly increase). This reduces memory
-        // waste and fragmentation.
-        assert(n);
-        n += (n + 1) / 2;
+    while (n < p->size + additional) {
+        if (n * esize < 2 * sizeof(size_t)) {
+            // First realloc must be at least 2 machine words
+            n = (2 * sizeof(size_t) + esize) / esize;
+            assert(n > 0);
+        } else if (n * esize + sizeof(vec_t) < 4096) {
+            // As long as we occupy less than a memory page, double the size
+            assert(n > 0);
+            n *= 2;
+        } else {
+            // Otherwise, multiply by 1.5 (rounding up to always increase)
+            assert(n > 0);
+            n += (n + 1) / 2;
+        }
     }
 
-    vec_t *p = vec_ptr(v);
-    p = realloc(p, sizeof(vec_t) + esize * n);
-    p->capacity = n;
+    if (n > p->capacity) {
+        p = realloc(p, sizeof(vec_t) + esize * n);
+        p->capacity = n;
+    }
 
     return p->buf;
 }

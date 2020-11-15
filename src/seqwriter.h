@@ -13,33 +13,23 @@
  * not, see <http://www.gnu.org/licenses/>.
 */
 #pragma once
-#include <inttypes.h>
-#include "workers.h"
-#include "sprt.h"
+#include <pthread.h>
+#include <stdio.h>
 #include "str.h"
 
 typedef struct {
-    str_t openings, pgn, sample;
-    SPRTParam sprtParam;
-    uint64_t srand;
-    double sampleFrequency;
-    int concurrency, games, rounds;
-    int resignCount, resignScore;
-    int drawCount, drawScore;
-    int pgnVerbosity;
-    bool log, random, repeat, sprt, gauntlet, sampleResolvePv;
-    char pad[2];
-} Options;
+    size_t idx;
+    str_t str;
+} SeqStr;
 
 typedef struct {
-    str_t cmd, name, *options;
-    int64_t time, increment, movetime, nodes;
-    int depth, movestogo;
-} EngineOptions;
+    pthread_mutex_t mtx;
+    SeqStr *buf;
+    FILE *out;
+    size_t idxNext;
+} SeqWriter;
 
-EngineOptions engine_options_init(void);
-void engine_options_destroy(EngineOptions *eo);
+SeqWriter seq_writer_init(const char *fileName, const char *mode);
+void seq_writer_destroy(SeqWriter *sw);
 
-Options options_init(void);
-void options_parse(int argc, const char **argv, Options *o, EngineOptions **eo);
-void options_destroy(Options *o);
+void seq_writer_push(SeqWriter *sw, size_t idx, str_t str);

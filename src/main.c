@@ -19,6 +19,7 @@
 #include "jobs.h"
 #include "openings.h"
 #include "options.h"
+#include "seqwriter.h"
 #include "sprt.h"
 #include "util.h"
 #include "vec.h"
@@ -27,7 +28,7 @@
 static Options options;
 static EngineOptions *eo;
 static Openings openings;
-static FILE *pgnFile, *sampleFile;
+static SeqWriter pgnSeqWriter, sampleSeqWriter;
 static JobQueue jq;
 
 static void main_init(int argc, const char **argv)
@@ -39,15 +40,11 @@ static void main_init(int argc, const char **argv)
     jq = job_queue_init(vec_size(eo), options.rounds, options.games, options.gauntlet);
     openings = openings_init(options.openings.buf, options.random, options.srand, 0);
 
-    pgnFile = NULL;
-
     if (options.pgn.len)
-        DIE_IF(0, !(pgnFile = fopen(options.pgn.buf, "ae")));
+        pgnSeqWriter = seq_writer_init(options.pgn.buf, "ae");
 
-    sampleFile = NULL;
-
-    if (options.sampleFileName.len)
-        DIE_IF(0, !(sampleFile = fopen(options.sampleFileName.buf, "a")));
+    if (options.sample.len)
+        sampleSeqWriter = seq_writer_init(options.sample.buf, "ae");
 
     // Prepare Workers[]
     Workers = vec_init(Worker);
@@ -66,11 +63,11 @@ static void main_destroy(void)
 {
     vec_destroy_rec(Workers, worker_destroy);
 
-    if (pgnFile)
-        DIE_IF(0, fclose(pgnFile) < 0);
+    if (options.sample.len)
+        seq_writer_destroy(&sampleSeqWriter);
 
-    if (sampleFile)
-        DIE_IF(0, fclose(sampleFile) < 0);
+    if (options.pgn.len)
+        seq_writer_destroy(&pgnSeqWriter);
 
     openings_destroy(&openings, 0);
     job_queue_destroy(&jq);
@@ -125,17 +122,17 @@ static void *thread_start(void *arg)
         const int wld = game_play(w, &game, &options, engines, eoPair, j.reverse);
 
         // Write to PGN file
-        if (pgnFile) {
+        if (options.pgn.len) {
             scope(str_destroy) str_t pgnText = str_init();
             game_export_pgn(&game, options.pgnVerbosity, &pgnText);
-            DIE_IF(w->id, fputs(pgnText.buf, pgnFile) < 0);
+            seq_writer_push(&pgnSeqWriter, idx, pgnText);
         }
 
         // Write to Sample file
-        if (sampleFile) {
+        if (options.sample.len) {
             scope(str_destroy) str_t sampleText = str_init();
             game_export_samples(&game, &sampleText);
-            DIE_IF(w->id, fputs(sampleText.buf, sampleFile) < 0);
+            seq_writer_push(&sampleSeqWriter, idx, sampleText);
         }
 
         // Write to stdout a one line summary of the game

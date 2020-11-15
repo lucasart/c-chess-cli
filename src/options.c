@@ -38,9 +38,9 @@ static void options_parse_sample(const char *s, Options *o)
 
     // Parse filename (default sample.csv if omitted)
     if ((tail = str_tok(tail, &token, ",")))
-        str_cpy(&o->sampleFileName, token);
+        str_cpy(&o->sample, token);
     else
-        str_cpy_c(&o->sampleFileName, "sample.csv");
+        str_cpy_c(&o->sample, "sample.csv");
 }
 
 // Parse time control. Expects 'mtg/time+inc' or 'time+inc'. Note that time and inc are provided by
@@ -178,7 +178,7 @@ Options options_init(void)
     Options o = {0};
     o.openings = str_init();
     o.pgn = str_init();
-    o.sampleFileName = str_init();
+    o.sample = str_init();
 
     // non-zero default values
     o.concurrency = 1;
@@ -273,5 +273,5 @@ void options_parse(int argc, const char **argv, Options *o, EngineOptions **eo)
 
 void options_destroy(Options *o)
 {
-    str_destroy_n(&o->openings, &o->pgn, &o->sampleFileName);
+    str_destroy_n(&o->openings, &o->pgn, &o->sample);
 }

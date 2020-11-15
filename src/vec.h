@@ -53,7 +53,7 @@ void *vec_do_grow(void *v, size_t esize, size_t n);
 #define vec_push(v, e) ({ \
     const vec_t *p = vec_cptr(v); \
     if (p->capacity == p->size) \
-        v = vec_do_grow(v, sizeof(*v), p->capacity); \
+        v = vec_do_grow(v, sizeof(*v), 1); \
     (v)[vec_ptr(v)->size++] = (e); \
 })
 

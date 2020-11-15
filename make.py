@@ -24,7 +24,7 @@ def compile(program, output):
     sources = 'src/bitboard.c src/gen.c src/position.c src/str.c src/util.c src/vec.c'
     if program == 'main':
         sources += ' src/engine.c src/game.c src/jobs.c src/main.c src/openings.c src/options.c' \
-            ' src/sprt.c src/workers.c'
+            ' src/seqwriter.c src/sprt.c src/workers.c'
     elif program == 'engine':
         sources += ' test/engine.c'
 
