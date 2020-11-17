@@ -59,7 +59,7 @@ static void main_init(int argc, const char **argv)
     }
 }
 
-static void main_destroy(void)
+static __attribute__((destructor)) void main_destroy(void)
 {
     vec_destroy_rec(Workers, worker_destroy);
 
@@ -194,6 +194,5 @@ int main(int argc, const char **argv)
     for (int i = 0; i < options.concurrency; i++)
         pthread_join(threads[i], NULL);
 
-    main_destroy();
     return 0;
 }
