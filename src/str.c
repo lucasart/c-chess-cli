@@ -15,8 +15,6 @@
 #include <assert.h>
 #include <inttypes.h>
 #include <stdarg.h>
-#include <stdbool.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include "str.h"
@@ -25,12 +23,22 @@
 static size_t str_round_up(size_t n)
 // Round to the next power of 2, at least the size of 2 machine words
 {
-    size_t p2 = 2 * sizeof(size_t);
+    if (n < 2 * sizeof(size_t))
+        return 2 * sizeof(size_t);
+    else if (n < 4096)
+        // growth rate 2
+        return n & (n - 1)
+            ? 1ULL << (64 - __builtin_clzll(n))  // next power of 2
+            : n;  // already a power of 2
+    else {
+        // growth rate 1.5
+        size_t p = 4096;
 
-    while (p2 < n)
-        p2 *= 2;
+        while (p < n)
+            p += p / 2;
 
-    return p2;
+        return p;
+    }
 }
 
 static void str_resize(str_t *s, size_t len)
