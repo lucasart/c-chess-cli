@@ -106,7 +106,8 @@ int main(int argc, char **argv)
     Position pos = {0};
     Go go = {0};
     bool uciChess960 = false;
-    uint64_t seed = argc > 1 ? (uint64_t)atoll(argv[1]) : 0;
+    const uint64_t originalSeed = argc > 1 ? (uint64_t)atoll(argv[1]) : 0;
+    uint64_t seed = originalSeed;
 
     scope(str_destroy) str_t line = str_init();
 
@@ -118,7 +119,9 @@ int main(int argc, char **argv)
             uci_printf("option name UCI_Chess960 type check default %s\n",
                 uciChess960 ? "true" : "false");
             uci_puts("uciok");
-        } else if (!strcmp(line.buf, "isready"))
+        } else if (!strcmp(line.buf, "ucinewgame"))
+            seed = originalSeed;  // make results reproducible across ucinewgame
+        else if (!strcmp(line.buf, "isready"))
             uci_puts("readyok");
         else if ((tail = str_prefix(line.buf, "setoption "))) {
             tail = str_prefix(tail, "name UCI_Chess960 value ");
