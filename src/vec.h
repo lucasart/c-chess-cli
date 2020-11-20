@@ -31,8 +31,7 @@ void *vec_do_init(size_t capacity, size_t esize);
 #define vec_init_reserve(capacity, etype) vec_do_init(capacity, sizeof(etype))
 
 #define vec_destroy(v) ({ \
-    assert(v); \
-    free(vec_ptr(v)); \
+    if (v) free(vec_ptr(v)); \
     v = NULL; \
 })
 

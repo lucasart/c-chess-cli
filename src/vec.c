@@ -35,7 +35,7 @@ void *vec_do_init(size_t capacity, size_t esize)
 
 size_t vec_size(const void *v)
 {
-    return vec_cptr(v)->size;
+    return v ? vec_cptr(v)->size : 0;
 }
 
 size_t vec_capacity(const void *v)
