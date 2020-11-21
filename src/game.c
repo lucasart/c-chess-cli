@@ -55,7 +55,7 @@ static void uci_go_command(Game *g, const EngineOptions *eo[2], int ei, const in
     if (eo[ei]->movetime)
         str_cat_fmt(cmd, " movetime %I", eo[ei]->movetime);
 
-    if (eo[ei]->time) {
+    if (eo[ei]->time || eo[ei]->increment) {
         const int color = g->pos[g->ply].turn;
 
         str_cat_fmt(cmd, " wtime %I winc %I btime %I binc %I",
@@ -225,7 +225,7 @@ int game_play(Worker *w, Game *g, const Options *o, const Engine engines[2],
         if (eo[ei]->movetime)
             // movetime is special: discard movestogo, time, increment
             timeLeft[ei] = eo[ei]->movetime;
-        else if (eo[ei]->time) {
+        else if (eo[ei]->time || eo[ei]->increment) {
             // Always apply increment (can be zero)
             timeLeft[ei] += eo[ei]->increment;
 
@@ -260,7 +260,7 @@ int game_play(Worker *w, Game *g, const Options *o, const Engine engines[2],
             break;
         }
 
-        if ((eo[ei]->time || eo[ei]->movetime) && timeLeft[ei] < 0) {
+        if ((eo[ei]->time || eo[ei]->increment || eo[ei]->movetime) && timeLeft[ei] < 0) {
             g->state = STATE_TIME_LOSS;
             break;
         }
