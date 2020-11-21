@@ -32,8 +32,26 @@ static SeqWriter pgnSeqWriter;
 FILE *sampleFile;
 static JobQueue jq;
 
+static void main_destroy(void)
+{
+    vec_destroy_rec(Workers, worker_destroy);
+
+    if (options.sample.len)
+        fclose(sampleFile);
+
+    if (options.pgn.len)
+        seq_writer_destroy(&pgnSeqWriter);
+
+    openings_destroy(&openings, 0);
+    job_queue_destroy(&jq);
+    options_destroy(&options);
+    vec_destroy_rec(eo, engine_options_destroy);
+}
+
 static void main_init(int argc, const char **argv)
 {
+    atexit(main_destroy);
+
     eo = vec_init(EngineOptions);
     options = options_init();
     options_parse(argc, argv, &options, &eo);
@@ -58,22 +76,6 @@ static void main_init(int argc, const char **argv)
 
         vec_push(Workers, worker_init(i, logName.buf));
     }
-}
-
-static __attribute__((destructor)) void main_destroy(void)
-{
-    vec_destroy_rec(Workers, worker_destroy);
-
-    if (options.sample.len)
-        fclose(sampleFile);
-
-    if (options.pgn.len)
-        seq_writer_destroy(&pgnSeqWriter);
-
-    openings_destroy(&openings, 0);
-    job_queue_destroy(&jq);
-    options_destroy(&options);
-    vec_destroy_rec(eo, engine_options_destroy);
 }
 
 static void *thread_start(void *arg)
