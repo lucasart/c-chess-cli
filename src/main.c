@@ -28,7 +28,8 @@
 static Options options;
 static EngineOptions *eo;
 static Openings openings;
-static SeqWriter pgnSeqWriter, sampleSeqWriter;
+static SeqWriter pgnSeqWriter;
+FILE *sampleFile;
 static JobQueue jq;
 
 static void main_init(int argc, const char **argv)
@@ -44,7 +45,7 @@ static void main_init(int argc, const char **argv)
         pgnSeqWriter = seq_writer_init(options.pgn.buf, "ae");
 
     if (options.sample.len)
-        sampleSeqWriter = seq_writer_init(options.sample.buf, "ae");
+        DIE_IF(0, !(sampleFile = fopen(options.sample.buf, "ae")));
 
     // Prepare Workers[]
     Workers = vec_init(Worker);
@@ -64,7 +65,7 @@ static __attribute__((destructor)) void main_destroy(void)
     vec_destroy_rec(Workers, worker_destroy);
 
     if (options.sample.len)
-        seq_writer_destroy(&sampleSeqWriter);
+        fclose(sampleFile);
 
     if (options.pgn.len)
         seq_writer_destroy(&pgnSeqWriter);
@@ -132,7 +133,7 @@ static void *thread_start(void *arg)
         if (options.sample.len) {
             scope(str_destroy) str_t sampleText = str_init();
             game_export_samples(&game, &sampleText);
-            seq_writer_push(&sampleSeqWriter, idx, sampleText);
+            fputs(sampleText.buf, sampleFile);
         }
 
         // Write to stdout a one line summary of the game
