@@ -107,7 +107,7 @@ static void init_slider_attacks(int square, bitboard_t mask[NB_SQUARE],
     mask[square] = slider_attacks(square, 0, dir) & ~edges;
     shift[square] = (unsigned)(64 - bb_count(mask[square]));
 
-    if (square < H8)
+    if (square + 1 < NB_SQUARE)
         attacksPtr[square + 1] = attacksPtr[square] + (1 << bb_count(mask[square]));
 
     // Loop over the subsets of mask[square]
@@ -135,7 +135,7 @@ static __attribute__((constructor)) void bb_init(void)
     }
 
     // Initialise Ray[][] and Segment[][]
-    for (int square = A1; square <= H8; square++) {
+    for (int square = 0; square < NB_SQUARE; square++) {
         for (int d = 0; d < 8; d++) {
             bitboard_t mask = 0;
             int r2 = rank_of(square), f2 = file_of(square);
@@ -156,7 +156,7 @@ static __attribute__((constructor)) void bb_init(void)
     }
 
     // Initialise leaper attacks (N, K, P)
-    for (int square = A1; square <= H8; square++) {
+    for (int square = 0; square < NB_SQUARE; square++) {
         const int rank = rank_of(square), file = file_of(square);
 
         for (int d = 0; d < 8; d++) {
@@ -174,7 +174,7 @@ static __attribute__((constructor)) void bb_init(void)
     BishopAttacks[0] = BishopDB;
     RookAttacks[0] = RookDB;
 
-    for (int square = A1; square <= H8; square++) {
+    for (int square = 0; square < NB_SQUARE; square++) {
         init_slider_attacks(square, BishopMask, BishopMagic, BishopShift, BishopAttacks, BishopDir);
         init_slider_attacks(square, RookMask, RookMagic, RookShift, RookAttacks, RookDir);
     }

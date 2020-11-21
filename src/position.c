@@ -28,12 +28,12 @@ static __attribute__((constructor)) void zobrist_init(void)
 {
     uint64_t seed = 0;
 
-    for (int color = WHITE; color <= BLACK; color++)
-        for (int piece = KNIGHT; piece < NB_PIECE; piece++)
-            for (int square = A1; square <= H8; square++)
+    for (int color = 0; color < NB_COLOR; color++)
+        for (int piece = 0; piece < NB_PIECE; piece++)
+            for (int square = 0; square < NB_SQUARE; square++)
                 ZobristKey[color][piece][square] = prng(&seed);
 
-    for (int square = A1; square <= H8; square++) {
+    for (int square = 0; square < NB_COLOR; square++) {
         ZobristCastling[square] = prng(&seed);
         ZobristEnPassant[square] = prng(&seed);
     }
