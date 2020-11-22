@@ -18,7 +18,6 @@
 
 // Result for each pair (e1, e2); e1 < e2. Stores count of game outcomes from e1's point of view.
 typedef struct {
-    pthread_mutex_t mtx;
     int count[3];
     char pad[4];
 } Result;
@@ -33,9 +32,11 @@ typedef struct {
 
 // Job Queue: consumed by workers to play tournament (thread safe)
 typedef struct {
-    pthread_mutex_t mtx;
+    pthread_mutex_t mtxJobs;
     Job *jobs;
     size_t idx;
+
+    pthread_mutex_t mtxResults;
     Result *results;
 } JobQueue;
 
@@ -43,6 +44,6 @@ JobQueue job_queue_init(int engines, int rounds, int games, bool gauntlet);
 void job_queue_destroy(JobQueue *jq);
 
 bool job_queue_pop(JobQueue *jq, Job *j, size_t *idx, size_t *count);
-void job_queue_add_result(const JobQueue *jq, int pair, int outcome, int count[3]);
+void job_queue_add_result(JobQueue *jq, int pair, int outcome, int count[3]);
 bool job_queue_done(JobQueue *jq);
 void job_queue_stop(JobQueue *jq);

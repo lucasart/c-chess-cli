@@ -33,7 +33,8 @@ JobQueue job_queue_init(int engines, int rounds, int games, bool gauntlet)
     assert(engines >= 2 && rounds >= 1 && games >= 1);
 
     JobQueue jq = {0};
-    pthread_mutex_init(&jq.mtx, NULL);
+    pthread_mutex_init(&jq.mtxJobs, NULL);
+    pthread_mutex_init(&jq.mtxResults, NULL);
     jq.jobs = vec_init(Job);
     jq.results = vec_init(Result);
 
@@ -71,13 +72,13 @@ void job_queue_destroy(JobQueue *jq)
 {
     vec_destroy(jq->results);
     vec_destroy(jq->jobs);
-    pthread_mutex_destroy(&jq->mtx);
+    pthread_mutex_destroy(&jq->mtxJobs);
+    pthread_mutex_destroy(&jq->mtxResults);
 }
 
 bool job_queue_pop(JobQueue *jq, Job *j, size_t *idx, size_t *count)
 {
-    pthread_mutex_lock(&jq->mtx);
-
+    pthread_mutex_lock(&jq->mtxJobs);
     const bool ok = jq->idx < vec_size(jq->jobs);
 
     if (ok) {
@@ -86,37 +87,34 @@ bool job_queue_pop(JobQueue *jq, Job *j, size_t *idx, size_t *count)
         *count = vec_size(jq->jobs);
     }
 
-    pthread_mutex_unlock(&jq->mtx);
-
+    pthread_mutex_unlock(&jq->mtxJobs);
     return ok;
 }
 
 // Add game outcome, and return updated totals
-void job_queue_add_result(const JobQueue *jq, int pair, int outcome, int count[3])
+void job_queue_add_result(JobQueue *jq, int pair, int outcome, int count[3])
 {
-    pthread_mutex_lock(&jq->results[pair].mtx);
-
+    pthread_mutex_lock(&jq->mtxResults);
     jq->results[pair].count[outcome]++;
 
     for (size_t i = 0; i < 3; i++)
         count[i] = jq->results[pair].count[i];
 
-    pthread_mutex_unlock(&jq->results[pair].mtx);
+    pthread_mutex_unlock(&jq->mtxResults);
 }
 
 bool job_queue_done(JobQueue *jq)
 {
-    pthread_mutex_lock(&jq->mtx);
+    pthread_mutex_lock(&jq->mtxJobs);
     assert(jq->idx <= vec_size(jq->jobs));
     const bool done = jq->idx == vec_size(jq->jobs);
-    pthread_mutex_unlock(&jq->mtx);
-
+    pthread_mutex_unlock(&jq->mtxJobs);
     return done;
 }
 
 void job_queue_stop(JobQueue *jq)
 {
-    pthread_mutex_lock(&jq->mtx);
+    pthread_mutex_lock(&jq->mtxJobs);
     jq->idx = vec_size(jq->jobs);
-    pthread_mutex_unlock(&jq->mtx);
+    pthread_mutex_unlock(&jq->mtxJobs);
 }
