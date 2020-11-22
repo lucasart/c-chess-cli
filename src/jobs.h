@@ -15,6 +15,7 @@
 #pragma once
 #include <pthread.h>
 #include <stdbool.h>
+#include "str.h"
 
 // Result for each pair (e1, e2); e1 < e2. Stores count of game outcomes from e1's point of view.
 typedef struct {
@@ -36,6 +37,9 @@ typedef struct {
     Job *jobs;
     size_t idx;
 
+    pthread_mutex_t mtxNames;
+    str_t *names;
+
     pthread_mutex_t mtxResults;
     Result *results;
 } JobQueue;
@@ -47,3 +51,5 @@ bool job_queue_pop(JobQueue *jq, Job *j, size_t *idx, size_t *count);
 void job_queue_add_result(JobQueue *jq, int pair, int outcome, int count[3]);
 bool job_queue_done(JobQueue *jq);
 void job_queue_stop(JobQueue *jq);
+
+void job_queue_set_name(JobQueue *jq, int ei, const char *name);

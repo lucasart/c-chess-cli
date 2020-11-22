@@ -35,9 +35,16 @@ JobQueue job_queue_init(int engines, int rounds, int games, bool gauntlet)
 
     JobQueue jq = {0};
     pthread_mutex_init(&jq.mtxJobs, NULL);
+    pthread_mutex_init(&jq.mtxNames, NULL);
     pthread_mutex_init(&jq.mtxResults, NULL);
+
     jq.jobs = vec_init(Job);
     jq.results = vec_init(Result);
+    jq.names = vec_init(str_t);
+
+    // Prepare engine names: blank for now, will be discovered at run time (concurrently)
+    for (int i = 0; i < engines; i++)
+        vec_push(jq.names, str_init());
 
     if (gauntlet) {
         // Gauntlet: N-1 pairs (0, e2) with 0 < e2
@@ -73,8 +80,11 @@ void job_queue_destroy(JobQueue *jq)
 {
     vec_destroy(jq->results);
     vec_destroy(jq->jobs);
-    pthread_mutex_destroy(&jq->mtxJobs);
+    vec_destroy_rec(jq->names, str_destroy);
+
     pthread_mutex_destroy(&jq->mtxResults);
+    pthread_mutex_destroy(&jq->mtxNames);
+    pthread_mutex_destroy(&jq->mtxJobs);
 }
 
 bool job_queue_pop(JobQueue *jq, Job *j, size_t *idx, size_t *count)
@@ -118,4 +128,14 @@ void job_queue_stop(JobQueue *jq)
     pthread_mutex_lock(&jq->mtxJobs);
     jq->idx = vec_size(jq->jobs);
     pthread_mutex_unlock(&jq->mtxJobs);
+}
+
+void job_queue_set_name(JobQueue *jq, int ei, const char *name)
+{
+    pthread_mutex_lock(&jq->mtxNames);
+
+    if (!jq->names[ei].len)
+        str_cpy_c(&jq->names[ei], name);
+
+    pthread_mutex_unlock(&jq->mtxNames);
 }

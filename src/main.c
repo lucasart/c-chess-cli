@@ -97,6 +97,7 @@ static void *thread_start(void *arg)
 
                 ei[i] = job.ei[i];
                 engines[i] = engine_init(w, eo[ei[i]].cmd.buf, eo[ei[i]].name.buf, eo[ei[i]].options);
+                job_queue_set_name(&jq, ei[i], engines[i].name.buf);
             }
 
         // Choose opening position
