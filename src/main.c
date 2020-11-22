@@ -84,45 +84,38 @@ static void *thread_start(void *arg)
     Engine engines[2] = {0};
 
     scope(str_destroy) str_t fen = str_init();
-    Job j = {0};
-    int e1 = 0, e2 = 1;  // eo[e1] plays eo[e2]
+    Job job = {0};
+    int ei[2] = {-1, -1};  // eo[ei[0]] plays eo[ei[1]]: initialize with invalid values to start
     size_t idx = 0, count = 0;  // game idx and count (shared across workers)
 
-    // Prepare engines[]
-    engines[0] = engine_init(w, eo[e1].cmd.buf, eo[e1].name.buf, eo[e1].options);
-    engines[1] = engine_init(w, eo[e2].cmd.buf, eo[e2].name.buf, eo[e2].options);
+    while (job_queue_pop(&jq, &job, &idx, &count)) {
+        // Engine stop/start, as needed
+        for (int i = 0; i < 2; i++)
+            if (job.ei[i] != ei[i]) {
+                if (engines[i].pid)
+                    engine_destroy(w, &engines[i]);
 
-    while (job_queue_pop(&jq, &j, &idx, &count)) {
-        // Engine switching (if needed)
-        if (j.e1 != e1) {
-            e1 = j.e1;
-            engine_destroy(w, &engines[0]);
-            engines[0] = engine_init(w, eo[e1].cmd.buf, eo[e1].name.buf, eo[e1].options);
-        }
-
-        if (j.e2 != e2) {
-            e2 = j.e2;
-            engine_destroy(w, &engines[1]);
-            engines[1] = engine_init(w, eo[e2].cmd.buf, eo[e2].name.buf, eo[e2].options);
-        }
+                ei[i] = job.ei[i];
+                engines[i] = engine_init(w, eo[ei[i]].cmd.buf, eo[ei[i]].name.buf, eo[ei[i]].options);
+            }
 
         // Choose opening position
         openings_next(&openings, &fen, options.repeat ? idx / 2 : idx, w->id);
 
         // Play 1 game
-        Game game = game_init(j.round, j.game);
+        Game game = game_init(job.round, job.game);
         int color = WHITE;
 
         if (!game_load_fen(&game, fen.buf, &color))
             DIE("[%d] illegal FEN '%s'\n", w->id, fen.buf);
 
-        const int whiteIdx = color ^ j.reverse;
+        const int whiteIdx = color ^ job.reverse;
 
         printf("[%d] Started game %zu of %zu (%s vs %s)\n", w->id, idx + 1, count,
             engines[whiteIdx].name.buf, engines[opposite(whiteIdx)].name.buf);
 
-        const EngineOptions *eoPair[2] = {&eo[e1], &eo[e2]};
-        const int wld = game_play(w, &game, &options, engines, eoPair, j.reverse);
+        const EngineOptions *eoPair[2] = {&eo[ei[0]], &eo[ei[1]]};
+        const int wld = game_play(w, &game, &options, engines, eoPair, job.reverse);
 
         // Write to PGN file
         if (options.pgn.len) {
@@ -147,7 +140,7 @@ static void *thread_start(void *arg)
 
         // Update on global score (across workers)
         int wldCount[3] = {0};
-        job_queue_add_result(&jq, j.pair, wld, wldCount);
+        job_queue_add_result(&jq, job.pair, wld, wldCount);
 
         const int n = wldCount[RESULT_WIN] + wldCount[RESULT_LOSS] + wldCount[RESULT_DRAW];
 
