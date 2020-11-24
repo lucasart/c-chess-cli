@@ -48,8 +48,10 @@ JobQueue job_queue_init(int engines, int rounds, int games, bool gauntlet)
 
     if (gauntlet) {
         // Gauntlet: N-1 pairs (0, e2) with 0 < e2
-        for (int e2 = 1; e2 < engines; e2++)
-            vec_push(jq.results, (Result){0});
+        for (int e2 = 1; e2 < engines; e2++) {
+            const Result r = {.ei = {0, e2}, .count = {0}, {0}};
+            vec_push(jq.results, r);
+        }
 
         for (int r = 0; r < rounds; r++) {
             int added = 0;  // number of games already added to the current round
@@ -60,8 +62,10 @@ JobQueue job_queue_init(int engines, int rounds, int games, bool gauntlet)
     } else {
         // Round robin: N(N-1)/2 pairs (e1, e2) with e1 < e2
         for (int e1 = 0; e1 < engines - 1; e1++)
-            for (int e2 = e1 + 1; e2 < engines; e2++)
-                vec_push(jq.results, (Result){0});
+            for (int e2 = e1 + 1; e2 < engines; e2++) {
+                const Result r = {.ei = {e1, e2}, .count = {0}, {0}};
+                vec_push(jq.results, r);
+            }
 
         for (int r = 0; r < rounds; r++) {
             int pair = 0;  // enumerate pairs in order

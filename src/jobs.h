@@ -19,6 +19,7 @@
 
 // Result for each pair (e1, e2); e1 < e2. Stores count of game outcomes from e1's point of view.
 typedef struct {
+    int ei[2];
     int count[3];
     char pad[4];
 } Result;
