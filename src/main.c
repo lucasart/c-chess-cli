@@ -191,5 +191,9 @@ int main(int argc, const char **argv)
     for (int i = 0; i < options.concurrency; i++)
         pthread_join(threads[i], NULL);
 
+    scope(str_destroy) str_t results = str_init();
+    job_queue_print_results(&jq, &results);
+    fputs(results.buf, stdout);
+
     return 0;
 }

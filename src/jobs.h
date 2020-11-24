@@ -54,3 +54,4 @@ bool job_queue_done(JobQueue *jq);
 void job_queue_stop(JobQueue *jq);
 
 void job_queue_set_name(JobQueue *jq, int ei, const char *name);
+void job_queue_print_results(JobQueue *jq, str_t *out);

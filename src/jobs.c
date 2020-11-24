@@ -14,6 +14,7 @@
 */
 #include "jobs.h"
 #include "vec.h"
+#include "workers.h"
 
 static void job_queue_init_pair(int games, int e1, int e2, int pair, int *added, int round,
     Job **jobs)
@@ -142,4 +143,21 @@ void job_queue_set_name(JobQueue *jq, int ei, const char *name)
         str_cpy_c(&jq->names[ei], name);
 
     pthread_mutex_unlock(&jq->mtxNames);
+}
+
+void job_queue_print_results(JobQueue *jq, str_t *out)
+{
+    str_cpy_c(out, "Results by pair:\n");
+
+    pthread_mutex_lock(&jq->mtxResults);
+    pthread_mutex_lock(&jq->mtxNames);
+
+    for (size_t i = 0; i < vec_size(jq->results); i++) {
+        const Result r = jq->results[i];
+        str_cat_fmt(out, "%S vs %S: %i - %i - %i\n", jq->names[r.ei[0]], jq->names[r.ei[1]],
+            r.count[RESULT_WIN], r.count[RESULT_LOSS], r.count[RESULT_DRAW]);
+    }
+
+    pthread_mutex_unlock(&jq->mtxNames);
+    pthread_mutex_unlock(&jq->mtxResults);
 }
