@@ -154,8 +154,11 @@ void job_queue_print_results(JobQueue *jq, str_t *out)
 
     for (size_t i = 0; i < vec_size(jq->results); i++) {
         const Result r = jq->results[i];
-        str_cat_fmt(out, "%S vs %S: %i - %i - %i\n", jq->names[r.ei[0]], jq->names[r.ei[1]],
-            r.count[RESULT_WIN], r.count[RESULT_LOSS], r.count[RESULT_DRAW]);
+        const int n = r.count[RESULT_WIN] + r.count[RESULT_LOSS] + r.count[RESULT_DRAW];
+        char score[8] = "";
+        sprintf(score, "%.3f", (r.count[RESULT_WIN] + 0.5 * r.count[RESULT_DRAW]) / n);
+        str_cat_fmt(out, "%S vs %S: %i - %i - %i  [%s] %i\n", jq->names[r.ei[0]], jq->names[r.ei[1]],
+            r.count[RESULT_WIN], r.count[RESULT_LOSS], r.count[RESULT_DRAW], score, n);
     }
 
     pthread_mutex_unlock(&jq->mtxNames);
