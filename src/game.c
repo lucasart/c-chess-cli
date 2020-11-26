@@ -369,54 +369,59 @@ void game_export_pgn(const Game *g, int verbosity, str_t *out)
     if (g->pos[0].chess960)
         str_cat_c(out, "[Variant \"Chess960\"]\n");
 
-    str_cat_fmt(out, "[PlyCount \"%i\"]\n\n", g->ply);
+    str_cat_fmt(out, "[PlyCount \"%i\"]\n", g->ply);
     scope(str_destroy) str_t san = str_init();
 
-    const int pliesPerLine = verbosity == 1 ? 6
-        : verbosity == 2 ? 5
-        : 16;
+    if (verbosity > 0) {
+        // Print the moves
+        str_push(out, '\n');
 
-    for (int ply = 1; ply <= g->ply; ply++) {
-        // Write move number
-        if (g->pos[ply - 1].turn == WHITE || ply == 1)
-            str_cat_fmt(out, g->pos[ply - 1].turn == WHITE ? "%i. " : "%i... ",
-                g->pos[ply - 1].fullMove);
+        const int pliesPerLine = verbosity == 2 ? 6
+            : verbosity == 3 ? 5
+            : 16;
 
-        // Append SAN move
-        pos_move_to_san(&g->pos[ply - 1], g->pos[ply].lastMove, &san);
-        str_cat(out, san);
+        for (int ply = 1; ply <= g->ply; ply++) {
+            // Write move number
+            if (g->pos[ply - 1].turn == WHITE || ply == 1)
+                str_cat_fmt(out, g->pos[ply - 1].turn == WHITE ? "%i. " : "%i... ",
+                    g->pos[ply - 1].fullMove);
 
-        // Append check marker
-        if (g->pos[ply].checkers) {
-            if (ply == g->ply && g->state == STATE_CHECKMATE)
-                str_push(out, '#');  // checkmate
-            else
-                str_push(out, '+');  // normal check
+            // Append SAN move
+            pos_move_to_san(&g->pos[ply - 1], g->pos[ply].lastMove, &san);
+            str_cat(out, san);
+
+            // Append check marker
+            if (g->pos[ply].checkers) {
+                if (ply == g->ply && g->state == STATE_CHECKMATE)
+                    str_push(out, '#');  // checkmate
+                else
+                    str_push(out, '+');  // normal check
+            }
+
+            // Write PGN comment
+            const int depth = g->info[ply - 1].depth, score = g->info[ply - 1].score;
+
+            if (verbosity == 2) {
+                if (score > INT_MAX / 2)
+                    str_cat_fmt(out, " {M%i/%i}", INT_MAX - score, depth);
+                else if (score < INT_MIN / 2)
+                    str_cat_fmt(out, " {-M%i/%i}", score - INT_MIN, depth);
+                else
+                    str_cat_fmt(out, " {%i/%i}", score, depth);
+            } else if (verbosity == 3) {
+                const int64_t time = g->info[ply - 1].time;
+
+                if (score > INT_MAX / 2)
+                    str_cat_fmt(out, " {M%i/%i %Ims}", INT_MAX - score, depth, time);
+                else if (score < INT_MIN / 2)
+                    str_cat_fmt(out, " {-M%i/%i %Ims}", score - INT_MIN, depth, time);
+                else
+                    str_cat_fmt(out, " {%i/%i %Ims}", score, depth, time);
+            }
+
+            // Append delimiter
+            str_push(out, ply % pliesPerLine == 0 ? '\n' : ' ');
         }
-
-        // Write PGN comment
-        const int depth = g->info[ply - 1].depth, score = g->info[ply - 1].score;
-
-        if (verbosity == 1) {
-            if (score > INT_MAX / 2)
-                str_cat_fmt(out, " {M%i/%i}", INT_MAX - score, depth);
-            else if (score < INT_MIN / 2)
-                str_cat_fmt(out, " {-M%i/%i}", score - INT_MIN, depth);
-            else
-                str_cat_fmt(out, " {%i/%i}", score, depth);
-        } else if (verbosity == 2) {
-            const int64_t time = g->info[ply - 1].time;
-
-            if (score > INT_MAX / 2)
-                str_cat_fmt(out, " {M%i/%i %Ims}", INT_MAX - score, depth, time);
-            else if (score < INT_MIN / 2)
-                str_cat_fmt(out, " {-M%i/%i %Ims}", score - INT_MIN, depth, time);
-            else
-                str_cat_fmt(out, " {%i/%i %Ims}", score, depth, time);
-        }
-
-        // Append delimiter
-        str_push(out, ply % pliesPerLine == 0 ? '\n' : ' ');
     }
 
     str_cat_c(str_cat(out, result), "\n\n");

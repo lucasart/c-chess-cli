@@ -184,7 +184,7 @@ Options options_init(void)
     o.concurrency = 1;
     o.games = o.rounds = 1;
     o.sprtParam.alpha = o.sprtParam.beta = 0.05;
-    o.pgnVerbosity = 2;
+    o.pgnVerbosity = 3;
 
     return o;
 }

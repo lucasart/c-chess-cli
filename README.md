@@ -40,7 +40,11 @@ c-chess-cli [-each [eng_options]] -engine [eng_options] -engine [eng_options] ..
    * Read opening positions from `FILE`, in EPD format. Note that Chess960 is auto-detected, at position level (not at file level), and `FILE` can mix Chess and Chess960 positions. Both X-FEN (KQkq) and S-FEN (HAha) are supported for Chess960.
    * `order` can be `random` or `sequential` (default value).
    * `srand` sets the seed of the random number generator to `N`. The default value `N=0` will set the seed automatically to an unpredictable number. Any non-zero number will generate a unique, reproducible random sequence.
- * `pgn FILE [VERBOSITY]`: Save games to `FILE`, in PGN format. `VERBOSITY` is optional: 0 for no comments, 1 for `{score/deph}` comments, or 2 (default value) for `{score/depth time}` comments.
+ * `pgn FILE [VERBOSITY]`: Save games to `FILE`, in PGN format. `VERBOSITY` is optional
+   * `0` produces a PGN with headers and results only, which can be used with rating tools like BayesElo or Ordo.
+   * `1` adds the moves to the PGN.
+   * `2` adds comments of the form `{score/depth}`.
+   * `3` (default value) adds time usage to the comments `{score/depth time}`.
  * `repeat`: Repeat each opening twice, with each engine playing both sides.
  * `sample freq[,resolvePv[,file]]`. See below.
 
