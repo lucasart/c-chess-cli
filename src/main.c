@@ -139,18 +139,21 @@ static void *thread_start(void *arg)
         printf("[%d] Finished game %zu (%s vs %s): %s {%s}\n", w->id, idx + 1,
             engines[whiteIdx].name.buf, engines[opposite(whiteIdx)].name.buf, result.buf, reason.buf);
 
-        // Update on global score (across workers)
+        // Pair update
         int wldCount[3] = {0};
         job_queue_add_result(&jq, job.pair, wld, wldCount);
-
         const int n = wldCount[RESULT_WIN] + wldCount[RESULT_LOSS] + wldCount[RESULT_DRAW];
-
         printf("Score of %s vs %s: %d - %d - %d  [%.3f] %d\n", engines[0].name.buf,
             engines[1].name.buf, wldCount[RESULT_WIN], wldCount[RESULT_LOSS], wldCount[RESULT_DRAW],
             (wldCount[RESULT_WIN] + 0.5 * wldCount[RESULT_DRAW]) / n, n);
 
+        // SPRT update
         if (options.sprt && sprt_done(wldCount, &options.sprtParam))
             job_queue_stop(&jq);
+
+        // Tournament update
+        if (vec_size(eo) > 2)
+            job_queue_print_results(&jq, (size_t)options.games);
 
         game_destroy(&game);
     }
@@ -190,10 +193,6 @@ int main(int argc, const char **argv)
     // Join threads[]
     for (int i = 0; i < options.concurrency; i++)
         pthread_join(threads[i], NULL);
-
-    scope(str_destroy) str_t results = str_init();
-    job_queue_print_results(&jq, &results);
-    fputs(results.buf, stdout);
 
     return 0;
 }

@@ -15,6 +15,7 @@
 #include "jobs.h"
 #include "vec.h"
 #include "workers.h"
+#include <stdio.h>
 
 static void job_queue_init_pair(int games, int e1, int e2, int pair, int *added, int round,
     Job **jobs)
@@ -35,9 +36,7 @@ JobQueue job_queue_init(int engines, int rounds, int games, bool gauntlet)
     assert(engines >= 2 && rounds >= 1 && games >= 1);
 
     JobQueue jq = {0};
-    pthread_mutex_init(&jq.mtxJobs, NULL);
-    pthread_mutex_init(&jq.mtxNames, NULL);
-    pthread_mutex_init(&jq.mtxResults, NULL);
+    pthread_mutex_init(&jq.mtx, NULL);
 
     jq.jobs = vec_init(Job);
     jq.results = vec_init(Result);
@@ -86,15 +85,12 @@ void job_queue_destroy(JobQueue *jq)
     vec_destroy(jq->results);
     vec_destroy(jq->jobs);
     vec_destroy_rec(jq->names, str_destroy);
-
-    pthread_mutex_destroy(&jq->mtxResults);
-    pthread_mutex_destroy(&jq->mtxNames);
-    pthread_mutex_destroy(&jq->mtxJobs);
+    pthread_mutex_destroy(&jq->mtx);
 }
 
 bool job_queue_pop(JobQueue *jq, Job *j, size_t *idx, size_t *count)
 {
-    pthread_mutex_lock(&jq->mtxJobs);
+    pthread_mutex_lock(&jq->mtx);
     const bool ok = jq->idx < vec_size(jq->jobs);
 
     if (ok) {
@@ -103,64 +99,71 @@ bool job_queue_pop(JobQueue *jq, Job *j, size_t *idx, size_t *count)
         *count = vec_size(jq->jobs);
     }
 
-    pthread_mutex_unlock(&jq->mtxJobs);
+    pthread_mutex_unlock(&jq->mtx);
     return ok;
 }
 
 // Add game outcome, and return updated totals
 void job_queue_add_result(JobQueue *jq, int pair, int outcome, int count[3])
 {
-    pthread_mutex_lock(&jq->mtxResults);
+    pthread_mutex_lock(&jq->mtx);
     jq->results[pair].count[outcome]++;
+    jq->completed++;
 
     for (size_t i = 0; i < 3; i++)
         count[i] = jq->results[pair].count[i];
 
-    pthread_mutex_unlock(&jq->mtxResults);
+    pthread_mutex_unlock(&jq->mtx);
 }
 
 bool job_queue_done(JobQueue *jq)
 {
-    pthread_mutex_lock(&jq->mtxJobs);
+    pthread_mutex_lock(&jq->mtx);
     assert(jq->idx <= vec_size(jq->jobs));
     const bool done = jq->idx == vec_size(jq->jobs);
-    pthread_mutex_unlock(&jq->mtxJobs);
+    pthread_mutex_unlock(&jq->mtx);
     return done;
 }
 
 void job_queue_stop(JobQueue *jq)
 {
-    pthread_mutex_lock(&jq->mtxJobs);
+    pthread_mutex_lock(&jq->mtx);
     jq->idx = vec_size(jq->jobs);
-    pthread_mutex_unlock(&jq->mtxJobs);
+    pthread_mutex_unlock(&jq->mtx);
 }
 
 void job_queue_set_name(JobQueue *jq, int ei, const char *name)
 {
-    pthread_mutex_lock(&jq->mtxNames);
+    pthread_mutex_lock(&jq->mtx);
 
     if (!jq->names[ei].len)
         str_cpy_c(&jq->names[ei], name);
 
-    pthread_mutex_unlock(&jq->mtxNames);
+    pthread_mutex_unlock(&jq->mtx);
 }
 
-void job_queue_print_results(JobQueue *jq, str_t *out)
+void job_queue_print_results(JobQueue *jq, size_t frequency)
 {
-    str_cpy_c(out, "Results by pair:\n");
+    pthread_mutex_lock(&jq->mtx);
 
-    pthread_mutex_lock(&jq->mtxResults);
-    pthread_mutex_lock(&jq->mtxNames);
+    if (jq->completed && jq->completed % frequency == 0) {
+        scope(str_destroy) str_t out = str_init_from_c("Tournament update:\n");
 
-    for (size_t i = 0; i < vec_size(jq->results); i++) {
-        const Result r = jq->results[i];
-        const int n = r.count[RESULT_WIN] + r.count[RESULT_LOSS] + r.count[RESULT_DRAW];
-        char score[8] = "";
-        sprintf(score, "%.3f", (r.count[RESULT_WIN] + 0.5 * r.count[RESULT_DRAW]) / n);
-        str_cat_fmt(out, "%S vs %S: %i - %i - %i  [%s] %i\n", jq->names[r.ei[0]], jq->names[r.ei[1]],
-            r.count[RESULT_WIN], r.count[RESULT_LOSS], r.count[RESULT_DRAW], score, n);
+        for (size_t i = 0; i < vec_size(jq->results); i++) {
+            const Result r = jq->results[i];
+            const int n = r.count[RESULT_WIN] + r.count[RESULT_LOSS] + r.count[RESULT_DRAW];
+
+            if (n) {
+                char score[8] = "";
+                sprintf(score, "%.3f", (r.count[RESULT_WIN] + 0.5 * r.count[RESULT_DRAW]) / n);
+                str_cat_fmt(&out, "%S vs %S: %i - %i - %i  [%s] %i\n", jq->names[r.ei[0]],
+                    jq->names[r.ei[1]], r.count[RESULT_WIN], r.count[RESULT_LOSS],
+                    r.count[RESULT_DRAW], score, n);
+            }
+        }
+
+        fputs(out.buf, stdout);
     }
 
-    pthread_mutex_unlock(&jq->mtxNames);
-    pthread_mutex_unlock(&jq->mtxResults);
+    pthread_mutex_unlock(&jq->mtx);
 }
