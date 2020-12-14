@@ -96,7 +96,7 @@ static void *thread_start(void *arg)
                     engine_destroy(w, &engines[i]);
 
                 ei[i] = job.ei[i];
-                engines[i] = engine_init(w, eo[ei[i]].cmd.buf, eo[ei[i]].name.buf, eo[ei[i]].options);
+                engines[i] = engine_init(w, eo[ei[i]].cmd.buf, eo[ei[i]].name.buf, eo[ei[i]].options, eo[ei[i]].proto);
                 job_queue_set_name(&jq, ei[i], engines[i].name.buf);
             }
 

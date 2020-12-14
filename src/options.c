@@ -69,6 +69,17 @@ static void options_parse_tc(const char *s, EngineOptions *eo)
     eo->increment = (int64_t)(increment * 1000);
 }
 
+static void options_parse_proto(const char *s, EngineOptions *eo)
+{
+    if (!strcmp(s, "uci"))
+        eo->proto = PROTO_UCI;
+    else if (!strcmp(s, "xboard"))
+        eo->proto = PROTO_XBOARD;
+    else
+        DIE("Invalid engine protocol: %s\n", s);
+}
+
+
 static int options_parse_eo(int argc, const char **argv, int i, EngineOptions *eo)
 {
     while (i < argc && argv[i][0] != '-') {
@@ -78,6 +89,8 @@ static int options_parse_eo(int argc, const char **argv, int i, EngineOptions *e
             str_cpy_c(&eo->cmd, tail);
         else if ((tail = str_prefix(argv[i], "name=")))
             str_cpy_c(&eo->name, tail);
+        else if ((tail = str_prefix(argv[i], "proto=")))
+            options_parse_proto(tail, eo);
         else if ((tail = str_prefix(argv[i], "option.")))
             vec_push(eo->options, str_init_from_c(tail));  // store "name=value" string
         else if ((tail = str_prefix(argv[i], "depth=")))
@@ -164,6 +177,7 @@ EngineOptions engine_options_init(void)
     eo.cmd = str_init();
     eo.name = str_init();
     eo.options = vec_init(str_t);
+    eo.proto = PROTO_UCI;
     return eo;
 }
 

@@ -121,13 +121,14 @@ static void engine_parse_cmd(const char *cmd, str_t *cwd, str_t *run, str_t **ar
         vec_push(*args, str_init_from(token));
 }
 
-Engine engine_init(Worker *w, const char *cmd, const char *name, const str_t *options)
+Engine engine_init(Worker *w, const char *cmd, const char *name, const str_t *options, int proto)
 {
     if (!*cmd)
         DIE("[%d] missing command to start engine.\n", w->id);
 
     Engine e = {0};
     e.name = str_init_from_c(*name ? name : cmd); // default value
+    e.proto = proto;
 
     // Parse cmd into (cwd, run, args): we want to execute run from cwd with args.
     scope(str_destroy) str_t cwd = str_init(), run = str_init();
@@ -147,33 +148,43 @@ Engine engine_init(Worker *w, const char *cmd, const char *name, const str_t *op
     vec_destroy_rec(args, str_destroy);
     free(argv);
 
-    // Start the uci..uciok dialogue
-    deadline_set(w, e.name.buf, system_msec() + 4000);
-//    engine_writeln(w, &e, "uci");
     scope(str_destroy) str_t line = str_init();
 
-    do {
-        engine_readln(w, &e, &line);
-        const char *tail = NULL;
+    if (proto == PROTO_UCI) {
+        // Start the uci..uciok dialogue
+        deadline_set(w, e.name.buf, system_msec() + 4000);
+        engine_writeln(w, &e, "uci");
 
-        // If no name was provided, parse it from "id name %s"
-        if (!*name && (tail = str_prefix(line.buf, "id name ")))
-            str_cpy_c(&e.name, tail + strspn(tail, " "));
+        do {
+            engine_readln(w, &e, &line);
+            const char *tail = NULL;
 
-        if ((tail = str_prefix(line.buf, "option name UCI_Chess960 ")))
-            e.supportChess960 = true;
-    } while (strcmp(line.buf, "feature done=1"));
+            // If no name was provided, parse it from "id name %s"
+            if (!*name && (tail = str_prefix(line.buf, "id name ")))
+                str_cpy_c(&e.name, tail + strspn(tail, " "));
 
-    deadline_clear(w);
+            if ((tail = str_prefix(line.buf, "option name UCI_Chess960 ")))
+                e.supportChess960 = true;
+        } while (strcmp(line.buf, "uciok"));
 
-#if 0
-    for (size_t i = 0; i < vec_size(options); i++) {
-        scope(str_destroy) str_t oname = str_init(), ovalue = str_init();
-        str_tok(str_tok(options[i].buf, &oname, "="), &ovalue, "=");
-        str_cpy_fmt(&line, "setoption name %S value %S", oname, ovalue);
-        engine_writeln(w, &e, line.buf);
+        deadline_clear(w);
+
+        
+        for (size_t i = 0; i < vec_size(options); i++) {
+            scope(str_destroy) str_t oname = str_init(), ovalue = str_init();
+            str_tok(str_tok(options[i].buf, &oname, "="), &ovalue, "=");
+            str_cpy_fmt(&line, "setoption name %S value %S", oname, ovalue);
+            engine_writeln(w, &e, line.buf);
+        }
+    } else {
+        // Wait xboard engine features enumeration
+        deadline_set(w, e.name.buf, system_msec() + 4000);
+        do {
+            engine_readln(w, &e, &line);
+            // Todo: add here options such as ping, sigint...
+        } while (strcmp(line.buf, "feature done=1"));
+        deadline_clear(w);
     }
-#endif
     return e;
 }
 
@@ -213,7 +224,8 @@ void engine_writeln(const Worker *w, const Engine *e, char *buf)
 
 void engine_sync(Worker *w, const Engine *e)
 {
-#if 0
+    if (e->proto != PROTO_UCI)
+        return;  // todo: ping/pong for xboard
     deadline_set(w, e->name.buf, system_msec() + 1000);
     engine_writeln(w, e, "isready");
     scope(str_destroy) str_t line = str_init();
@@ -223,10 +235,67 @@ void engine_sync(Worker *w, const Engine *e)
     } while (strcmp(line.buf, "readyok"));
 
     deadline_clear(w);
-#endif
 }
 
-bool engine_bestmove(Worker *w, const Engine *e, int64_t *timeLeft, str_t *best, str_t *pv,
+static bool uci_engine_bestmove(Worker *w, const Engine *e, int64_t *timeLeft, str_t *best, str_t *pv,
+    Info *info)
+{
+    int result = false;
+    scope(str_destroy) str_t line = str_init(), token = str_init();
+    str_clear(pv);
+
+    const int64_t start = system_msec(), timeLimit = start + *timeLeft;
+    deadline_set(w, e->name.buf, timeLimit + 1000);
+
+    while (*timeLeft >= 0 && !result) {
+        engine_readln(w, e, &line);
+
+        const int64_t now = system_msec();
+        info->time = now - start;
+        *timeLeft = timeLimit - now;
+
+        const char *tail = NULL;
+
+        if ((tail = str_prefix(line.buf, "info "))) {
+            while ((tail = str_tok(tail, &token, " "))) {
+                if (!strcmp(token.buf, "depth")) {
+                    if ((tail = str_tok(tail, &token, " ")))
+                        info->depth = atoi(token.buf);
+                } else if (!strcmp(token.buf, "score")) {
+                    if ((tail = str_tok(tail, &token, " "))) {
+                        if (!strcmp(token.buf, "cp") && (tail = str_tok(tail, &token, " ")))
+                            info->score = atoi(token.buf);
+                        else if (!strcmp(token.buf, "mate") && (tail = str_tok(tail, &token, " "))) {
+                            const int movesToMate = atoi(token.buf);
+                            info->score = movesToMate < 0 ? INT_MIN - movesToMate : INT_MAX - movesToMate;
+                        } else
+                            DIE("illegal syntax after 'score' in '%s'\n", line.buf);
+                    }
+                } else if (!strcmp(token.buf, "pv"))
+                    str_cpy_c(pv, tail + strspn(tail, " "));
+            }
+        } else if ((tail = str_prefix(line.buf, "bestmove "))) {
+            str_tok(tail, &token, " ");
+            str_cpy(best, token);
+            result = true;
+        }
+    }
+
+    // Time out. Send "stop" and give the opportunity to the engine to respond with bestmove (still
+    // under deadline protection).
+    if (!result) {
+        engine_writeln(w, e, "stop");
+
+        do {
+            engine_readln(w, e, &line);
+        } while (!str_prefix(line.buf, "bestmove "));
+    }
+
+    deadline_clear(w);
+    return result;
+}
+
+static bool xboard_engine_bestmove(Worker *w, const Engine *e, int64_t *timeLeft, str_t *best, str_t *pv,
     Info *info)
 {
     int result = false;
@@ -270,8 +339,17 @@ bool engine_bestmove(Worker *w, const Engine *e, int64_t *timeLeft, str_t *best,
 
     // Time out. Send "stop" and give the opportunity to the engine to respond with bestmove (still
     // under deadline protection).
-	// TODO
+	// TODO ? Not sure that's possible with xboard
 
     deadline_clear(w);
     return result;
+}
+
+bool engine_bestmove(Worker *w, const Engine *e, int64_t *timeLeft, str_t *best, str_t *pv,
+    Info *info)
+{
+    if (e->proto == PROTO_UCI)
+        return uci_engine_bestmove(w, e, timeLeft, best, pv, info);
+    else
+        return xboard_engine_bestmove(w, e, timeLeft, best, pv, info);
 }

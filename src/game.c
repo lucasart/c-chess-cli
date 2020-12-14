@@ -258,9 +258,12 @@ int game_play(Worker *w, Game *g, const Options *o, const Engine engines[2],
                 DIE("[%d] '%s' does not support Chess960\n", w->id, engines[i].name.buf);
         }
 
-        //engine_writeln(w, &engines[i], "ucinewgame");
-        engine_writeln(w, &engines[i], "new");
-		xboard_setup_game_time(w, &engines[i], eo[i]);
+        if (eo[i]->proto == PROTO_UCI) {
+            engine_writeln(w, &engines[i], "ucinewgame");
+        } else {
+            engine_writeln(w, &engines[i], "new");
+            xboard_setup_game_time(w, &engines[i], eo[i]);
+        }
         engine_sync(w, &engines[i]);
     }
 
@@ -280,10 +283,14 @@ int game_play(Worker *w, Game *g, const Options *o, const Engine engines[2],
         if ((g->state = game_apply_chess_rules(g, &legalMoves)))
             break;
 
-        if (g->ply < 2)
-            xboard_position_command(g, &cmd);
-        else
-            xboard_update_position_command(g, &cmd);
+        if (eo[ei]->proto == PROTO_UCI) {
+                uci_position_command(g, &cmd);
+        } else {
+            if (g->ply < 2)
+                xboard_position_command(g, &cmd);
+            else
+                xboard_update_position_command(g, &cmd);
+        }
         engine_writeln(w, &engines[ei], cmd.buf);
         engine_sync(w, &engines[ei]);
 
@@ -302,7 +309,12 @@ int game_play(Worker *w, Game *g, const Options *o, const Engine engines[2],
             // Only depth and/or nodes limit
             timeLeft[ei] = INT64_MAX / 2;  // HACK: system_msec() + timeLeft must not overflow
 
-        xboard_go_command(g, eo, ei, timeLeft, &cmd);
+        if (eo[ei]->proto == PROTO_UCI) {
+            uci_go_command(g, eo, ei, timeLeft, &cmd);
+        } else {
+            xboard_go_command(g, eo, ei, timeLeft, &cmd);
+        }
+
         engine_writeln(w, &engines[ei], cmd.buf);
 
         Info info = {0};
