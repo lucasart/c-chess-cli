@@ -149,7 +149,7 @@ Engine engine_init(Worker *w, const char *cmd, const char *name, const str_t *op
 
     // Start the uci..uciok dialogue
     deadline_set(w, e.name.buf, system_msec() + 4000);
-    engine_writeln(w, &e, "uci");
+//    engine_writeln(w, &e, "uci");
     scope(str_destroy) str_t line = str_init();
 
     do {
@@ -162,17 +162,18 @@ Engine engine_init(Worker *w, const char *cmd, const char *name, const str_t *op
 
         if ((tail = str_prefix(line.buf, "option name UCI_Chess960 ")))
             e.supportChess960 = true;
-    } while (strcmp(line.buf, "uciok"));
+    } while (strcmp(line.buf, "feature done=1"));
 
     deadline_clear(w);
 
+#if 0
     for (size_t i = 0; i < vec_size(options); i++) {
         scope(str_destroy) str_t oname = str_init(), ovalue = str_init();
         str_tok(str_tok(options[i].buf, &oname, "="), &ovalue, "=");
         str_cpy_fmt(&line, "setoption name %S value %S", oname, ovalue);
         engine_writeln(w, &e, line.buf);
     }
-
+#endif
     return e;
 }
 
@@ -212,6 +213,7 @@ void engine_writeln(const Worker *w, const Engine *e, char *buf)
 
 void engine_sync(Worker *w, const Engine *e)
 {
+#if 0
     deadline_set(w, e->name.buf, system_msec() + 1000);
     engine_writeln(w, e, "isready");
     scope(str_destroy) str_t line = str_init();
@@ -221,6 +223,7 @@ void engine_sync(Worker *w, const Engine *e)
     } while (strcmp(line.buf, "readyok"));
 
     deadline_clear(w);
+#endif
 }
 
 bool engine_bestmove(Worker *w, const Engine *e, int64_t *timeLeft, str_t *best, str_t *pv,
@@ -242,40 +245,32 @@ bool engine_bestmove(Worker *w, const Engine *e, int64_t *timeLeft, str_t *best,
 
         const char *tail = NULL;
 
-        if ((tail = str_prefix(line.buf, "info "))) {
-            while ((tail = str_tok(tail, &token, " "))) {
-                if (!strcmp(token.buf, "depth")) {
-                    if ((tail = str_tok(tail, &token, " ")))
-                        info->depth = atoi(token.buf);
-                } else if (!strcmp(token.buf, "score")) {
-                    if ((tail = str_tok(tail, &token, " "))) {
-                        if (!strcmp(token.buf, "cp") && (tail = str_tok(tail, &token, " ")))
-                            info->score = atoi(token.buf);
-                        else if (!strcmp(token.buf, "mate") && (tail = str_tok(tail, &token, " "))) {
-                            const int movesToMate = atoi(token.buf);
-                            info->score = movesToMate < 0 ? INT_MIN - movesToMate : INT_MAX - movesToMate;
-                        } else
-                            DIE("illegal syntax after 'score' in '%s'\n", line.buf);
-                    }
-                } else if (!strcmp(token.buf, "pv"))
-                    str_cpy_c(pv, tail + strspn(tail, " "));
-            }
-        } else if ((tail = str_prefix(line.buf, "bestmove "))) {
+        if ((tail = str_prefix(line.buf, "move "))) {
             str_tok(tail, &token, " ");
             str_cpy(best, token);
+            fprintf(w->log, "Got move %s\n", best->buf);
             result = true;
+        } else {
+			int field = 1;
+			tail = line.buf;
+            while ((tail = str_tok(tail, &token, " "))) {
+				if (field == 1) {
+					info->depth = atoi(token.buf);
+				} else if (field == 2) {
+					info->score = atoi(token.buf);
+				} else if (field == 4) {
+					break;
+				}
+				field++;
+			}
+			str_cpy_c(pv, tail + strspn(tail, " "));
+            fprintf(w->log, "Got thinking depth %d score %d pv %s\n", info->depth, info->score, pv->buf);
         }
     }
 
     // Time out. Send "stop" and give the opportunity to the engine to respond with bestmove (still
     // under deadline protection).
-    if (!result) {
-        engine_writeln(w, e, "stop");
-
-        do {
-            engine_readln(w, e, &line);
-        } while (!str_prefix(line.buf, "bestmove "));
-    }
+	// TODO
 
     deadline_clear(w);
     return result;
