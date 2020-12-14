@@ -66,7 +66,6 @@ static void options_parse_tc(const char *s, EngineOptions *eo)
         time = atof(left.buf);
 
     eo->time = (int64_t)(time * 1000);
-    printf("MEIN: time for %s is %ld\n", eo->name.buf, eo->time);
     eo->increment = (int64_t)(increment * 1000);
 }
 

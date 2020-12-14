@@ -63,6 +63,14 @@ static void xboard_position_command(const Game *g, str_t *cmd)
     }
 }
 
+static void xboard_update_position_command(const Game *g, str_t *cmd)
+{
+    str_cpy_fmt(cmd, "force\n");
+    scope(str_destroy) str_t lan = str_init();
+    pos_move_to_lan(&g->pos[g->ply - 1], g->pos[g->ply].lastMove, &lan);
+    str_cat(cmd, lan);
+}
+
 static void uci_go_command(Game *g, const EngineOptions *eo[2], int ei, const int64_t timeLeft[2],
     str_t *cmd)
 {
@@ -95,11 +103,9 @@ static void xboard_go_command(Game *g, const EngineOptions *eo[2], int ei, const
 {
     str_cpy_c(cmd, "");
     if (eo[ei]->time) {
-        const int color = g->pos[g->ply].turn;
-
         str_cat_fmt(cmd, "time %I\notime %I\n",
-            timeLeft[ei ^ color] / 10,
-            timeLeft[ei ^ color ^ BLACK] / 10);
+            timeLeft[ei] / 10,
+            timeLeft[1-ei] / 10);
     }
     str_cat_fmt(cmd, "go");
 }
@@ -274,7 +280,10 @@ int game_play(Worker *w, Game *g, const Options *o, const Engine engines[2],
         if ((g->state = game_apply_chess_rules(g, &legalMoves)))
             break;
 
-        xboard_position_command(g, &cmd);
+        if (g->ply < 2)
+            xboard_position_command(g, &cmd);
+        else
+            xboard_update_position_command(g, &cmd);
         engine_writeln(w, &engines[ei], cmd.buf);
         engine_sync(w, &engines[ei]);
 
