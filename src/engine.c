@@ -179,6 +179,8 @@ Engine engine_init(Worker *w, const char *cmd, const char *name, const str_t *op
     } else {
         // Wait xboard engine features enumeration
         deadline_set(w, e.name.buf, system_msec() + 4000);
+        engine_writeln(w, &e, "xboard");
+        engine_writeln(w, &e, "protover 2");
         do {
             engine_readln(w, &e, &line);
             // Todo: add here options such as ping, sigint...
@@ -313,27 +315,21 @@ static bool xboard_engine_bestmove(Worker *w, const Engine *e, int64_t *timeLeft
         *timeLeft = timeLimit - now;
 
         const char *tail = NULL;
+        const char *msg = line.buf;
+        char buf1[line.len+1];
+        char buf2[line.len+1];
+        char move[line.len+1];
 
-        if ((tail = str_prefix(line.buf, "move "))) {
-            str_tok(tail, &token, " ");
-            str_cpy(best, token);
-            fprintf(w->log, "Got move %s\n", best->buf);
+        if ((sscanf(msg, "%s %s %s", buf1, buf2, move) == 3 && strcmp(buf2, "...") == 0) ||
+                (sscanf(msg, "%s %s", buf1, move) == 2 && strcmp(buf1, "move") == 0)) {
+            str_cpy_c(best, move);
+            if (w->log)
+                fprintf(w->log, "Got move %s\n", best->buf);
             result = true;
-        } else {
-			int field = 1;
-			tail = line.buf;
-            while ((tail = str_tok(tail, &token, " "))) {
-				if (field == 1) {
-					info->depth = atoi(token.buf);
-				} else if (field == 2) {
-					info->score = atoi(token.buf);
-				} else if (field == 4) {
-					break;
-				}
-				field++;
-			}
-			str_cpy_c(pv, tail + strspn(tail, " "));
-            fprintf(w->log, "Got thinking depth %d score %d pv %s\n", info->depth, info->score, pv->buf);
+        } else if (sscanf(msg, "%d %d %*d %*d %s", &info->depth, &info->score, buf1) == 3) {
+            str_cpy_c(pv, buf1);
+            if (w->log)
+                fprintf(w->log, "Got thinking depth %d score %d pv %s\n", info->depth, info->score, pv->buf);
         }
     }
 
