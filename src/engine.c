@@ -130,7 +130,20 @@ static void free_buf(char **buf)
 // return true if done=1
 static bool parse_xboard_feature(Engine *e, char *feature)
 {
-    printf("Got feature %s\n", feature);
+    char *equ = index(feature, '=');
+    if (!equ)
+        return false;
+    *equ = '\0';
+    char *val = equ + 1;
+    char *key = feature;
+    printf("Got feature '%s' = '%s'\n", key, val);
+    if (!strcmp(key, "done")) {
+        if (!strcmp(val, "1"))
+            return true;
+    } else if (!strcmp(key, "myname")) {
+            str_cpy_c(&e->name, val);
+    }
+    // todo: other features: usermove, ping...
     return (strcmp(feature, "done=1") == 0);
 }
 
