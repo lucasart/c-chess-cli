@@ -320,6 +320,12 @@ static bool xboard_engine_bestmove(Worker *w, const Engine *e, int64_t *timeLeft
         char buf2[line.len+1];
         char move[line.len+1];
 
+        /* We expect 2 types of messages:
+         * - move command. The format is supposed to be "move e2e4" but apparently
+         *   there is an (older ?) undocumented version of the protocol which is used
+         *   by GNUchess and goes "1. ... e2e4"
+         * - engine thinking. Format is "<depth> <score> <time> <nodes> <pv>"
+         */
         if ((sscanf(msg, "%s %s %s", buf1, buf2, move) == 3 && strcmp(buf2, "...") == 0) ||
                 (sscanf(msg, "%s %s", buf1, move) == 2 && strcmp(buf1, "move") == 0)) {
             str_cpy_c(best, move);
