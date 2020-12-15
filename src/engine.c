@@ -136,7 +136,6 @@ static bool parse_xboard_feature(Engine *e, char *feature)
     *equ = '\0';
     char *val = equ + 1;
     char *key = feature;
-    printf("Got feature '%s' = '%s'\n", key, val);
     if (!strcmp(key, "done")) {
         if (!strcmp(val, "1"))
             return true;
@@ -147,6 +146,7 @@ static bool parse_xboard_feature(Engine *e, char *feature)
     return (strcmp(feature, "done=1") == 0);
 }
 
+// Shift a char* buffer by one char (i.e remove a char)
 static void shift_buf(char *buf)
 {
     char *s = buf;
@@ -402,14 +402,12 @@ static bool xboard_engine_bestmove(Worker *w, const Engine *e, int64_t *timeLeft
             result = true;
         } else if (sscanf(msg, "%d %d %*d %*d %s", &info->depth, &info->score, buf1) == 3) {
             str_cpy_c(pv, buf1);
-            if (w->log)
-                fprintf(w->log, "Got thinking depth %d score %d pv %s\n", info->depth, info->score, pv->buf);
         }
     }
 
     // Time out. Send "stop" and give the opportunity to the engine to respond with bestmove (still
     // under deadline protection).
-	// TODO ? Not sure that's possible with xboard
+    // TODO ? Not sure that's possible with xboard
 
     deadline_clear(w);
     return result;

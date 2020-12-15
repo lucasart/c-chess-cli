@@ -43,7 +43,7 @@ static void uci_position_command(const Game *g, str_t *cmd)
 
 
 static void xboard_position_command(const Game *g, str_t *cmd)
-// Builds a string of the form "position fen ... [moves ...]". Implements rule50 pruning: start from
+// Builds a string of the form "setboard fen \n [<move \n>...]". Implements rule50 pruning: start from
 // the last position that reset the rule50 counter, to reduce the move list to the minimum, without
 // losing information.
 {
@@ -63,6 +63,7 @@ static void xboard_position_command(const Game *g, str_t *cmd)
     }
 }
 
+// Send position update to xboard after one move
 static void xboard_update_position_command(const Game *g, str_t *cmd)
 {
     str_cpy_fmt(cmd, "force\n");
