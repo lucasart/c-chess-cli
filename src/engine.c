@@ -28,6 +28,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <ctype.h>
 #include <sys/wait.h>
 
 #include "engine.h"
@@ -121,6 +122,59 @@ static void engine_parse_cmd(const char *cmd, str_t *cwd, str_t *run, str_t **ar
         vec_push(*args, str_init_from(token));
 }
 
+static void free_buf(char **buf)
+{
+    free(*buf);
+}
+
+// return true if done=1
+static bool parse_xboard_feature(Engine *e, char *feature)
+{
+    printf("Got feature %s\n", feature);
+    return (strcmp(feature, "done=1") == 0);
+}
+
+static void shift_buf(char *buf)
+{
+    char *s = buf;
+    while (*s) {
+        *s = *(s+1);
+        s++;
+    }
+}
+
+// Parse possible multiple xboard features on a single line, and maybe with quotes
+// return true if done=1
+static bool parse_xboard_features(Engine *e, char *_buffer)
+{
+    scope(free_buf) char *buffer = strdup(_buffer);
+    char *p = buffer, *start_of_word = buffer;
+    int c;
+    bool in_string = false;
+
+    while (*p) {
+        c = *p;
+        if (c == '"') {
+            shift_buf(p);
+            in_string = !in_string;
+            continue;
+        }
+        if (!in_string && isspace(c)) {
+            *p = '\0';
+            if (parse_xboard_feature(e, start_of_word))
+                return true;
+            start_of_word = p + 1;
+        }
+        p++;
+    }
+    if (in_string)
+        fprintf(stderr, "Warning: unmatched quote on xboard feature: %s\n", _buffer);
+    if (parse_xboard_feature(e, start_of_word))
+        return true;
+
+    return false;
+}
+
 Engine engine_init(Worker *w, const char *cmd, const char *name, const str_t *options, int proto)
 {
     if (!*cmd)
@@ -181,10 +235,12 @@ Engine engine_init(Worker *w, const char *cmd, const char *name, const str_t *op
         deadline_set(w, e.name.buf, system_msec() + 4000);
         engine_writeln(w, &e, "xboard");
         engine_writeln(w, &e, "protover 2");
-        do {
+        for(;;) {
             engine_readln(w, &e, &line);
-            // Todo: add here options such as ping, sigint...
-        } while (strcmp(line.buf, "feature done=1"));
+            if (!strncmp(line.buf, "feature ", strlen("feature ")))
+                if (parse_xboard_features(&e, line.buf + strlen("feature ")))
+                    break;
+        }
         deadline_clear(w);
     }
     return e;
@@ -314,7 +370,6 @@ static bool xboard_engine_bestmove(Worker *w, const Engine *e, int64_t *timeLeft
         info->time = now - start;
         *timeLeft = timeLimit - now;
 
-        const char *tail = NULL;
         const char *msg = line.buf;
         char buf1[line.len+1];
         char buf2[line.len+1];
