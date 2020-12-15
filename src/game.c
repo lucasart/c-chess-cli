@@ -104,7 +104,7 @@ static void xboard_go_command(Game *g, const EngineOptions *eo[2], int ei, const
 {
     str_cpy_c(cmd, "");
     if (eo[ei]->time) {
-        str_cat_fmt(cmd, "time %I\notime %I\n",
+        str_cat_fmt(cmd, "time %I\notim %I\n",
             timeLeft[ei] / 10,
             timeLeft[1-ei] / 10);
     }
@@ -226,18 +226,14 @@ void game_destroy(Game *g)
 static void xboard_setup_game_time(Worker *w, const Engine *engine, const EngineOptions *eo)
 {
     scope(str_destroy) str_t s = str_init();
-	if (eo->movetime) {
-		if (eo->movetime % 1000 != 0)
-			DIE("xboard protocol only supports whole second move times\n");
-    	str_cat_fmt(&s, "st %I", eo->movetime / 1000);
-	} else {
-		if (eo->increment % 1000 != 0)
-			DIE("xboard protocol only supports whole second increments\n");
-		int seconds = eo->time / 1000;
-		int inc = eo->increment / 1000;
-    	str_cat_fmt(&s, "level %i %i:%i %I", eo->movestogo, seconds / 60, seconds % 60, inc);
-	}
-	engine_writeln(w, engine, s.buf);
+    if (eo->movetime) {
+        str_cat_fmt(&s, "st %F", ((double) eo->movetime) / 1000.0);
+    } else {
+        double minutes = ((double) eo->time) / 60000.0;
+        double inc = ((double) eo->increment) / 1000.0;
+        str_cat_fmt(&s, "level %i %F %F", eo->movestogo, minutes, inc);
+    }
+    engine_writeln(w, engine, s.buf);
 }
 
 
