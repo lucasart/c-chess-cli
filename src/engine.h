@@ -19,12 +19,14 @@
 #include <sys/types.h>
 #include "str.h"
 #include "workers.h"
+#include "options.h"
 
 // Engine process
 typedef struct {
     FILE *in, *out;
     str_t name;
     pid_t pid;
+    int proto;
     bool supportChess960;
     char pad[3];
 } Engine;
@@ -35,7 +37,7 @@ typedef struct {
     int64_t time;
 } Info;
 
-Engine engine_init(Worker *w, const char *cmd, const char *name, const str_t *options);
+Engine engine_init(Worker *w, const char *cmd, const char *name, const str_t *options, int proto);
 void engine_destroy(Worker *w, Engine *e);
 
 void engine_readln(const Worker *w, const Engine *e, str_t *line);

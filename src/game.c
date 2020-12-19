@@ -41,6 +41,37 @@ static void uci_position_command(const Game *g, str_t *cmd)
     }
 }
 
+
+static void xboard_position_command(const Game *g, str_t *cmd)
+// Builds a string of the form "setboard fen \n [<move \n>...]". Implements rule50 pruning: start from
+// the last position that reset the rule50 counter, to reduce the move list to the minimum, without
+// losing information.
+{
+    // Index of the starting FEN, where rule50 was last reset
+    const int ply0 = max(g->ply - g->pos[g->ply].rule50, 0);
+
+    scope(str_destroy) str_t fen = str_init();
+    pos_get(&g->pos[ply0], &fen, g->sfen);
+    str_cpy_fmt(cmd, "setboard %S\nforce\n", fen);
+
+    if (ply0 < g->ply) {
+        scope(str_destroy) str_t lan = str_init();
+        for (int ply = ply0 + 1; ply <= g->ply; ply++) {
+            pos_move_to_lan(&g->pos[ply - 1], g->pos[ply].lastMove, &lan);
+            str_cat(str_push(cmd, '\n'), lan);
+        }
+    }
+}
+
+// Send position update to xboard after one move
+static void xboard_update_position_command(const Game *g, str_t *cmd)
+{
+    str_cpy_fmt(cmd, "force\n");
+    scope(str_destroy) str_t lan = str_init();
+    pos_move_to_lan(&g->pos[g->ply - 1], g->pos[g->ply].lastMove, &lan);
+    str_cat(cmd, lan);
+}
+
 static void uci_go_command(Game *g, const EngineOptions *eo[2], int ei, const int64_t timeLeft[2],
     str_t *cmd)
 {
@@ -66,6 +97,18 @@ static void uci_go_command(Game *g, const EngineOptions *eo[2], int ei, const in
     if (eo[ei]->movestogo)
         str_cat_fmt(cmd, " movestogo %i",
             eo[ei]->movestogo - ((g->ply / 2) % eo[ei]->movestogo));
+}
+
+static void xboard_go_command(Game *g, const EngineOptions *eo[2], int ei, const int64_t timeLeft[2],
+    str_t *cmd)
+{
+    str_cpy_c(cmd, "");
+    if (eo[ei]->time) {
+        str_cat_fmt(cmd, "time %I\notim %I\n",
+            timeLeft[ei] / 10,
+            timeLeft[1-ei] / 10);
+    }
+    str_cat_fmt(cmd, "go");
 }
 
 static int game_apply_chess_rules(const Game *g, move_t **moves)
@@ -180,6 +223,20 @@ void game_destroy(Game *g)
     str_destroy_n(&g->names[WHITE], &g->names[BLACK]);
 }
 
+static void xboard_setup_game_time(Worker *w, const Engine *engine, const EngineOptions *eo)
+{
+    scope(str_destroy) str_t s = str_init();
+    if (eo->movetime) {
+        str_cat_fmt(&s, "st %F", ((double) eo->movetime) / 1000.0);
+    } else {
+        double minutes = ((double) eo->time) / 60000.0;
+        double inc = ((double) eo->increment) / 1000.0;
+        str_cat_fmt(&s, "level %i %F %F", eo->movestogo, minutes, inc);
+    }
+    engine_writeln(w, engine, s.buf);
+}
+
+
 int game_play(Worker *w, Game *g, const Options *o, const Engine engines[2],
     const EngineOptions *eo[2], bool reverse)
 // Play a game:
@@ -198,7 +255,12 @@ int game_play(Worker *w, Game *g, const Options *o, const Engine engines[2],
                 DIE("[%d] '%s' does not support Chess960\n", w->id, engines[i].name.buf);
         }
 
-        engine_writeln(w, &engines[i], "ucinewgame");
+        if (eo[i]->proto == PROTO_UCI) {
+            engine_writeln(w, &engines[i], "ucinewgame");
+        } else {
+            engine_writeln(w, &engines[i], "new");
+            xboard_setup_game_time(w, &engines[i], eo[i]);
+        }
         engine_sync(w, &engines[i]);
     }
 
@@ -218,7 +280,14 @@ int game_play(Worker *w, Game *g, const Options *o, const Engine engines[2],
         if ((g->state = game_apply_chess_rules(g, &legalMoves)))
             break;
 
-        uci_position_command(g, &cmd);
+        if (eo[ei]->proto == PROTO_UCI) {
+                uci_position_command(g, &cmd);
+        } else {
+            if (g->ply < 2)
+                xboard_position_command(g, &cmd);
+            else
+                xboard_update_position_command(g, &cmd);
+        }
         engine_writeln(w, &engines[ei], cmd.buf);
         engine_sync(w, &engines[ei]);
 
@@ -237,7 +306,12 @@ int game_play(Worker *w, Game *g, const Options *o, const Engine engines[2],
             // Only depth and/or nodes limit
             timeLeft[ei] = INT64_MAX / 2;  // HACK: system_msec() + timeLeft must not overflow
 
-        uci_go_command(g, eo, ei, timeLeft, &cmd);
+        if (eo[ei]->proto == PROTO_UCI) {
+            uci_go_command(g, eo, ei, timeLeft, &cmd);
+        } else {
+            xboard_go_command(g, eo, ei, timeLeft, &cmd);
+        }
+
         engine_writeln(w, &engines[ei], cmd.buf);
 
         Info info = {0};

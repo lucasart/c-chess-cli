@@ -1,6 +1,6 @@
 ## c-chess-cli
 
-c-chess-cli is a command line interface for UCI chess engines written in C. Free from [dependency hell](https://en.wikipedia.org/wiki/Dependency_hell), it only uses the C standard library, and POSIX. Primarily developped on Linux, it should work on all POSIX operating systems, including MacOS and Android. Windows is not supported.
+c-chess-cli is a command line interface for chess engines written in C. Free from [dependency hell](https://en.wikipedia.org/wiki/Dependency_hell), it only uses the C standard library, and POSIX. Primarily developped on Linux, it should work on all POSIX operating systems, including MacOS and Android. Windows is not supported.
 
 ## How to compile ?
 
@@ -62,6 +62,7 @@ c-chess-cli [-each [eng_options]] -engine [eng_options] -engine [eng_options] ..
  * `st=N`: time limit per move, in seconds (can be fractional like `st=0.123`).
  * `depth=N`: depth limit per move.
  * `nodes=N`: node limit per move.
+ * `proto=PROTO`: protocol to use. Either uci (default) or xboard. Note that not all xboard features are supported.
  * `option.OPTION=VALUE`: Set custom option OPTION to value VALUE.
 
 ### Sampling
