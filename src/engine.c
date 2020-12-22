@@ -28,7 +28,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <ctype.h>
 #include <sys/wait.h>
 
 #include "engine.h"
@@ -122,80 +121,13 @@ static void engine_parse_cmd(const char *cmd, str_t *cwd, str_t *run, str_t **ar
         vec_push(*args, str_init_from(token));
 }
 
-static void free_buf(char **buf)
-{
-    free(*buf);
-}
-
-// return true if done=1
-static bool parse_xboard_feature(Engine *e, char *feature)
-{
-    char *equ = index(feature, '=');
-    if (!equ)
-        return false;
-    *equ = '\0';
-    char *val = equ + 1;
-    char *key = feature;
-    if (!strcmp(key, "done")) {
-        if (!strcmp(val, "1"))
-            return true;
-    } else if (!strcmp(key, "myname")) {
-            str_cpy_c(&e->name, val);
-    }
-    // todo: other features: usermove, ping...
-    return (strcmp(feature, "done=1") == 0);
-}
-
-// Shift a char* buffer by one char (i.e remove a char)
-static void shift_buf(char *buf)
-{
-    char *s = buf;
-    while (*s) {
-        *s = *(s+1);
-        s++;
-    }
-}
-
-// Parse possible multiple xboard features on a single line, and maybe with quotes
-// return true if done=1
-static bool parse_xboard_features(Engine *e, char *_buffer)
-{
-    scope(free_buf) char *buffer = strdup(_buffer);
-    char *p = buffer, *start_of_word = buffer;
-    int c;
-    bool in_string = false;
-
-    while (*p) {
-        c = *p;
-        if (c == '"') {
-            shift_buf(p);
-            in_string = !in_string;
-            continue;
-        }
-        if (!in_string && isspace(c)) {
-            *p = '\0';
-            if (parse_xboard_feature(e, start_of_word))
-                return true;
-            start_of_word = p + 1;
-        }
-        p++;
-    }
-    if (in_string)
-        fprintf(stderr, "Warning: unmatched quote on xboard feature: %s\n", _buffer);
-    if (parse_xboard_feature(e, start_of_word))
-        return true;
-
-    return false;
-}
-
-Engine engine_init(Worker *w, const char *cmd, const char *name, const str_t *options, int proto)
+Engine engine_init(Worker *w, const char *cmd, const char *name, const str_t *options)
 {
     if (!*cmd)
         DIE("[%d] missing command to start engine.\n", w->id);
 
     Engine e = {0};
     e.name = str_init_from_c(*name ? name : cmd); // default value
-    e.proto = proto;
 
     // Parse cmd into (cwd, run, args): we want to execute run from cwd with args.
     scope(str_destroy) str_t cwd = str_init(), run = str_init();
@@ -215,47 +147,32 @@ Engine engine_init(Worker *w, const char *cmd, const char *name, const str_t *op
     vec_destroy_rec(args, str_destroy);
     free(argv);
 
+    // Start the uci..uciok dialogue
+    deadline_set(w, e.name.buf, system_msec() + 4000);
+    engine_writeln(w, &e, "uci");
     scope(str_destroy) str_t line = str_init();
 
-    if (proto == PROTO_UCI) {
-        // Start the uci..uciok dialogue
-        deadline_set(w, e.name.buf, system_msec() + 4000);
-        engine_writeln(w, &e, "uci");
+    do {
+        engine_readln(w, &e, &line);
+        const char *tail = NULL;
 
-        do {
-            engine_readln(w, &e, &line);
-            const char *tail = NULL;
+        // If no name was provided, parse it from "id name %s"
+        if (!*name && (tail = str_prefix(line.buf, "id name ")))
+            str_cpy_c(&e.name, tail + strspn(tail, " "));
 
-            // If no name was provided, parse it from "id name %s"
-            if (!*name && (tail = str_prefix(line.buf, "id name ")))
-                str_cpy_c(&e.name, tail + strspn(tail, " "));
+        if ((tail = str_prefix(line.buf, "option name UCI_Chess960 ")))
+            e.supportChess960 = true;
+    } while (strcmp(line.buf, "uciok"));
 
-            if ((tail = str_prefix(line.buf, "option name UCI_Chess960 ")))
-                e.supportChess960 = true;
-        } while (strcmp(line.buf, "uciok"));
+    deadline_clear(w);
 
-        deadline_clear(w);
-
-        
-        for (size_t i = 0; i < vec_size(options); i++) {
-            scope(str_destroy) str_t oname = str_init(), ovalue = str_init();
-            str_tok(str_tok(options[i].buf, &oname, "="), &ovalue, "=");
-            str_cpy_fmt(&line, "setoption name %S value %S", oname, ovalue);
-            engine_writeln(w, &e, line.buf);
-        }
-    } else {
-        // Wait xboard engine features enumeration
-        deadline_set(w, e.name.buf, system_msec() + 4000);
-        engine_writeln(w, &e, "xboard");
-        engine_writeln(w, &e, "protover 2");
-        for(;;) {
-            engine_readln(w, &e, &line);
-            if (!strncmp(line.buf, "feature ", strlen("feature ")))
-                if (parse_xboard_features(&e, line.buf + strlen("feature ")))
-                    break;
-        }
-        deadline_clear(w);
+    for (size_t i = 0; i < vec_size(options); i++) {
+        scope(str_destroy) str_t oname = str_init(), ovalue = str_init();
+        str_tok(str_tok(options[i].buf, &oname, "="), &ovalue, "=");
+        str_cpy_fmt(&line, "setoption name %S value %S", oname, ovalue);
+        engine_writeln(w, &e, line.buf);
     }
+
     return e;
 }
 
@@ -295,8 +212,6 @@ void engine_writeln(const Worker *w, const Engine *e, char *buf)
 
 void engine_sync(Worker *w, const Engine *e)
 {
-    if (e->proto != PROTO_UCI)
-        return;  // todo: ping/pong for xboard
     deadline_set(w, e->name.buf, system_msec() + 1000);
     engine_writeln(w, e, "isready");
     scope(str_destroy) str_t line = str_init();
@@ -308,7 +223,7 @@ void engine_sync(Worker *w, const Engine *e)
     deadline_clear(w);
 }
 
-static bool uci_engine_bestmove(Worker *w, const Engine *e, int64_t *timeLeft, str_t *best, str_t *pv,
+bool engine_bestmove(Worker *w, const Engine *e, int64_t *timeLeft, str_t *best, str_t *pv,
     Info *info)
 {
     int result = false;
@@ -364,60 +279,4 @@ static bool uci_engine_bestmove(Worker *w, const Engine *e, int64_t *timeLeft, s
 
     deadline_clear(w);
     return result;
-}
-
-static bool xboard_engine_bestmove(Worker *w, const Engine *e, int64_t *timeLeft, str_t *best, str_t *pv,
-    Info *info)
-{
-    int result = false;
-    scope(str_destroy) str_t line = str_init(), token = str_init();
-    str_clear(pv);
-
-    const int64_t start = system_msec(), timeLimit = start + *timeLeft;
-    deadline_set(w, e->name.buf, timeLimit + 1000);
-
-    while (*timeLeft >= 0 && !result) {
-        engine_readln(w, e, &line);
-
-        const int64_t now = system_msec();
-        info->time = now - start;
-        *timeLeft = timeLimit - now;
-
-        const char *msg = line.buf;
-        char buf1[line.len+1];
-        char buf2[line.len+1];
-        char move[line.len+1];
-
-        /* We expect 2 types of messages:
-         * - move command. The format is supposed to be "move e2e4" but apparently
-         *   there is an (older ?) undocumented version of the protocol which is used
-         *   by GNUchess and goes "1. ... e2e4"
-         * - engine thinking. Format is "<depth> <score> <time> <nodes> <pv>"
-         */
-        if ((sscanf(msg, "%s %s %s", buf1, buf2, move) == 3 && strcmp(buf2, "...") == 0) ||
-                (sscanf(msg, "%s %s", buf1, move) == 2 && strcmp(buf1, "move") == 0)) {
-            str_cpy_c(best, move);
-            if (w->log)
-                fprintf(w->log, "Got move %s\n", best->buf);
-            result = true;
-        } else if (sscanf(msg, "%d %d %*d %*d %s", &info->depth, &info->score, buf1) == 3) {
-            str_cpy_c(pv, buf1);
-        }
-    }
-
-    // Time out. Send "stop" and give the opportunity to the engine to respond with bestmove (still
-    // under deadline protection).
-    // TODO ? Not sure that's possible with xboard
-
-    deadline_clear(w);
-    return result;
-}
-
-bool engine_bestmove(Worker *w, const Engine *e, int64_t *timeLeft, str_t *best, str_t *pv,
-    Info *info)
-{
-    if (e->proto == PROTO_UCI)
-        return uci_engine_bestmove(w, e, timeLeft, best, pv, info);
-    else
-        return xboard_engine_bestmove(w, e, timeLeft, best, pv, info);
 }

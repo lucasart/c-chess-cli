@@ -31,12 +31,10 @@ typedef struct {
     char pad[2];
 } Options;
 
-enum { PROTO_UCI, PROTO_XBOARD };
-
 typedef struct {
     str_t cmd, name, *options;
     int64_t time, increment, movetime, nodes;
-    int depth, movestogo, proto;
+    int depth, movestogo;
 } EngineOptions;
 
 EngineOptions engine_options_init(void);

@@ -12,7 +12,7 @@ args = p.parse_args()
 
 # Determine flags for: compilation, warning, and linking
 cflags = '-I./src -std=gnu11 -mpopcnt {}'.format('-DNDEBUG -Os -ffast-math -flto -s' if not args.debug else '-g -O1')
-wflags = '-Wfatal-errors -Wall -Wextra -Wstrict-prototypes -Wsign-conversion -Wshadow -Wno-unused-parameter'
+wflags = '-Wfatal-errors -Wall -Wextra -Wstrict-prototypes -Wsign-conversion -Wshadow -Wpadded'
 lflags ='-lpthread -lm'
 if args.static: lflags += ' -static'
 

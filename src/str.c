@@ -160,21 +160,10 @@ static char *do_fmt_u(uintmax_t n, char *s)
     return s + 1;
 }
 
-#define MAXF 100  // supposedly 28 would be enough
-static void do_fmt_F(double f, str_t *dest)
-{
-    char buf[MAXF]; // supposedly 28 would be enough
-    if (MAXF <= snprintf(buf, MAXF, "%f", f)) {
-        fprintf(stderr, "warning: failed to properly format double %f\n", f);
-    }
-    str_cat_c(dest, buf);
-}
-
 static void do_str_cat_fmt(str_t *dest, const char *fmt, va_list args)
 // Supported formats
 // - Integers: %i (int), %I (intmax_t), %u (unsigned), %U (uintmax_t)
 // - Strings: %s (const char *), %S (str_t)
-// - Floats: %F (double)
 {
     assert(str_ok(*dest) && fmt);
 
@@ -215,8 +204,6 @@ static void do_str_cat_fmt(str_t *dest, const char *fmt, va_list args)
             str_cat_c(dest, do_fmt_u(va_arg(args, unsigned), &buf[sizeof(buf) - 1]));
         else if (pct[1] == 'U')  // uintmax_t
             str_cat_c(dest, do_fmt_u(va_arg(args, uintmax_t), &buf[sizeof(buf) - 1]));
-        else if (pct[1] == 'F') // double
-            do_fmt_F(va_arg(args, double), dest);
         else
             assert(false);  // add your format specifier handler here
     }
