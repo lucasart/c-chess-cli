@@ -84,7 +84,7 @@ static int options_parse_eo(int argc, const char **argv, int i, EngineOptions *e
             eo->depth = atoi(tail);
         else if ((tail = str_prefix(argv[i], "nodes=")))
             eo->nodes = atoll(tail);
-        else if ((tail = str_prefix(argv[i], "st=")))
+        else if ((tail = str_prefix(argv[i], "movetime=")))
             eo->movetime = (int64_t)(atof(tail) * 1000);
         else if ((tail = str_prefix(argv[i], "tc=")))
             options_parse_tc(tail, eo);

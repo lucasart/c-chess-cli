@@ -59,7 +59,7 @@ c-chess-cli [-each [eng_options]] -engine [eng_options] -engine [eng_options] ..
    * Arguments can be provided as part of the command. For example `"cmd=../fooEngine -foo=1"`. Note that the `""` are needed here, for the command line interpreter to parse the whole string as a single token.
  * `name=NAME`: Set the engine's name. If omitted, the name is take from the `id name` value sent by the engine.
  * `tc=TIMECONTROL`: Set the time control to `TIMECONTROL`. The format is `moves/time+increment`, where `moves` is the number of moves per tc, `time` is time per tc (in seconds), and `increment` is time increment per move (in seconds).
- * `st=N`: time limit per move, in seconds (can be fractional like `st=0.123`).
+ * `movetime=N`: time limit per move, in seconds (can be fractional like `movetime=0.123`).
  * `depth=N`: depth limit per move.
  * `nodes=N`: node limit per move.
  * `option.OPTION=VALUE`: Set custom option OPTION to value VALUE.
