@@ -76,6 +76,7 @@ void seq_writer_push(SeqWriter *sw, size_t idx, str_t str)
             fputs(sw->buf[j].str.buf, sw->out);
             seq_str_destroy(&sw->buf[j]);
         }
+        fflush(sw->out);
 
         // Delete buf[0..i-1]
         memmove(&sw->buf[0], &sw->buf[i], (vec_size(sw->buf) - i) * sizeof(SeqStr));
