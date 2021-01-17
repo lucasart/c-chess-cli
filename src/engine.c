@@ -212,7 +212,7 @@ void engine_writeln(const Worker *w, const Engine *e, char *buf)
 
 void engine_sync(Worker *w, const Engine *e)
 {
-    deadline_set(w, e->name.buf, system_msec() + 1000);
+    deadline_set(w, e->name.buf, system_msec() + 2000);
     engine_writeln(w, e, "isready");
     scope(str_destroy) str_t line = str_init();
 
