@@ -178,6 +178,10 @@ Engine engine_init(Worker *w, const char *cmd, const char *name, const str_t *op
 
 void engine_destroy(Worker *w, Engine *e)
 {
+    // Engine was not instanciated with engine_init()
+    if (!e->pid)
+        return;
+
     // Order the engine to quit, and grant 1s deadline for obeying
     deadline_set(w, e->name.buf, system_msec() + 1000);
     engine_writeln(w, e, "quit");
