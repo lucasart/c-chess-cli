@@ -278,6 +278,9 @@ bool pos_set(Position *pos, const char *fen, bool force960, bool *sfen)
     // Full move counter (in moves, starts at 1): optional, default 1
     pos->fullMove = str_tok(fen, &token, " ") ? (uint16_t)atoi(token.buf) : 1;
 
+    if (pos->fullMove < 1)
+        return false;
+
     // Verify piece counts
     for (int color = WHITE; color <= BLACK; color++)
         if (bb_count(pos_pieces_cpp(pos, color, KNIGHT, PAWN)) > 10
