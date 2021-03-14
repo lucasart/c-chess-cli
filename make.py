@@ -42,7 +42,7 @@ if args.task == 'test':
 
         run('./c-chess-cli -each "cmd=./test/engine 123" depth=3 ' \
             '-engine option.Hash=2 tc=10/0 -engine name=e2 tc=20/0 -engine name=e3 ' \
-            '-sample 0.5,y,training.csv -openings file=test/chess960.epd -rounds 3 ' \
+            '-sample 0.5,y,n,training.csv -openings file=test/chess960.epd -rounds 3 ' \
             '-games 50 -pgn out2.pgn 2 -log > stdout')
         run('grep -v ^deadline c-chess-cli.1.log > log')
 

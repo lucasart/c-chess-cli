@@ -395,6 +395,124 @@ void pos_get(const Position *pos, str_t *fen, bool sfen)
     str_cat_fmt(fen, " %s %i %i", epStr, pos->rule50, pos->fullMove);
 }
 
+// State used for writing bit by bit to data[]
+typedef struct {
+    uint8_t *data;
+    size_t idx;
+} BitStream;
+
+static void bitstream_write_one(BitStream *s, bool b)
+{
+    if (b)
+        s->data[s->idx / 8] |= 1 << (s->idx % 8);
+
+    s->idx++;
+}
+
+static void bitstream_write_n(BitStream *s, unsigned d, unsigned n)
+{
+    assert(n < 32);
+
+    for (unsigned i = 0; i < n; i++)
+        bitstream_write_one(s, d & (1 << i));
+}
+
+/* Huffman Encoding
+  Empty  xxxxxxx0
+  Pawn   xxxxx001 + 1 bit (Color)
+  Knight xxxxx011 + 1 bit (Color)
+  Bishop xxxxx101 + 1 bit (Color)
+  Rook   xxxxx111 + 1 bit (Color)
+  Queen   xxxx1001 + 1 bit (Color)
+
+  Worst case:
+   - 32 empty squares    32 bits
+   - 30 pieces           150 bits
+   - 2 kings             12 bits
+   - castling rights     4 bits
+   - ep square           7 bits
+   - rule50              7 bits
+   - game ply            16 bits
+   - TOTAL               228 bits < 256 bits
+*/
+typedef struct {
+    unsigned code;  // how it will be coded
+    unsigned bits;  // How many bits do you have
+} HuffmanedPiece;
+
+static const HuffmanedPiece HuffmanTable[NB_PIECE + 1] = {
+    {0b0011, 4},  // KNIGHT   3
+    {0b0101, 4},  // BISHOP   5
+    {0b0111, 4},  // ROOK     7
+    {0b1001, 4},  // QUEEN    9
+    {0, 0},  // KING - unused
+    {0b0001, 4},  // PAWN     1
+    {0b0000, 1},  // NO_PIECE 0
+};
+
+// Get binary packed FEN, following the NNUE compression format
+void pos_get_bin(const Position *pos, uint8_t data[32])
+{
+    memset(data, 0, 32);
+    BitStream s = {.data = data, .idx = 0};
+
+    bitstream_write_one(&s, pos->turn);
+
+    for (int color = 0; color < NB_COLOR; color++)
+        bitstream_write_n(&s, (unsigned)pos_king_square(pos, color), 6);
+
+    // Write the pieces on the board other than the kings.
+    for (int rank = RANK_8; rank >= RANK_1; rank--)
+        for (int file = FILE_A; file <= FILE_H; file++) {
+            const int square = square_from(rank, file);
+            const int piece = pos_piece_on(pos, square);
+
+            if (piece != KING) {
+                bitstream_write_n(&s, HuffmanTable[piece].code, HuffmanTable[piece].bits);
+
+                if (piece != NB_PIECE)
+                    bitstream_write_one(&s, pos_color_on(pos, square));
+            }
+        }
+
+    // Castling in 4 bits
+    // 1-bit: can WHITE castle KING side (ie. in the A->H direction)
+    // 1-bit: can WHITE castle QUEEN side (ie. in the H->A direction)
+    // same for BLACK
+    // FIXME: Ambiguous for Chess960, for example, if white can castle queen side, we need to know
+    // with which rook. Indeed, there could be 2 white rooks on the left side of the white king.
+    for (int color = 0; color < NB_COLOR; color++) {
+        const int king = pos_king_square(pos, color);
+
+        for (int direction = 1; direction >= -1; direction -= 2)
+            if ((unsigned)(file_of(king) + direction) < NB_FILE)
+                bitstream_write_one(&s, (pos->castleRooks & Ray[king][king + direction]) != 0);
+    }
+
+    // En-passant:
+    // 1-bit: 0 means none, 1 means en-passant square to follow
+    // [6-bit]: en-passant square (if above was 1)
+    if (pos->epSquare == NB_SQUARE)
+        bitstream_write_one(&s, 0);
+    else {
+        bitstream_write_one(&s, 1);
+        bitstream_write_n(&s, pos->epSquare, 6);
+    }
+
+    // Store rule50 and fullMove.
+    // FIXME: Replicate NNUE's badly designed encoding for compatibility.
+    bitstream_write_n(&s, pos->rule50 % 64, 6);
+    bitstream_write_n(&s, pos->fullMove % 256, 8);
+    bitstream_write_n(&s, pos->fullMove / 256 , 8);
+    bitstream_write_n(&s, pos->rule50 / 64, 1);
+
+    /* Instead should have been:
+    bitstream_write_n(&s, pos->rule50, 7);
+    bitstream_write_n(&s, pos->fullMove, 16);
+    */
+    assert(s.idx <= 256);
+}
+
 // Play a move on a position copy (original 'before' is untouched): pos = before + play(m)
 void pos_move(Position *pos, const Position *before, move_t m)
 {

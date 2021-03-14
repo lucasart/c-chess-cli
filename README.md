@@ -69,15 +69,12 @@ c-chess-cli [-each [eng_options]] -engine [eng_options] -engine [eng_options] ..
 The purpose of this feature is to the generate training data, which can be used to fit the parameters of a
 chess engine evaluation, otherwise known as supervised learning.
 
-Using `-sample freq[,resolvePv[,file]]` will generate a csv file of samples, in this format:
-```
-fen,score,result
-```
-where score is the search result (in cp), and result is the result of the game from the side to
-move's perspective (0=loss, 1=draw, 2=win).
-
-Using `resolvePv=y` does two things:
- * First, it resolves the PV, which means that it plays the PV and reocords the position at the end
-  (leaf node), instea of the current position (root node).
- * Second, it guarantees that the recorded fen is not in check (by recording the last PV position
-  that is not in check, if that is possible, else discarding the sample).
+Syntax is `-sample freq[,resolve[,binary,[file]]]`. Example `-sample 0.25,y,n,out.csv`.
+ * `freq` is the sampling frequency (floating point number between `0` and `1`).
+ * `resolve` is `y` for PV resolution, and `n` (default) otherwise. PV resolution does the following:
+   * Plays the PV and reocords the position at the end (leaf node), instead of the current position (root node).
+   * Guarantees that the recorded positions are not in check (by recording the last PV position that is not in check, if all PV positions are in check, the sample is discarded).
+ * `binary` is `y` for binary format, and `n` (default) for text format.
+   * text format is a human readable CSV whose lines look like `fen,score,result`, where `score` is in centipawns, and result is `-1=lose`, `0=draw`, `1=win` (all from the side to move's pov).
+   * binary follows the NNUE training data format (see code for documentation).
+ * `file` is the name of the file where samples are written. Defaults to `sample.csv` if omitted.

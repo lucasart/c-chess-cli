@@ -36,6 +36,10 @@ static void options_parse_sample(const char *s, Options *o)
     if ((tail = str_tok(tail, &token, ",")))
         o->sampleResolvePv = !strcmp(token.buf, "y");
 
+    // Parse binary flag
+    if ((tail = str_tok(tail, &token, ",")))
+        o->sampleBinary = !strcmp(token.buf, "y");
+
     // Parse filename (default sample.csv if omitted)
     if ((tail = str_tok(tail, &token, ",")))
         str_cpy(&o->sample, token);
