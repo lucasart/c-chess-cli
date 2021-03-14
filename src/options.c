@@ -34,7 +34,7 @@ static void options_parse_sample(const char *s, Options *o)
 
     // Parse resolve flag
     if ((tail = str_tok(tail, &token, ",")))
-        o->sampleResolvePv = !strcmp(token.buf, "y");
+        o->sampleResolve = !strcmp(token.buf, "y");
 
     // Parse binary flag
     if ((tail = str_tok(tail, &token, ",")))

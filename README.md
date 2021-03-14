@@ -71,9 +71,10 @@ chess engine evaluation, otherwise known as supervised learning.
 
 Syntax is `-sample freq[,resolve[,binary,[file]]]`. Example `-sample 0.25,y,n,out.csv`.
  * `freq` is the sampling frequency (floating point number between `0` and `1`).
- * `resolve` is `y` for PV resolution, and `n` (default) otherwise. PV resolution does the following:
-   * Plays the PV and reocords the position at the end (leaf node), instead of the current position (root node).
-   * Guarantees that the recorded positions are not in check (by recording the last PV position that is not in check, if all PV positions are in check, the sample is discarded).
+ * `resolve` is `y` for tactical resolution, and `n` (default) otherwise. Tactical resolution is done as follows:
+   * Solve tactical sequences: by playing the PV and recording the final position (leaf node), instead of the current position (root node).
+   * Excludes checks: by recording the last PV position that is not in check (if all PV positions are in check, the sample is discarded).
+   * Exclude mates: by discarding samples where the engine returns a mate score.
  * `binary` is `y` for binary format, and `n` (default) for text format.
    * text format is a human readable CSV whose lines look like `fen,score,result`, where `score` is in centipawns, and result is `-1=lose`, `0=draw`, `1=win` (all from the side to move's pov).
    * binary follows the NNUE training data format (see code for documentation).

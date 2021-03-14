@@ -28,6 +28,11 @@ static bool is_mated(int score)
     return score < INT16_MIN + 1024;
 }
 
+static bool is_mate(int score)
+{
+    return is_mating(score) || is_mated(score);
+}
+
 static void uci_position_command(const Game *g, str_t *cmd)
 // Builds a string of the form "position fen ... [moves ...]". Implements rule50 pruning: start from
 // the last position that reset the rule50 counter, to reduce the move list to the minimum, without
@@ -295,16 +300,16 @@ int game_play(Worker *w, Game *g, const Options *o, const Engine engines[2],
             resignCount[ei] = 0;
 
         // Write sample: position (compactly encoded) + score
-        if (prngf(&w->seed) <= o->sampleFrequency) {
+        if (!(o->sampleResolve && is_mate(info.score)) && prngf(&w->seed) <= o->sampleFrequency) {
             Sample sample = {
-                .pos = o->sampleResolvePv ? resolved : g->pos[g->ply],
+                .pos = o->sampleResolve ? resolved : g->pos[g->ply],
                 .score = info.score,
                 .result = NB_RESULT // unknown yet (use invalid state for now)
             };
 
             // Record sample, except if resolvePv=true and the position is in check (becuase PV
             // resolution couldn't avoid it), in which case the sample is discarded.
-            if (!o->sampleResolvePv || !sample.pos.checkers)
+            if (!o->sampleResolve || !sample.pos.checkers)
                 vec_push(g->samples, sample);
         }
 
