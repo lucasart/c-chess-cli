@@ -37,8 +37,8 @@ if args.task == 'test':
         print('\nRun tests:')
         run('./c-chess-cli -each cmd=./test/engine depth=6 option.Hash=4 ' \
             '-engine name=engine=1 option.Threads=2 -engine name=engine2 depth=5 ' \
-            '-openings file=test/chess960.epd order=random srand=1 -repeat -resign 5 900000000 ' \
-            '-draw 3 600000000 -games 1930 -pgn out1.pgn 2 -concurrency 8 > /dev/null')
+            '-openings file=test/chess960.epd order=random srand=1 -repeat -resign 5 13733 ' \
+            '-draw 3 9155 -games 1930 -pgn out1.pgn 2 -concurrency 8 > /dev/null')
 
         run('./c-chess-cli -each "cmd=./test/engine 123" depth=3 ' \
             '-engine option.Hash=2 tc=10/0 -engine name=e2 tc=20/0 -engine name=e3 ' \

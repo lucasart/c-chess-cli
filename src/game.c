@@ -18,6 +18,16 @@
 #include "util.h"
 #include "vec.h"
 
+static bool is_mating(int score)
+{
+    return score > INT16_MAX - 1024;
+}
+
+static bool is_mated(int score)
+{
+    return score < INT16_MIN + 1024;
+}
+
 static void uci_position_command(const Game *g, str_t *cmd)
 // Builds a string of the form "position fen ... [moves ...]". Implements rule50 pruning: start from
 // the last position that reset the rule50 counter, to reduce the move list to the minimum, without
@@ -403,19 +413,19 @@ void game_export_pgn(const Game *g, int verbosity, str_t *out)
             const int depth = g->info[ply - 1].depth, score = g->info[ply - 1].score;
 
             if (verbosity == 2) {
-                if (score > INT_MAX / 2)
-                    str_cat_fmt(out, " {M%i/%i}", INT_MAX - score, depth);
-                else if (score < INT_MIN / 2)
-                    str_cat_fmt(out, " {-M%i/%i}", score - INT_MIN, depth);
+                if (is_mating(score))
+                    str_cat_fmt(out, " {M%i/%i}", INT16_MAX - score, depth);
+                else if (is_mated(score))
+                    str_cat_fmt(out, " {-M%i/%i}", score - INT16_MIN, depth);
                 else
                     str_cat_fmt(out, " {%i/%i}", score, depth);
             } else if (verbosity == 3) {
                 const int64_t time = g->info[ply - 1].time;
 
-                if (score > INT_MAX / 2)
-                    str_cat_fmt(out, " {M%i/%i %Ims}", INT_MAX - score, depth, time);
-                else if (score < INT_MIN / 2)
-                    str_cat_fmt(out, " {-M%i/%i %Ims}", score - INT_MIN, depth, time);
+                if (is_mating(score))
+                    str_cat_fmt(out, " {M%i/%i %Ims}", INT16_MAX - score, depth, time);
+                else if (is_mated(score))
+                    str_cat_fmt(out, " {-M%i/%i %Ims}", score - INT16_MIN, depth, time);
                 else
                     str_cat_fmt(out, " {%i/%i %Ims}", score, depth, time);
             }
