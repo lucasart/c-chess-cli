@@ -50,8 +50,6 @@ typedef struct {
     Info *info;  // remembered from parsing info lines (for PGN comments)
     Sample *samples;  // list of samples when generating training data
     int round, game, ply, state;
-    bool sfen;  // use S-FEN for this game (ie. HAha instead of KQkq)
-    char pad[7];
 } Game;
 
 Game game_init(int round, int game);

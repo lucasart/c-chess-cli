@@ -168,10 +168,9 @@ static bool pos_move_is_capture(const Position *pos, move_t m)
     return bb_test(pos->byColor[opposite(pos->turn)], move_to(m));
 }
 
-bool pos_set(Position *pos, const char *fen, bool force960, bool *sfen)
+bool pos_set(Position *pos, const char *fen, bool force960)
 // Set position from FEN string.
 // force960: if true, set pos.chess60=true, else auto-detect.
-// sfen: if != NULL, auto-detect S-FEN.
 {
     *pos = (Position){0};
     scope(str_destroy) str_t token = str_init();
@@ -219,8 +218,6 @@ bool pos_set(Position *pos, const char *fen, bool force960, bool *sfen)
     }
 
     // Castling rights: optional, default '-'
-    bool _sfen = false;
-
     if ((fen = str_tok(fen, &token, " "))) {
         if (token.len > 4)
             return false;
@@ -234,16 +231,12 @@ bool pos_set(Position *pos, const char *fen, bool force960, bool *sfen)
                 bb_set(&pos->castleRooks, bb_msb(Rank[rank] & ourRooks));
             else if (uc == 'Q')
                 bb_set(&pos->castleRooks, bb_lsb(Rank[rank] & ourRooks));
-            else if ('A' <= uc && uc <= 'H') {
+            else if ('A' <= uc && uc <= 'H')
                 bb_set(&pos->castleRooks, square_from(rank, uc - 'A'));
-                _sfen = true;
-            } else if (*c != '-' || pos->castleRooks || c[1] != '\0')
+            else if (*c != '-' || pos->castleRooks || c[1] != '\0')
                 return false;
         }
     }
-
-    if (sfen)
-        *sfen = _sfen;
 
     pos->key ^= zobrist_castling(pos->castleRooks);
 
@@ -335,8 +328,8 @@ bool pos_set(Position *pos, const char *fen, bool force960, bool *sfen)
     return true;
 }
 
-// Get FEN string of position. For Chess960, use HAha when sfen = true (instead of KQkq).
-void pos_get(const Position *pos, str_t *fen, bool sfen)
+// Get FEN string of position
+void pos_get(const Position *pos, str_t *fen)
 {
     str_clear(fen);
 
@@ -380,11 +373,11 @@ void pos_get(const Position *pos, str_t *fen, bool sfen)
             assert(!bb_several(left) && !bb_several(right));
 
             if (right)
-                str_push(fen, pos->chess960 && sfen ? FileLabel[color][file_of(bb_lsb(right))]
+                str_push(fen, pos->chess960 ? FileLabel[color][file_of(bb_lsb(right))]
                     : PieceLabel[color][KING]);
 
             if (left)
-                str_push(fen, pos->chess960 && sfen ? FileLabel[color][file_of(bb_lsb(left))]
+                str_push(fen, pos->chess960 ? FileLabel[color][file_of(bb_lsb(left))]
                     : PieceLabel[color][QUEEN]);
         }
     }
@@ -814,7 +807,7 @@ void pos_print(const Position *pos)
     }
 
     scope(str_destroy) str_t fen = str_init();
-    pos_get(pos, &fen, false);
+    pos_get(pos, &fen);
     puts(fen.buf);
 
     scope(str_destroy) str_t lan = str_init();

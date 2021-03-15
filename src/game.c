@@ -42,7 +42,7 @@ static void uci_position_command(const Game *g, str_t *cmd)
     const int ply0 = max(g->ply - g->pos[g->ply].rule50, 0);
 
     scope(str_destroy) str_t fen = str_init();
-    pos_get(&g->pos[ply0], &fen, g->sfen);
+    pos_get(&g->pos[ply0], &fen);
     str_cpy_fmt(cmd, "position fen %S", fen);
 
     if (ply0 < g->ply) {
@@ -179,7 +179,7 @@ bool game_load_fen(Game *g, const char *fen, int *color)
 {
     vec_push(g->pos, (Position){0});
 
-    if (pos_set(&g->pos[0], fen, false, &g->sfen)) {
+    if (pos_set(&g->pos[0], fen, false)) {
         *color = g->pos[0].turn;
         return true;
     } else
@@ -379,7 +379,7 @@ void game_export_pgn(const Game *g, int verbosity, str_t *out)
     str_cat_fmt(out, "[Termination \"%S\"]\n", reason);
 
     scope(str_destroy) str_t fen = str_init();
-    pos_get(&g->pos[0], &fen, g->sfen);
+    pos_get(&g->pos[0], &fen);
     str_cat_fmt(out, "[FEN \"%S\"]\n", fen);
 
     if (g->pos[0].chess960)
@@ -449,7 +449,7 @@ void game_export_samples(const Game *g, str_t *out)
     scope(str_destroy) str_t fen = str_init();
 
     for (size_t i = 0; i < vec_size(g->samples); i++) {
-        pos_get(&g->samples[i].pos, &fen, g->sfen);
+        pos_get(&g->samples[i].pos, &fen);
         str_cat_fmt(out, "%S,%i,%i\n", fen, g->samples[i].score, g->samples[i].result);
     }
 }
