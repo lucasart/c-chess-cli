@@ -34,7 +34,6 @@ typedef struct {
 
 bool pos_set(Position *pos, const char *fen, bool force960);
 void pos_get(const Position *pos, str_t *fen);
-void pos_get_bin(const Position *pos, uint8_t data[32]);
 void pos_move(Position *pos, const Position *before, move_t m);
 
 bitboard_t pos_pieces(const Position* pos);

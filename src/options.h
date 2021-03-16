@@ -27,8 +27,8 @@ typedef struct {
     int resignCount, resignScore;
     int drawCount, drawScore;
     int pgnVerbosity;
-    bool log, random, repeat, sprt, gauntlet, sampleResolve, sampleBinary;
-    char pad;
+    bool log, random, repeat, sprt, gauntlet, sampleResolve;
+    char pad[2];
 } Options;
 
 typedef struct {

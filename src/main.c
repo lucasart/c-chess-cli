@@ -127,13 +127,9 @@ static void *thread_start(void *arg)
 
         // Write to Sample file
         if (options.sample.len) {
-            if (options.sampleBinary)
-                game_export_binary_samples(&game, sampleFile);
-            else {
-                scope(str_destroy) str_t sampleText = str_init();
-                game_export_samples(&game, &sampleText);
-                fputs(sampleText.buf, sampleFile);
-            }
+            scope(str_destroy) str_t sampleText = str_init();
+            game_export_samples(&game, &sampleText);
+            fputs(sampleText.buf, sampleFile);
         }
 
         // Write to stdout a one line summary of the game

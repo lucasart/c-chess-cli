@@ -453,26 +453,3 @@ void game_export_samples(const Game *g, str_t *out)
         str_cat_fmt(out, "%S,%i,%i\n", fen, g->samples[i].score, g->samples[i].result);
     }
 }
-
-typedef struct {
-    uint8_t data[32];  // see pos_get_bin() for encoding
-    int16_t score;  // in cp for the side to move
-    uint16_t sfMove;  // move in Stockfish internal format
-    uint16_t gameply;
-    int8_t result;  // game result
-    char pad;
-} BinarySample;
-
-void game_export_binary_samples(const Game *g, FILE *out)
-{
-    BinarySample sample = {0};
-
-    for (size_t i = 0; i < vec_size(g->samples); i++) {
-        pos_get_bin(&g->samples[i].pos, sample.data);
-        sample.score = g->samples[i].score;
-        // TODO: set sample.sfMove and sample.ply (currently zero)
-        sample.result = g->samples[i].result - 1;
-
-        fwrite(&sample, sizeof(sample), 1, out);
-    }
-}
