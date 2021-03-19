@@ -120,15 +120,25 @@ static int options_parse_openings(int argc, const char **argv, int i, Options *o
     return i - 1;
 }
 
-static int options_parse_adjudication(int argc, const char **argv, int i, int *count, int *score)
+static int options_parse_adjudication(int argc, const char **argv, int i, int *number, int *count,
+    int *score)
 {
-    if (i + 1 < argc) {
-        *count = atoi(argv[i++]);
-        *score = atoi(argv[i]);
-    } else
-        DIE("Missing parameter(s) for '%s'\n", argv[i - 1]);
+    while (i < argc && argv[i][0] != '-') {
+        const char *tail = NULL;
 
-    return i;
+        if ((tail = str_prefix(argv[i], "number=")))
+            *number = atoi(tail);
+        else if ((tail = str_prefix(argv[i], "count="))) {
+            *count = atoi(tail);
+        } else if ((tail = str_prefix(argv[i], "score=")))
+            *score = atoi(tail);
+        else
+            DIE("Illegal token in -openings: '%s'\n", argv[i]);
+
+        i++;
+    }
+
+    return i - 1;
 }
 
 static int options_parse_sprt(int argc, const char **argv, int i, Options *o)
@@ -222,9 +232,11 @@ void options_parse(int argc, const char **argv, Options *o, EngineOptions **eo)
             if (i + 1 < argc && argv[i + 1][0] != '-')
                 o->pgnVerbosity = atoi(argv[++i]);
         } else if (!strcmp(argv[i], "-resign"))
-            i = options_parse_adjudication(argc, argv, i + 1, &o->resignCount, &o->resignScore);
+            i = options_parse_adjudication(argc, argv, i + 1, &o->resignNumber, &o->resignCount,
+                &o->resignScore);
         else if (!strcmp(argv[i], "-draw"))
-            i = options_parse_adjudication(argc, argv, i + 1, &o->drawCount, &o->drawScore);
+            i = options_parse_adjudication(argc, argv, i + 1, &o->drawNumber, &o->drawCount,
+                &o->drawScore);
         else if (!strcmp(argv[i], "-sprt"))
             i = options_parse_sprt(argc, argv, i + 1, o);
         else if (!strcmp(argv[i], "-sample"))

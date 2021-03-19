@@ -283,7 +283,7 @@ int game_play(Worker *w, Game *g, const Options *o, const Engine engines[2],
 
         // Apply draw adjudication rule
         if (o->drawCount && abs(info.score) <= o->drawScore) {
-            if (++drawPlyCount >= 2 * o->drawCount) {
+            if (++drawPlyCount >= 2 * o->drawCount && g->ply / 2 + 1 >= o->drawNumber) {
                 g->state = STATE_DRAW_ADJUDICATION;
                 break;
             }
@@ -292,7 +292,7 @@ int game_play(Worker *w, Game *g, const Options *o, const Engine engines[2],
 
         // Apply resign rule
         if (o->resignCount && info.score <= -o->resignScore) {
-            if (++resignCount[ei] >= o->resignCount) {
+            if (++resignCount[ei] >= o->resignCount && g->ply / 2 + 1 >= o->resignNumber) {
                 g->state = STATE_RESIGN;
                 break;
             }

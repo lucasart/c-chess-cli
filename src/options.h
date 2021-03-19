@@ -24,8 +24,8 @@ typedef struct {
     uint64_t srand;
     double sampleFrequency;
     int concurrency, games, rounds;
-    int resignCount, resignScore;
-    int drawCount, drawScore;
+    int resignNumber, resignCount, resignScore;
+    int drawNumber, drawCount, drawScore;
     int pgnVerbosity;
     bool log, random, repeat, sprt, gauntlet, sampleResolve;
     char pad[2];
