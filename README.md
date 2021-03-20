@@ -21,7 +21,7 @@ c-chess-cli [-each [eng_options]] -engine [eng_options] -engine [eng_options] ..
     -engine cmd=demolito "option.Time Buffer=80" nodes=200000 \
     -engine cmd=../Engines/critter_1.6a depth=11 \
     -games 1920 -concurrency 8 -openings file=test/chess960.epd order=random -repeat \
-    -sprt elo0=1 elo1=5 -resign 3 700 -draw 8 10 -pgn out.pgn 2
+    -sprt elo0=1 elo1=5 -resign count=3 score=700 -draw number=40 count=8 score=10 -pgn out.pgn 2
 ```
 
 ### Options
@@ -29,8 +29,8 @@ c-chess-cli [-each [eng_options]] -engine [eng_options] -engine [eng_options] ..
  * `engine OPTIONS`: Add an engine defined by `OPTIONS` to the tournament.
  * `each OPTIONS`: Apply `OPTIONS` to each engine in the tournament.
  * `concurrency N`: Set the maximum number of concurrent games to N (default value 1).
- * `draw COUNT SCORE`: Adjudicate the game as a draw, if the score of both engines is within `SCORE` centipawns from zero, for at least `COUNT` consecutive moves.
- * `resign COUNT SCORE`: Adjudicate the game as a loss, if an engine's score is at least `SCORE` centipawns below zero, for at least `COUNT` consecutive moves.
+ * `draw [number=N] count=C score=S`: Adjudicate the game as a draw, if the score of both engines is within `S` centipawns from zero, for at least `C` consecutive moves, and at least `N` moves have been played (default value `N=0`).
+ * `resign [number=N] count=C score=S`: Adjudicate the game as a loss, if an engine's score is at least `S` centipawns below zero, for at least `C` consecutive moves, and at least `N` moves have been played (default value `N=0`).
  * `games N`: Play N games per encounter (default value 1). This value should be set to an even number in tournaments with more than two players to make sure that each player plays an equal number of games with white and black pieces.
  * `rounds N`: Multiply the number of rounds to play by `N` (default value 1). This only makes sense to use for tournaments with more than 2 engines.
  * `gauntlet`: Play a gauntlet tournament (first engine against the others). The default is to play a round-robin (plays all pairs).

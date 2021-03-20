@@ -230,6 +230,9 @@ int game_play(Worker *w, Game *g, const Options *o, const Engine engines[2],
         if (played)
             pos_move(&g->pos[g->ply], &g->pos[g->ply - 1], played);
 
+        if (g->state == STATE_DRAW_ADJUDICATION || g->state == STATE_RESIGN)
+            break;
+
         if ((g->state = game_apply_chess_rules(g, &legalMoves)))
             break;
 
@@ -283,19 +286,15 @@ int game_play(Worker *w, Game *g, const Options *o, const Engine engines[2],
 
         // Apply draw adjudication rule
         if (o->drawCount && abs(info.score) <= o->drawScore) {
-            if (++drawPlyCount >= 2 * o->drawCount && g->ply / 2 + 1 >= o->drawNumber) {
+            if (++drawPlyCount >= 2 * o->drawCount && g->ply / 2 + 1 >= o->drawNumber)
                 g->state = STATE_DRAW_ADJUDICATION;
-                break;
-            }
         } else
             drawPlyCount = 0;
 
         // Apply resign rule
         if (o->resignCount && info.score <= -o->resignScore) {
-            if (++resignCount[ei] >= o->resignCount && g->ply / 2 + 1 >= o->resignNumber) {
+            if (++resignCount[ei] >= o->resignCount && g->ply / 2 + 1 >= o->resignNumber)
                 g->state = STATE_RESIGN;
-                break;
-            }
         } else
             resignCount[ei] = 0;
 
