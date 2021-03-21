@@ -32,18 +32,18 @@ def compile(program, output):
 
 if args.task == 'test':
     if compile('engine', './test/engine') == 0 and compile('main', './c-chess-cli') == 0:
-        run('rm stdout* out*.pgn training.csv c-chess-cli.*.log log*')
+        run('rm stdout* out*.pgn training.csv c-chess-cli.*.log log')
 
         print('\nRun tests:')
         run('./c-chess-cli -each cmd=./test/engine depth=6 option.Hash=4 ' \
             '-engine name=engine=1 option.Threads=2 -engine name=engine2 depth=5 ' \
-            '-openings file=test/chess960.epd order=random srand=1 -repeat -resign count=4 score=13733 ' \
-            '-draw count=3 score=11077 -games 1930 -pgn out1.pgn 2 -concurrency 8 > /dev/null')
+            '-openings file=test/chess960.epd order=random srand=1 -resign count=4 score=13733 ' \
+            '-draw number=40 count=3 score=11077 -games 965 -pgn out1.pgn 2 -concurrency 8 > /dev/null')
 
         run('./c-chess-cli -each "cmd=./test/engine 123" depth=3 ' \
             '-engine option.Hash=2 tc=10/0 -engine name=e2 tc=20/0 -engine name=e3 ' \
-            '-sample 0.5,y,training.csv -openings file=test/chess960.epd -rounds 3 ' \
-            '-games 50 -pgn out2.pgn 2 -log > stdout')
+            '-sample 0.5,y,training.csv -openings file=test/chess960.epd -repeat -rounds 3 ' \
+            '-games 30 -resign number=35 count=5 score=8192 -pgn out2.pgn 2 -log > stdout')
         run('grep -v ^deadline c-chess-cli.1.log > log')
 
         print('\nFile signatures:')
