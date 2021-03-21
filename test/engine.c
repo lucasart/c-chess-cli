@@ -25,6 +25,39 @@ typedef struct {
     int depth;
 } Go;
 
+static uint64_t hash_mix(uint64_t block)
+{
+    block ^= block >> 23;
+    block *= 0x2127599bf4325c37ULL;
+    return block ^= block >> 47;
+}
+
+void hash_block(uint64_t block, uint64_t *hash)
+{
+    *hash ^= hash_mix(block);
+    *hash *= 0x880355f21e6d1965ULL;
+}
+
+// Based on FastHash64, without length hashing, to make it capable of incremental updates
+void hash_blocks(const void *buffer, size_t length, uint64_t *hash)
+{
+    assert((uintptr_t)buffer % 8 == 0);
+    const uint64_t *blocks = (const uint64_t *)buffer;
+
+    for (size_t i = 0; i < length / 8; i++)
+        hash_block(*blocks++, hash);
+
+    if (length % 8) {
+        const uint8_t *bytes = (const uint8_t *)blocks;
+        uint64_t block = 0;
+
+        for (size_t i = 0; i < length % 8; i++)
+            block = (block << 8) | *bytes++;
+
+        hash_block(block, hash);
+    }
+}
+
 static void parse_position(const char *tail, Position *pos, bool uciChess960)
 {
     scope(str_destroy) str_t token = str_init();
@@ -126,9 +159,12 @@ int main(int argc, char **argv)
         else if ((tail = str_prefix(line.buf, "setoption "))) {
             tail = str_prefix(tail, "name UCI_Chess960 value ");
             uciChess960 = tail && !strcmp(tail, "true");
-        } else if ((tail = str_prefix(line.buf, "position ")))
+        } else if ((tail = str_prefix(line.buf, "position "))) {
+            // Hash the position string into seed. This allows c-chess-cli test suite to exercise
+            // concurrency, while keeping PGN output identical.
+            hash_blocks(tail, strlen(tail), &seed);
             parse_position(tail, &pos, uciChess960);
-        else if ((tail = str_prefix(line.buf, "go "))) {
+        } else if ((tail = str_prefix(line.buf, "go "))) {
             tail = str_prefix(tail, "depth ");
             go.depth = tail ? atoi(tail) : 0;
             run_go(&pos, &go, &seed);
