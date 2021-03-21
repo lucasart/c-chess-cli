@@ -35,7 +35,7 @@ c-chess-cli [-each [eng_options]] -engine [eng_options] -engine [eng_options] ..
  * `rounds N`: Multiply the number of rounds to play by `N` (default value 1). This only makes sense to use for tournaments with more than 2 engines.
  * `gauntlet`: Play a gauntlet tournament (first engine against the others). The default is to play a round-robin (plays all pairs).
    * with `n=2` engines, both gauntlet and round-robin just play the number of `-games` specified.
-   * gauntlet for `n>2`: `G(e1, ..., en) = G(e1, e2) + G(e2, ..., en)`. There are `n-1` pairs.
+   * gauntlet for `n>2`: `G(e1, ..., en) = G(e1, e2) + G(e1, e3) + ... + G(e1, en)`. There are `n-1` pairs.
    * round-robin for `n>2`: `RR(e1, ..., en) = G(e1, ..., en) + RR(e2, ..., en)`. There are `n(n-1)/2` pairs.
    * using `-rounds` repeats the tournament `-rounds` times. The number of games played for each pair is therefore `-games * -rounds`.
  * `sprt [elo0=E0] elo1=E1 [alpha=A] [beta=B]`: Performs a Sequential Probability Ratio Test for `H1: elo=E1` vs `H0: elo=E0`, where `alpha` is the type I error probability (false positive), and `beta` is type II error probability (false negative). Default values are `elo0=0`, and `alpha=beta=0.05`. This can only be used in matches between two players.
