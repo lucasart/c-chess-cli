@@ -46,6 +46,8 @@ int pos_color_on(const Position *pos, int square);
 int pos_piece_on(const Position *pos, int square);
 
 bool pos_move_is_castling(const Position *pos, move_t m);
+bool pos_move_is_tactical(const Position *pos, move_t m);
+
 void pos_move_to_lan(const Position *pos, move_t m, str_t *lan);
 void pos_move_to_san(const Position *pos, move_t m, str_t *san);
 move_t pos_lan_to_move(const Position *pos, const char *lan);

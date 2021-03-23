@@ -121,7 +121,6 @@ static bool illegal_move(move_t move, const move_t *moves)
 static Position resolve_pv(const Worker *w, const Game *g, const char *pv)
 {
     scope(str_destroy) str_t token = str_init();
-    const char *tail = pv;
 
     // Start with current position. We can't guarantee that the resolved position won't be in check,
     // but a valid one must be returned.
@@ -132,17 +131,22 @@ static Position resolve_pv(const Worker *w, const Game *g, const char *pv)
     int idx = 0;
     move_t *moves = vec_init_reserve(64, move_t);
 
-    while ((tail = str_tok(tail, &token, " "))) {
+    while ((pv = str_tok(pv, &token, " "))) {
         const move_t m = pos_lan_to_move(&p[idx], token.buf);
+
+        // Only play tactical moves, stop on the first quiet move
+        if (!pos_move_is_tactical(&p[idx], m))
+            break;
+
         moves = gen_all_moves(&p[idx], moves);
 
         if (illegal_move(m, moves)) {
-            printf("[%d] WARNING: Illegal move in PV '%s%s' from %s\n", w->id, token.buf, tail,
+            printf("[%d] WARNING: Illegal move in PV '%s%s' from %s\n", w->id, token.buf, pv,
                 g->names[g->pos[g->ply].turn].buf);
 
             if (w->log)
                 DIE_IF(w->id, fprintf(w->log, "WARNING: illegal move in PV '%s%s'\n", token.buf,
-                    tail) < 0);
+                    pv) < 0);
 
             break;
         }

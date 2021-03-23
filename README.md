@@ -72,7 +72,7 @@ chess engine evaluation, otherwise known as supervised learning. It produces a h
 Syntax is `-sample freq[,resolve,[file]]`. Example `-sample 0.25,y,out.csv`.
  * `freq` is the sampling frequency (floating point number between `0` and `1`).
  * `resolve` is `y` for tactical resolution, and `n` (default) otherwise. Tactical resolution is done as follows:
-   * Solve tactical sequences: by playing the PV and recording the final position (leaf node), instead of the current position (root node).
+   * Solve tactical sequences: by playing all tactical moves at the start of the PV, to record the first quiet position.
    * Excludes checks: by recording the last PV position that is not in check (if all PV positions are in check, the sample is discarded).
    * Exclude mates: by discarding samples where the engine returns a mate score.
  * `file` is the name of the file where samples are written. Defaults to `sample.csv` if omitted.
