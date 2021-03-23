@@ -13,6 +13,7 @@
  * not, see <http://www.gnu.org/licenses/>.
 */
 #include <limits.h>
+#include <math.h>
 #include "game.h"
 #include "gen.h"
 #include "util.h"
@@ -303,7 +304,8 @@ int game_play(Worker *w, Game *g, const Options *o, const Engine engines[2],
             resignCount[ei] = 0;
 
         // Write sample: position (compactly encoded) + score
-        if (!(o->sampleResolve && is_mate(info.score)) && prngf(&w->seed) <= o->sampleFrequency) {
+        if (!(o->sampleResolve && is_mate(info.score)) && prngf(&w->seed) <=
+                o->sampleFreq * exp(-o->sampleDecay * g->pos[g->ply].rule50)) {
             Sample sample = {0};
             sample.pos = o->sampleResolve ? resolved : g->pos[g->ply],
             sample.score = sample.pos.turn == g->pos[g->ply].turn ? info.score : -info.score;

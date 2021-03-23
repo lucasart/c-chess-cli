@@ -22,7 +22,7 @@ typedef struct {
     str_t openings, pgn, sample;
     SPRTParam sprtParam;
     uint64_t srand;
-    double sampleFrequency;
+    double sampleFreq, sampleDecay;
     int concurrency, games, rounds;
     int resignNumber, resignCount, resignScore;
     int drawNumber, drawCount, drawScore;

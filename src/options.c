@@ -20,27 +20,30 @@
 #include "util.h"
 #include "vec.h"
 
-static void options_parse_sample(const char *s, Options *o)
+static int options_parse_sample(int argc, const char **argv, int i, Options *o)
 {
-    scope(str_destroy) str_t token = str_init();
-    const char *tail = str_tok(s, &token, ",");
-    assert(tail);
+    // Non-zero default values
+    o->sampleFreq = 1;
+    str_cpy_c(&o->sample, "sample.csv");
 
-    // Parse sample frequency (and check range)
-    o->sampleFrequency = atof(token.buf);
+    while (i < argc && argv[i][0] != '-') {
+        const char *tail = NULL;
 
-    if (o->sampleFrequency > 1.0 || o->sampleFrequency < 0.0)
-        DIE("Sample frequency '%f' must be between 0 and 1\n", o->sampleFrequency);
+        if ((tail = str_prefix(argv[i], "freq=")))
+            o->sampleFreq = atof(tail);
+        else if ((tail = str_prefix(argv[i], "decay=")))
+            o->sampleDecay = atof(tail);
+        else if ((tail = str_prefix(argv[i], "resolve=")))
+            o->sampleResolve = (*tail == 'y');
+        else if ((tail = str_prefix(argv[i], "file=")))
+            str_cpy_c(&o->sample, tail);
+        else
+            DIE("Illegal token in -openings: '%s'\n", argv[i]);
 
-    // Parse resolve flag
-    if ((tail = str_tok(tail, &token, ",")))
-        o->sampleResolve = !strcmp(token.buf, "y");
+        i++;
+    }
 
-    // Parse filename (default sample.csv if omitted)
-    if ((tail = str_tok(tail, &token, ",")))
-        str_cpy(&o->sample, token);
-    else
-        str_cpy_c(&o->sample, "sample.csv");
+    return i - 1;
 }
 
 // Parse time control. Expects 'mtg/time+inc' or 'time+inc'. Note that time and inc are provided by
@@ -240,7 +243,7 @@ void options_parse(int argc, const char **argv, Options *o, EngineOptions **eo)
         else if (!strcmp(argv[i], "-sprt"))
             i = options_parse_sprt(argc, argv, i + 1, o);
         else if (!strcmp(argv[i], "-sample"))
-            options_parse_sample(argv[++i], o);
+            i = options_parse_sample(argc, argv, i + 1, o);
         else
             DIE("Unknown option '%s'\n", argv[i]);
     }

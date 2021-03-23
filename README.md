@@ -50,7 +50,7 @@ c-chess-cli [-each [eng_options]] -engine [eng_options] -engine [eng_options] ..
    * `2` adds comments of the form `{score/depth}`.
    * `3` (default value) adds time usage to the comments `{score/depth time}`.
  * `repeat`: Repeat each opening twice, with each engine playing both sides.
- * `sample freq[,resolvePv[,file]]`. See below.
+ * `sample`. See below.
 
 ### Engine options
 
@@ -66,13 +66,13 @@ c-chess-cli [-each [eng_options]] -engine [eng_options] -engine [eng_options] ..
 
 ### Sampling
 
-The purpose of this feature is to the generate training data, which can be used to fit the parameters of a
-chess engine evaluation, otherwise known as supervised learning. It produces a human readable and easily parsable CSV file.
+The purpose of this feature is to the generate training data, which can be used to fit the parameters of a chess engine evaluation, otherwise known as supervised learning. It produces a human readable and easily parsable CSV file.
 
-Syntax is `-sample freq[,resolve,[file]]`. Example `-sample 0.25,y,out.csv`.
- * `freq` is the sampling frequency (floating point number between `0` and `1`).
- * `resolve` is `y` for tactical resolution, and `n` (default) otherwise. Tactical resolution is done as follows:
+Syntax is `-sample [freq=F] [decay=D] [resolve=R] [file=F]`. Example `-sample freq=0.25 resolve=y file=out.csv`.
+ * `F` is the sampling frequency (floating point number between `0` and `1`). Defaults to `1` if omitted.
+ * `D` is the sample decay based on the rule50 counter. Sampling probability is `F * exp(-D * rule50)`, where `rule50` ranges from `0` to `99` is the ply counter for the 50-move draw rule. Defaults to `0` if omitted.
+ * `R` is `y` for tactical resolution, and `n` (default) otherwise. Tactical resolution is done as follows:
    * Solve tactical sequences: by playing all tactical moves at the start of the PV, to record the first quiet position.
    * Excludes checks: by recording the last PV position that is not in check (if all PV positions are in check, the sample is discarded).
    * Exclude mates: by discarding samples where the engine returns a mate score.
- * `file` is the name of the file where samples are written. Defaults to `sample.csv` if omitted.
+ * `F` is the name of the file where samples are written. Defaults to `sample.csv` if omitted.
