@@ -300,11 +300,10 @@ int game_play(Worker *w, Game *g, const Options *o, const Engine engines[2],
 
         // Write sample: position (compactly encoded) + score
         if (!(o->sampleResolve && is_mate(info.score)) && prngf(&w->seed) <= o->sampleFrequency) {
-            Sample sample = {
-                .pos = o->sampleResolve ? resolved : g->pos[g->ply],
-                .score = info.score,
-                .result = NB_RESULT // unknown yet (use invalid state for now)
-            };
+            Sample sample = {0};
+            sample.pos = o->sampleResolve ? resolved : g->pos[g->ply],
+            sample.score = sample.pos.turn == g->pos[g->ply].turn ? info.score : -info.score;
+            sample.result = NB_RESULT;  // mark as invalid for now, computed after the game
 
             // Record sample, except if resolvePv=true and the position is in check (becuase PV
             // resolution couldn't avoid it), in which case the sample is discarded.
