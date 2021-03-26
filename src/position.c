@@ -533,10 +533,10 @@ bool pos_move_is_castling(const Position *pos, move_t m)
 }
 
 bool pos_move_is_tactical(const Position *pos, move_t m)
-// Detect normal captures, en-passant captures, and promotions
+// Detect normal captures, castling (as KxR capture), en-passant captures, and promotions
 {
     const int from = move_from(m), to = move_to(m);
-    return bb_test(pos->byColor[opposite(pos->turn)], to)
+    return bb_test(pos->byColor[WHITE] | pos->byColor[BLACK], to)
         || (to == pos->epSquare && bb_test(pos_pieces_cp(pos, pos->turn, PAWN), from))
         || move_prom(m) <= QUEEN;
 }
