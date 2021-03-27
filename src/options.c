@@ -38,7 +38,7 @@ static int options_parse_sample(int argc, const char **argv, int i, Options *o)
         else if ((tail = str_prefix(argv[i], "file=")))
             str_cpy_c(&o->sample, tail);
         else
-            DIE("Illegal token in -openings: '%s'\n", argv[i]);
+            DIE("Illegal token in -sample: '%s'\n", argv[i]);
 
         i++;
     }
@@ -126,6 +126,8 @@ static int options_parse_openings(int argc, const char **argv, int i, Options *o
 static int options_parse_adjudication(int argc, const char **argv, int i, int *number, int *count,
     int *score)
 {
+    const int i0 = i;
+
     while (i < argc && argv[i][0] != '-') {
         const char *tail = NULL;
 
@@ -136,7 +138,7 @@ static int options_parse_adjudication(int argc, const char **argv, int i, int *n
         } else if ((tail = str_prefix(argv[i], "score=")))
             *score = atoi(tail);
         else
-            DIE("Illegal token in -openings: '%s'\n", argv[i]);
+            DIE("Illegal token in %s: '%s'\n", argv[i0 - 1], argv[i]);
 
         i++;
     }
