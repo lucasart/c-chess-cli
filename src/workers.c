@@ -68,9 +68,11 @@ int64_t deadline_overdue(Worker *w)
 
 Worker worker_init(int i, const char *logName)
 {
-    Worker w = {0};
-    w.seed = (uint64_t)i;
-    w.id = i + 1;
+    Worker w = {
+        .seed = (uint64_t)i,
+        .id = i + 1
+    };
+
     pthread_mutex_init(&w.deadline.mtx, NULL);
     w.deadline.engineName = str_init();
 

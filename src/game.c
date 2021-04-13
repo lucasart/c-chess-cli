@@ -165,19 +165,14 @@ static Position resolve_pv(const Worker *w, const Game *g, const char *pv)
 
 Game game_init(int round, int game)
 {
-    Game g = {0};
-
-    g.round = round;
-    g.game = game;
-
-    g.names[WHITE] = str_init();
-    g.names[BLACK] = str_init();
-
-    g.pos = vec_init(Position);
-    g.info = vec_init(Info);
-    g.samples = vec_init(Sample);
-
-    return g;
+    return (Game){
+        .round = round,
+        .game = game,
+        .names = {str_init(), str_init()},
+        .pos = vec_init(Position),
+        .info = vec_init(Info),
+        .samples = vec_init(Sample)
+    };
 }
 
 bool game_load_fen(Game *g, const char *fen, int *color)
@@ -307,10 +302,11 @@ int game_play(Worker *w, Game *g, const Options *o, const Engine engines[2],
         // Write sample: position (compactly encoded) + score
         if (!(o->sampleResolve && is_mate(info.score)) && prngf(&w->seed) <=
                 o->sampleFreq * exp(-o->sampleDecay * g->pos[g->ply].rule50)) {
-            Sample sample = {0};
-            sample.pos = o->sampleResolve ? resolved : g->pos[g->ply],
-            sample.score = sample.pos.turn == g->pos[g->ply].turn ? info.score : -info.score;
-            sample.result = NB_RESULT;  // mark as invalid for now, computed after the game
+            Sample sample = (Sample){
+                .pos = o->sampleResolve ? resolved : g->pos[g->ply],
+                .score = sample.pos.turn == g->pos[g->ply].turn ? info.score : -info.score,
+                .result = NB_RESULT  // mark as invalid for now, computed after the game
+            };
 
             // Record sample, except if resolvePv=true and the position is in check (becuase PV
             // resolution couldn't avoid it), in which case the sample is discarded.
@@ -448,13 +444,14 @@ void game_export_pgn(const Game *g, int verbosity, str_t *out)
     str_cat_c(str_cat(out, result), "\n\n");
 }
 
-void game_export_samples(const Game *g, str_t *out)
+void game_export_samples(const Game *g, FILE *out)
 {
-    str_clear(out);
-    scope(str_destroy) str_t fen = str_init();
+    scope(str_destroy) str_t fen = str_init(), lines = str_init();
 
     for (size_t i = 0; i < vec_size(g->samples); i++) {
         pos_get(&g->samples[i].pos, &fen);
-        str_cat_fmt(out, "%S,%i,%i\n", fen, g->samples[i].score, g->samples[i].result);
+        str_cat_fmt(&lines, "%S,%i,%i\n", fen, g->samples[i].score, g->samples[i].result);
     }
+
+    fputs(lines.buf, out);
 }

@@ -31,9 +31,11 @@ static void seq_str_destroy(SeqStr *ss)
 
 SeqWriter seq_writer_init(const char *fileName, const char *mode)
 {
-    SeqWriter sw = {0};
-    sw.out = fopen(fileName, mode);
-    sw.buf = vec_init(SeqStr);
+    SeqWriter sw = {
+        .out = fopen(fileName, mode),
+        .buf = vec_init(SeqStr)
+    };
+
     pthread_mutex_init(&sw.mtx, NULL);
     return sw;
 }

@@ -126,8 +126,9 @@ Engine engine_init(Worker *w, const char *cmd, const char *name, const str_t *op
     if (!*cmd)
         DIE("[%d] missing command to start engine.\n", w->id);
 
-    Engine e = {0};
-    e.name = str_init_from_c(*name ? name : cmd); // default value
+    Engine e = {
+        .name = str_init_from_c(*name ? name : cmd) // default value
+    };
 
     // Parse cmd into (cwd, run, args): we want to execute run from cwd with args.
     scope(str_destroy) str_t cwd = str_init(), run = str_init();

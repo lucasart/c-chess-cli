@@ -19,8 +19,9 @@
 
 Openings openings_init(const char *fileName, bool random, uint64_t srand, int threadId)
 {
-    Openings o = {0};
-    o.index = vec_init(size_t);
+    Openings o = {
+        .index = vec_init(size_t)
+    };
 
     if (*fileName)
         DIE_IF(threadId, !(o.file = fopen(fileName, "re")));

@@ -35,12 +35,12 @@ JobQueue job_queue_init(int engines, int rounds, int games, bool gauntlet)
 {
     assert(engines >= 2 && rounds >= 1 && games >= 1);
 
-    JobQueue jq = {0};
+    JobQueue jq = {
+        .jobs = vec_init(Job),
+        .results = vec_init(Result),
+        .names = vec_init(str_t)
+    };
     pthread_mutex_init(&jq.mtx, NULL);
-
-    jq.jobs = vec_init(Job);
-    jq.results = vec_init(Result);
-    jq.names = vec_init(str_t);
 
     // Prepare engine names: blank for now, will be discovered at run time (concurrently)
     for (int i = 0; i < engines; i++)

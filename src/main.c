@@ -126,11 +126,8 @@ static void *thread_start(void *arg)
         }
 
         // Write to Sample file
-        if (options.sample.len) {
-            scope(str_destroy) str_t sampleText = str_init();
-            game_export_samples(&game, &sampleText);
-            fputs(sampleText.buf, sampleFile);
-        }
+        if (options.sample.len)
+            game_export_samples(&game, sampleFile);
 
         // Write to stdout a one line summary of the game
         scope(str_destroy) str_t result = str_init(), reason = str_init();

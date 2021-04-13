@@ -182,11 +182,11 @@ static int options_parse_sprt(int argc, const char **argv, int i, Options *o)
 
 EngineOptions engine_options_init(void)
 {
-    EngineOptions eo = {0};
-    eo.cmd = str_init();
-    eo.name = str_init();
-    eo.options = vec_init(str_t);
-    return eo;
+    return (EngineOptions){
+        .cmd = str_init(),
+        .name = str_init(),
+        .options = vec_init(str_t)
+    };
 }
 
 void engine_options_destroy(EngineOptions *eo)
@@ -197,18 +197,20 @@ void engine_options_destroy(EngineOptions *eo)
 
 Options options_init(void)
 {
-    Options o = {0};
-    o.openings = str_init();
-    o.pgn = str_init();
-    o.sample = str_init();
-
-    // non-zero default values
-    o.concurrency = 1;
-    o.games = o.rounds = 1;
-    o.sprtParam.alpha = o.sprtParam.beta = 0.05;
-    o.pgnVerbosity = 3;
-
-    return o;
+    return (Options){
+        .openings = str_init(),
+        .pgn = str_init(),
+        .sample = str_init(),
+        .concurrency = 1,
+        .games = 1,
+        .rounds = 1,
+        .sprtParam = (SPRTParam){
+            .alpha = 0.05,
+            .beta = 0.05,
+            .elo1 = 4
+        },
+        .pgnVerbosity = 3
+    };
 }
 
 void options_parse(int argc, const char **argv, Options *o, EngineOptions **eo)
