@@ -127,7 +127,7 @@ static void *thread_start(void *arg)
 
         // Write to Sample file
         if (options.sample.len)
-            game_export_samples(&game, sampleFile);
+            game_export_samples(&game, sampleFile, options.sampleBin);
 
         // Write to stdout a one line summary of the game
         scope(str_destroy) str_t result = str_init(), reason = str_init();

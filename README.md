@@ -76,4 +76,19 @@ Syntax is `-sample [freq=%f] [decay=%f] [resolve=y|n] [file=%s] [format=csv|bin]
    * Excludes checks: by recording the last PV position that is not in check (if all PV positions are in check, the sample is discarded).
    * Exclude mates: by discarding samples where the engine returns a mate score.
  * `file` is the name of the file where samples are written. Defaults to `sample.csv` if omitted.
- * `format` is the format in which the file is written. Defaults to `csv`, which is human readable: `FEN,Eval,Result`. Values for `Result` are `0=loss`, `1=draw`, `2=win`. Binary format is an experimental feature, see code for documentation, encoding may change in future.
+ * `format` is the format in which the file is written. Defaults to `csv`, which is human readable: `FEN,Eval,Result`. `Eval` is the score in cp, as returned by the engine, except for mate scores encoded as `INT16_MAX - dtm` (mating) or `INT16_MIN + dtm` (mated). Values for `Result` are `0=loss`, `1=draw`, `2=win`. Binary format `bin` uses variable length encoding shown below.
+
+Entries in binary format (28 bytes max, average 24 or less):
+```
+uint64_t occ;    // occupied squares (bitboard)
+int16_t score;   // score in cp as returned by the engine
+uint8_t result;  // 0=loss, 1=draw, 2=win
+uint8_t turn:1, rule50:7;  // turn: 0=WHITE, 1=BLACK; rule50: half-move clock for 50-move rule
+uint8_t packedPieces[(count(occ) + 1) / 2];  // 4 bits per piece
+```
+Encoding for `packedPieces[]` elements is:
+```
+0=KNIGHT, 1=BISHOP, 2=ROOK, 3=QUEEN, 4=KING, 5=PAWN,
+6=ROOK with castling ability,
+7=PAWN which is capturable en-passant
+```

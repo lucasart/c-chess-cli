@@ -32,11 +32,20 @@ typedef struct {
     bool chess960;  // for move<->string conversions ("e1h1" if chess960 else "e1g1")
 } Position;
 
+typedef struct {
+    bitboard_t occ;
+    int16_t score;
+    uint8_t result;
+    uint8_t turn:1, rule50:7;
+    uint8_t packedPieces[16];
+    char pad[4];
+} PackedPos;
+
 bool pos_set(Position *pos, const char *fen, bool force960);
 void pos_get(const Position *pos, str_t *fen);
 void pos_move(Position *pos, const Position *before, move_t m);
 
-bitboard_t pos_pieces(const Position* pos);
+bitboard_t pos_pieces(const Position *pos);
 bitboard_t pos_pieces_cp(const Position *pos, int color, int piece);
 bitboard_t pos_pieces_cpp(const Position *pos, int color, int p1, int p2);
 
@@ -53,3 +62,5 @@ void pos_move_to_san(const Position *pos, move_t m, str_t *san);
 move_t pos_lan_to_move(const Position *pos, const char *lan);
 
 void pos_print(const Position *pos);
+
+size_t pos_pack(const Position *pos, int score, int result, PackedPos *pp);

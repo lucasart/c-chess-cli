@@ -13,6 +13,7 @@
  * not, see <http://www.gnu.org/licenses/>.
 */
 #include <ctype.h>
+#include <stddef.h>
 #include <stdio.h>
 #include <string.h>
 #include "position.h"
@@ -704,4 +705,37 @@ void pos_print(const Position *pos)
     scope(str_destroy) str_t lan = str_init();
     pos_move_to_lan(pos, pos->lastMove, &lan);
     printf("Last move: %s\n", lan.buf);
+}
+
+size_t pos_pack(const Position *pos, int score, int result, PackedPos *pp)
+{
+    *pp = (PackedPos){
+        .occ = pos_pieces(pos),
+        .score = (int16_t)score,
+        .result = (uint8_t)result,
+        .turn = pos->turn,
+        .rule50 = pos->rule50
+    };
+
+    bitboard_t remaining = pp->occ;
+    unsigned nibbleIdx = 0;
+
+    while (remaining) {
+        const int square = bb_pop_lsb(&remaining), color = pos_color_on(pos, square);
+
+        // extended piece type: 6 normal ones + 2 extra to encode castling and en-passant
+        int extPiece = pos_piece_on(pos, square);
+
+        if (extPiece == ROOK && bb_test(pos->castleRooks, square))
+            extPiece = PAWN + 1;  // rook that can castle
+        else if (extPiece == PAWN && pos->epSquare == square + push_inc(pos->turn))
+            extPiece = PAWN + 2;  // pawn that can be captured en-passant
+
+        // nibble = 3 bits for extPiece + 1 bit for color
+        const uint8_t nibble = 2 * extPiece + color;
+        pp->packedPieces[nibbleIdx / 2] |= nibbleIdx % 2 ? nibble << 4 : nibble;
+        nibbleIdx++;
+    }
+
+    return offsetof(PackedPos, packedPieces) + (nibbleIdx + 1) / 2;
 }

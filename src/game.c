@@ -444,7 +444,7 @@ void game_export_pgn(const Game *g, int verbosity, str_t *out)
     str_cat_c(str_cat(out, result), "\n\n");
 }
 
-void game_export_samples(const Game *g, FILE *out)
+static void game_export_samples_csv(const Game *g, FILE *out)
 {
     scope(str_destroy) str_t fen = str_init(), lines = str_init();
 
@@ -453,5 +453,30 @@ void game_export_samples(const Game *g, FILE *out)
         str_cat_fmt(&lines, "%S,%i,%i\n", fen, g->samples[i].score, g->samples[i].result);
     }
 
+    // write lines atomically (threads are racing on 'out')
     fputs(lines.buf, out);
+}
+
+static void game_export_samples_bin(const Game *g, FILE *out)
+{
+    const size_t count = vec_size(g->samples);
+
+    flockfile(out);
+
+    for (size_t i = 0; i < count; i++) {
+        PackedPos packed = {0};
+        const size_t bytes = pos_pack(&g->samples[i].pos, g->samples[i].score, g->samples[i].result,
+            &packed);
+        fwrite_unlocked(&packed, bytes, 1, out);
+    }
+
+    funlockfile(out);
+}
+
+void game_export_samples(const Game *g, FILE *out, bool bin)
+{
+    if (bin)
+        game_export_samples_bin(g, out);
+    else
+        game_export_samples_csv(g, out);
 }
