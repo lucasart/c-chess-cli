@@ -37,7 +37,14 @@ static int options_parse_sample(int argc, const char **argv, int i, Options *o)
             o->sampleResolve = (*tail == 'y');
         else if ((tail = str_prefix(argv[i], "file=")))
             str_cpy_c(&o->sample, tail);
-        else
+        else if ((tail = str_prefix(argv[i], "format="))) {
+            if (!strcmp(tail, "csv"))
+                o->sampleBin = false;
+            else if (!strcmp(tail, "bin"))
+                o->sampleBin = true;
+            else
+                DIE("Illegal format in -sample: '%s'\n", tail);
+        } else
             DIE("Illegal token in -sample: '%s'\n", argv[i]);
 
         i++;

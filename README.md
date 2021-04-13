@@ -58,21 +58,22 @@ c-chess-cli [-each [eng_options]] -engine [eng_options] -engine [eng_options] ..
    * The current working directory will be set automatically, if a `/` is contained in `COMMAND`. For example, `cmd=../Engines/critter_1.6a`, will run `./critter_1.6a` from `../Engines`. If no `/` is found, the command is executed as is. Without `/`, for example `cmd=demolito` will run `demolito`, which only works if `demolito` is in `PATH`.
    * Arguments can be provided as part of the command. For example `"cmd=../fooEngine -foo=1"`. Note that the `""` are needed here, for the command line interpreter to parse the whole string as a single token.
  * `name=NAME`: Set the engine's name. If omitted, the name is take from the `id name` value sent by the engine.
- * `tc=TIMECONTROL`: Set the time control to `TIMECONTROL`. The format is `moves/time+increment`, where `moves` is the number of moves per tc, `time` is time per tc (in seconds), and `increment` is time increment per move (in seconds).
+ * `tc=TIMECONTROL`: Set the time control to `TIMECONTROL`. The format is `moves/time+increment`, where `moves` is the number of moves per tc, `time` is time per tc (in seconds), and `increment` is time increment per move (in seconds). Note that `moves` and `increment` are optional, so you can use `moves/time` or `time+increment`.
  * `movetime=N`: time limit per move, in seconds (can be fractional like `movetime=0.123`).
  * `depth=N`: depth limit per move.
  * `nodes=N`: node limit per move.
- * `option.OPTION=VALUE`: Set custom option OPTION to value VALUE.
+ * `option.O=V`: Set UCI option `O` to value `V`.
 
 ### Sampling
 
 The purpose of this feature is to the generate training data, which can be used to fit the parameters of a chess engine evaluation, otherwise known as supervised learning. It produces a human readable and easily parsable CSV file.
 
-Syntax is `-sample [freq=F] [decay=D] [resolve=R] [file=F]`. Example `-sample freq=0.25 resolve=y file=out.csv`.
- * `F` is the sampling frequency (floating point number between `0` and `1`). Defaults to `1` if omitted.
- * `D` is the sample decay based on the rule50 counter. Sampling probability is `F * exp(-D * rule50)`, where `rule50` ranges from `0` to `99` is the ply counter for the 50-move draw rule. Defaults to `0` if omitted.
- * `R` is `y` for tactical resolution, and `n` (default) otherwise. Tactical resolution is done as follows:
+Syntax is `-sample [freq=%f] [decay=%f] [resolve=y|n] [file=%s] [format=csv|bin]`. Example `-sample freq=0.25 resolve=y file=out.csv format=csv`.
+ * `freq` is the sampling frequency (floating point number between `0` and `1`). Defaults to `1` if omitted.
+ * `decay` is the sample decay based on the rule50 counter. Sampling probability is `freq * exp(-decay * rule50)`, where `rule50` ranges from `0` to `99` is the ply counter for the 50-move draw rule. Defaults to `0` if omitted.
+ * `resolve` is `y` for tactical resolution, and `n` (default) otherwise. Tactical resolution is done as follows:
    * Solve tactical sequences: by playing all tactical moves at the start of the PV, to record the first quiet position.
    * Excludes checks: by recording the last PV position that is not in check (if all PV positions are in check, the sample is discarded).
    * Exclude mates: by discarding samples where the engine returns a mate score.
- * `F` is the name of the file where samples are written. Defaults to `sample.csv` if omitted.
+ * `file` is the name of the file where samples are written. Defaults to `sample.csv` if omitted.
+ * `format` is the format in which the file is written. Defaults to `csv`, which is human readable: `FEN,Eval,Result`. Values for `Result` are `0=loss`, `1=draw`, `2=win`. Binary format is an experimental feature, see code for documentation, encoding may change in future.
