@@ -732,7 +732,7 @@ size_t pos_pack(const Position *pos, int score, int result, PackedPos *pp)
             extPiece = PAWN + 2;  // pawn that can be captured en-passant
 
         // nibble = 3 bits for extPiece + 1 bit for color
-        const uint8_t nibble = 2 * extPiece + color;
+        const uint8_t nibble = (uint8_t)(2 * extPiece + color);
         pp->packedPieces[nibbleIdx / 2] |= nibbleIdx % 2 ? nibble << 4 : nibble;
         nibbleIdx++;
     }

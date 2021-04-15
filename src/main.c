@@ -29,7 +29,7 @@ static Options options;
 static EngineOptions *eo;
 static Openings openings;
 static SeqWriter pgnSeqWriter;
-FILE *sampleFile;
+static FILE *sampleFile;
 static JobQueue jq;
 
 static void main_destroy(void)
@@ -56,7 +56,7 @@ static void main_init(int argc, const char **argv)
     options = options_init();
     options_parse(argc, argv, &options, &eo);
 
-    jq = job_queue_init(vec_size(eo), options.rounds, options.games, options.gauntlet);
+    jq = job_queue_init((int)vec_size(eo), options.rounds, options.games, options.gauntlet);
     openings = openings_init(options.openings.buf, options.random, options.srand, 0);
 
     if (options.pgn.len)

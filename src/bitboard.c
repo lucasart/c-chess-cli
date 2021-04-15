@@ -86,7 +86,8 @@ static bitboard_t slider_attacks(int square, bitboard_t occ, const int dir[4][2]
             if (bb_test(occ, sq))
                 break;
 
-            rank += dr, file += df;
+            rank += dr;
+            file += df;
         }
     }
 

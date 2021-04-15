@@ -17,12 +17,12 @@
 vec_t *vec_ptr(void *v)
 {
     assert(v);
-    return (vec_t *)((char *)(v) - offsetof(vec_t, buf));
+    return (vec_t *)((size_t *)(v) - offsetof(vec_t, buf) / sizeof(size_t));
 }
 
 const vec_t *vec_cptr(const void *v)
 {
-    return (const vec_t *)((const char *)(v) - offsetof(vec_t, buf));
+    return (const vec_t *)((const size_t *)(v) - offsetof(vec_t, buf) / sizeof(size_t));
 }
 
 void *vec_do_init(size_t capacity, size_t esize)

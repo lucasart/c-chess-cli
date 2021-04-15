@@ -32,14 +32,14 @@ static uint64_t hash_mix(uint64_t block)
     return block ^= block >> 47;
 }
 
-void hash_block(uint64_t block, uint64_t *hash)
+static void hash_block(uint64_t block, uint64_t *hash)
 {
     *hash ^= hash_mix(block);
     *hash *= 0x880355f21e6d1965ULL;
 }
 
 // Based on FastHash64, without length hashing, to make it capable of incremental updates
-void hash_blocks(const void *buffer, size_t length, uint64_t *hash)
+static void hash_blocks(const void *buffer, size_t length, uint64_t *hash)
 {
     assert((uintptr_t)buffer % 8 == 0);
     const uint64_t *blocks = (const uint64_t *)buffer;
