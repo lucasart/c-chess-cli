@@ -64,7 +64,7 @@ c-chess-cli [-each [eng_options]] -engine [eng_options] -engine [eng_options] ..
  * `nodes=N`: node limit per move.
  * `option.O=V`: Set UCI option `O` to value `V`.
 
-### Sampling
+### Sampling (advanced)
 
 The purpose of this feature is to the generate training data, which can be used to fit the parameters of a chess engine evaluation, otherwise known as supervised learning. It produces a human readable and easily parsable CSV file.
 
@@ -75,7 +75,7 @@ Syntax is `-sample [freq=%f] [decay=%f] [resolve=y|n] [file=%s] [format=csv|bin]
    * Solve tactical sequences: by playing all tactical moves at the start of the PV, to record the first quiet position.
    * Excludes checks: by recording the last PV position that is not in check (if all PV positions are in check, the sample is discarded).
    * Exclude mates: by discarding samples where the engine returns a mate score.
- * `file` is the name of the file where samples are written. Defaults to `sample.csv` if omitted.
+ * `file` is the name of the file where samples are written. Defaults to `sample.csv|bin` if omitted.
  * `format` is the format in which the file is written. Defaults to `csv`, which is human readable: `FEN,Eval,Result`. `Eval` is the score in cp, as returned by the engine, except for mate scores encoded as `INT16_MAX - dtm` (mating) or `INT16_MIN + dtm` (mated). Values for `Result` are `0=loss`, `1=draw`, `2=win`. Binary format `bin` uses variable length encoding shown below.
 
 Entries in binary format (28 bytes max, average 24 or less):

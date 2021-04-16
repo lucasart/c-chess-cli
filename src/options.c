@@ -22,9 +22,7 @@
 
 static int options_parse_sample(int argc, const char **argv, int i, Options *o)
 {
-    // Non-zero default values
     o->sp.freq = 1;
-    str_cpy_c(&o->sp.fileName, "sample.csv");
 
     while (i < argc && argv[i][0] != '-') {
         const char *tail = NULL;
@@ -49,6 +47,9 @@ static int options_parse_sample(int argc, const char **argv, int i, Options *o)
 
         i++;
     }
+
+    if (!o->sp.fileName.len)
+        str_cat_c(str_cpy_c(&o->sp.fileName, "sample."), o->sp.bin ? "bin" : "csv");
 
     return i - 1;
 }
