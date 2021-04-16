@@ -162,7 +162,7 @@ int main(int argc, char **argv)
         } else if ((tail = str_prefix(line.buf, "position "))) {
             // Hash the position string into seed. This allows c-chess-cli test suite to exercise
             // concurrency, while keeping PGN output identical.
-            hash_blocks(tail, strlen(tail), &seed);
+            hash_blocks(line.buf, line.len, &seed);
             parse_position(tail, &pos, uciChess960);
         } else if ((tail = str_prefix(line.buf, "go "))) {
             tail = str_prefix(tail, "depth ");
