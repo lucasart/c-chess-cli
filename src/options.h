@@ -19,16 +19,23 @@
 #include "str.h"
 
 typedef struct {
-    str_t openings, pgn, sample;
+    str_t fileName;
+    double freq, decay;
+    bool resolve, bin;
+    char pad[6];
+} SampleParams;
+
+typedef struct {
+    SampleParams sp;
+    str_t openings, pgn;
     SPRTParam sprtParam;
     uint64_t srand;
-    double sampleFreq, sampleDecay;
     int concurrency, games, rounds;
     int resignNumber, resignCount, resignScore;
     int drawNumber, drawCount, drawScore;
     int pgnVerbosity;
-    bool log, random, repeat, sprt, gauntlet, sampleResolve, sampleBin;
-    char pad[1];
+    bool log, random, repeat, sprt, gauntlet;
+    char pad[3];
 } Options;
 
 typedef struct {
@@ -39,6 +46,9 @@ typedef struct {
 
 EngineOptions engine_options_init(void);
 void engine_options_destroy(EngineOptions *eo);
+
+SampleParams sample_params_init(void);
+void sample_params_destroy(SampleParams *sp);
 
 Options options_init(void);
 void options_parse(int argc, const char **argv, Options *o, EngineOptions **eo);

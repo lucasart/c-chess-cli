@@ -300,17 +300,17 @@ int game_play(Worker *w, Game *g, const Options *o, const Engine engines[2],
             resignCount[ei] = 0;
 
         // Write sample: position (compactly encoded) + score
-        if (!(o->sampleResolve && is_mate(info.score)) && prngf(&w->seed) <=
-                o->sampleFreq * exp(-o->sampleDecay * g->pos[g->ply].rule50)) {
+        if (!(o->sp.resolve && is_mate(info.score)) && prngf(&w->seed) <=
+                o->sp.freq * exp(-o->sp.decay * g->pos[g->ply].rule50)) {
             Sample sample = (Sample){
-                .pos = o->sampleResolve ? resolved : g->pos[g->ply],
+                .pos = o->sp.resolve ? resolved : g->pos[g->ply],
                 .score = sample.pos.turn == g->pos[g->ply].turn ? info.score : -info.score,
                 .result = NB_RESULT  // mark as invalid for now, computed after the game
             };
 
             // Record sample, except if resolvePv=true and the position is in check (becuase PV
             // resolution couldn't avoid it), in which case the sample is discarded.
-            if (!o->sampleResolve || !sample.pos.checkers)
+            if (!o->sp.resolve || !sample.pos.checkers)
                 vec_push(g->samples, sample);
         }
 

@@ -23,25 +23,25 @@
 static int options_parse_sample(int argc, const char **argv, int i, Options *o)
 {
     // Non-zero default values
-    o->sampleFreq = 1;
-    str_cpy_c(&o->sample, "sample.csv");
+    o->sp.freq = 1;
+    str_cpy_c(&o->sp.fileName, "sample.csv");
 
     while (i < argc && argv[i][0] != '-') {
         const char *tail = NULL;
 
         if ((tail = str_prefix(argv[i], "freq=")))
-            o->sampleFreq = atof(tail);
+            o->sp.freq = atof(tail);
         else if ((tail = str_prefix(argv[i], "decay=")))
-            o->sampleDecay = atof(tail);
+            o->sp.decay = atof(tail);
         else if ((tail = str_prefix(argv[i], "resolve=")))
-            o->sampleResolve = (*tail == 'y');
+            o->sp.resolve = (*tail == 'y');
         else if ((tail = str_prefix(argv[i], "file=")))
-            str_cpy_c(&o->sample, tail);
+            str_cpy_c(&o->sp.fileName, tail);
         else if ((tail = str_prefix(argv[i], "format="))) {
             if (!strcmp(tail, "csv"))
-                o->sampleBin = false;
+                o->sp.bin = false;
             else if (!strcmp(tail, "bin"))
-                o->sampleBin = true;
+                o->sp.bin = true;
             else
                 DIE("Illegal format in -sample: '%s'\n", tail);
         } else
@@ -195,12 +195,24 @@ void engine_options_destroy(EngineOptions *eo)
     vec_destroy_rec(eo->options, str_destroy);
 }
 
+SampleParams sample_params_init(void)
+{
+    return (SampleParams){
+        .fileName = str_init()
+    };
+}
+
+void sample_params_destroy(SampleParams *sp)
+{
+    str_destroy(&sp->fileName);
+}
+
 Options options_init(void)
 {
     return (Options){
+        .sp = sample_params_init(),
         .openings = str_init(),
         .pgn = str_init(),
-        .sample = str_init(),
         .concurrency = 1,
         .games = 1,
         .rounds = 1,
@@ -211,6 +223,12 @@ Options options_init(void)
         },
         .pgnVerbosity = 3
     };
+}
+
+void options_destroy(Options *o)
+{
+    sample_params_destroy(&o->sp);
+    str_destroy_n(&o->openings, &o->pgn);
 }
 
 void options_parse(int argc, const char **argv, Options *o, EngineOptions **eo)
@@ -295,9 +313,4 @@ void options_parse(int argc, const char **argv, Options *o, EngineOptions **eo)
 
     if (vec_size(*eo) > 2 && o->sprt)
         DIE("only 2 engines for SPRT\n");
-}
-
-void options_destroy(Options *o)
-{
-    str_destroy_n(&o->openings, &o->pgn, &o->sample);
 }

@@ -36,7 +36,7 @@ static void main_destroy(void)
 {
     vec_destroy_rec(Workers, worker_destroy);
 
-    if (options.sample.len)
+    if (options.sp.fileName.len)
         fclose(sampleFile);
 
     if (options.pgn.len)
@@ -62,8 +62,8 @@ static void main_init(int argc, const char **argv)
     if (options.pgn.len)
         pgnSeqWriter = seq_writer_init(options.pgn.buf, "ae");
 
-    if (options.sample.len)
-        DIE_IF(0, !(sampleFile = fopen(options.sample.buf, "ae")));
+    if (options.sp.fileName.len)
+        DIE_IF(0, !(sampleFile = fopen(options.sp.fileName.buf, "ae")));
 
     // Prepare Workers[]
     Workers = vec_init(Worker);
@@ -126,8 +126,8 @@ static void *thread_start(void *arg)
         }
 
         // Write to Sample file
-        if (options.sample.len)
-            game_export_samples(&game, sampleFile, options.sampleBin);
+        if (options.sp.fileName.len)
+            game_export_samples(&game, sampleFile, options.sp.bin);
 
         // Write to stdout a one line summary of the game
         scope(str_destroy) str_t result = str_init(), reason = str_init();
