@@ -707,12 +707,10 @@ void pos_print(const Position *pos)
     printf("Last move: %s\n", lan.buf);
 }
 
-size_t pos_pack(const Position *pos, int score, int result, PackedPos *pp)
+size_t pos_pack(const Position *pos, PackedPos *pp)
 {
     *pp = (PackedPos){
         .occ = pos_pieces(pos),
-        .score = (int16_t)score,
-        .result = (uint8_t)result,
         .turn = pos->turn,
         .rule50 = pos->rule50
     };

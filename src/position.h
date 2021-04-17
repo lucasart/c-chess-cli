@@ -34,11 +34,9 @@ typedef struct {
 
 typedef struct {
     bitboard_t occ;
-    int16_t score;
-    uint8_t result;
     uint8_t turn:1, rule50:7;
     uint8_t packedPieces[16];
-    char pad[4];
+    char pad[7];
 } PackedPos;
 
 bool pos_set(Position *pos, const char *fen, bool force960);
@@ -63,4 +61,4 @@ move_t pos_lan_to_move(const Position *pos, const char *lan);
 
 void pos_print(const Position *pos);
 
-size_t pos_pack(const Position *pos, int score, int result, PackedPos *pp);
+size_t pos_pack(const Position *pos, PackedPos *pp);

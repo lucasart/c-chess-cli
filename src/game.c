@@ -450,8 +450,6 @@ static void game_export_samples_csv(const Game *g, FILE *out)
 
     for (size_t i = 0; i < vec_size(g->samples); i++) {
         pos_get(&g->samples[i].pos, &fen);
-
-        // Write sample 'atomically' (threads are racing on out)
         fprintf(out, "%s,%d,%d\n", fen.buf, g->samples[i].score, g->samples[i].result);
     }
 }
@@ -460,18 +458,22 @@ static void game_export_samples_bin(const Game *g, FILE *out)
 {
     for (size_t i = 0; i < vec_size(g->samples); i++) {
         PackedPos packed = {0};
-        const size_t bytes = pos_pack(&g->samples[i].pos, g->samples[i].score, g->samples[i].result,
-            &packed);
+        const size_t bytes = pos_pack(&g->samples[i].pos, &packed);
 
-        // Write sample 'atomically' (threads are racing on out)
         fwrite(&packed, bytes, 1, out);
+        fwrite(&g->samples[i].score, sizeof(g->samples[i].score), 1, out);
+        fwrite(&g->samples[i].result, sizeof(g->samples[i].result), 1, out);
     }
 }
 
 void game_export_samples(const Game *g, FILE *out, bool bin)
 {
+    flockfile(out);
+
     if (bin)
         game_export_samples_bin(g, out);
     else
         game_export_samples_csv(g, out);
+
+    funlockfile(out);
 }
