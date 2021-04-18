@@ -22,8 +22,6 @@
 
 static int options_parse_sample(int argc, const char **argv, int i, Options *o)
 {
-    o->sp.freq = 1;
-
     while (i < argc && argv[i][0] != '-') {
         const char *tail = NULL;
 
@@ -199,7 +197,8 @@ void engine_options_destroy(EngineOptions *eo)
 SampleParams sample_params_init(void)
 {
     return (SampleParams){
-        .fileName = str_init()
+        .fileName = str_init(),
+        .freq = 1
     };
 }
 

@@ -13,7 +13,6 @@
  * not, see <http://www.gnu.org/licenses/>.
 */
 #include <assert.h>
-#include <inttypes.h>
 #include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
@@ -160,6 +159,23 @@ static char *do_fmt_u(uintmax_t n, char *s)
     return s + 1;
 }
 
+str_t *str_cat_int(str_t *dest, intmax_t i)
+{
+    char buf[40];  // enough for sizeof(uintmax_t) <= 16
+    char *s = do_fmt_u((uintmax_t)imaxabs(i), &buf[sizeof(buf) - 1]);
+
+    if (i < 0)
+        *--s = '-';
+
+    return str_cat_c(dest, s);
+}
+
+str_t *str_cat_uint(str_t *dest, uintmax_t u)
+{
+    char buf[40];  // enough for sizeof(uintmax_t) <= 16
+    return str_cat_c(dest, do_fmt_u(u, &buf[sizeof(buf) - 1]));
+}
+
 static void do_str_cat_fmt(str_t *dest, const char *fmt, va_list args)
 // Supported formats
 // - Integers: %i (int), %I (intmax_t), %u (unsigned), %U (uintmax_t)
@@ -188,22 +204,18 @@ static void do_str_cat_fmt(str_t *dest, const char *fmt, va_list args)
         fmt = pct + 2;  // move past the '%?' to prepare next loop iteration
         assert(strlen(fmt) == bytesLeft);
 
-        assert(sizeof(intmax_t) <= 8);
-        char buf[24];  // enough to fit a intmax_t with sign prefix '-' and '\0' terminator
-
         if (pct[1] == 's')
-            str_cat_c(dest, va_arg(args, const char *restrict));  // C-string
+            str_cat_c(dest, va_arg(args, const char *restrict));
         else if (pct[1] == 'S')
-            str_cat(dest, va_arg(args, str_t));  // string
-        else if (pct[1] == 'i' || pct[1] == 'I') {  // int or intmax_t
-            const intmax_t i = pct[1] == 'i' ? va_arg(args, int) : va_arg(args, intmax_t);
-            char *s = do_fmt_u((uintmax_t)imaxabs(i), &buf[sizeof(buf) - 1]);
-            if (i < 0) *--s = '-';
-            str_cat_c(dest, s);
-        } else if (pct[1] == 'u')  // unsigned int
-            str_cat_c(dest, do_fmt_u(va_arg(args, unsigned), &buf[sizeof(buf) - 1]));
-        else if (pct[1] == 'U')  // uintmax_t
-            str_cat_c(dest, do_fmt_u(va_arg(args, uintmax_t), &buf[sizeof(buf) - 1]));
+            str_cat(dest, va_arg(args, str_t));
+        else if (pct[1] == 'i')
+            str_cat_int(dest, va_arg(args, int));
+        else if (pct[1] == 'I')
+            str_cat_int(dest, va_arg(args, intmax_t));
+        else if (pct[1] == 'u')
+            str_cat_uint(dest, va_arg(args, unsigned));
+        else if (pct[1] == 'U')
+            str_cat_uint(dest, va_arg(args, uintmax_t));
         else
             assert(false);  // add your format specifier handler here
     }
@@ -211,21 +223,23 @@ static void do_str_cat_fmt(str_t *dest, const char *fmt, va_list args)
     assert(str_ok(*dest));
 }
 
-void str_cpy_fmt(str_t *dest, const char *fmt, ...)
+str_t *str_cpy_fmt(str_t *dest, const char *fmt, ...)
 {
     va_list args;
     va_start(args, fmt);
     str_resize(dest, 0);
     do_str_cat_fmt(dest, fmt, args);
     va_end(args);
+    return dest;
 }
 
-void str_cat_fmt(str_t *dest, const char *fmt, ...)
+str_t *str_cat_fmt(str_t *dest, const char *fmt, ...)
 {
     va_list args;
     va_start(args, fmt);
     do_str_cat_fmt(dest, fmt, args);
     va_end(args);
+    return dest;
 }
 
 const char *str_tok(const char *s, str_t *token, const char *delim)

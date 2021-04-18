@@ -13,6 +13,7 @@
  * not, see <http://www.gnu.org/licenses/>.
 */
 #pragma once
+#include <inttypes.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -65,9 +66,13 @@ str_t *str_ncat(str_t *dest, str_t src, size_t n);
 str_t *str_cat(str_t *dest, str_t src);
 #define str_cat_c(dest, c_str) str_cat(dest, str_ref(c_str))
 
+// Lightweight functions to concatenate a single integer (decimal signed/unsined)
+str_t *str_cat_int(str_t *dest, intmax_t i);
+str_t *str_cat_uint(str_t *dest, uintmax_t u);
+
 // same as sprintf(), but provides both replace (cpy) and append (cat) versions
-void str_cpy_fmt(str_t *dest, const char *fmt, ...);
-void str_cat_fmt(str_t *dest, const char *fmt, ...);
+str_t *str_cpy_fmt(str_t *dest, const char *fmt, ...);
+str_t *str_cat_fmt(str_t *dest, const char *fmt, ...);
 
 // reads a token into valid string 'token', from s, using delim characters as a generalisation for
 // white spaces. returns tail pointer on success, otherwise NULL (no more tokens to read).
