@@ -81,10 +81,10 @@ Syntax is `-sample [freq=%f] [decay=%f] [resolve=y|n] [file=%s] [format=csv|bin]
 Entries in binary format (28 bytes max, average 24 or less):
 ```
 uint64_t occ;    // occupied squares (bitboard)
+uint8_t turn:1, rule50:7;  // turn: 0=WHITE, 1=BLACK; rule50: half-move clock for 50-move rule
+uint8_t packedPieces[(count(occ) + 1) / 2];  // 4 bits per piece, max 16 bytes
 int16_t score;   // score in cp as returned by the engine
 uint8_t result;  // 0=loss, 1=draw, 2=win
-uint8_t turn:1, rule50:7;  // turn: 0=WHITE, 1=BLACK; rule50: half-move clock for 50-move rule
-uint8_t packedPieces[(count(occ) + 1) / 2];  // 4 bits per piece
 ```
 Encoding for `packedPieces[]` elements is:
 ```
