@@ -14,6 +14,7 @@
 */
 #include <pthread.h>
 #include <stdlib.h>
+#include <string.h>
 #include "engine.h"
 #include "game.h"
 #include "jobs.h"
@@ -163,6 +164,11 @@ static void *thread_start(void *arg)
 
 int main(int argc, const char **argv)
 {
+    if (argc >= 2 && !strcmp(argv[1], "-version")) {
+        puts("c-chess-cli " VERSION);
+        return 0;
+    }
+
     main_init(argc, argv);
 
     // Start threads[]

@@ -1,5 +1,5 @@
 #!/usr/bin/python
-import argparse, os
+import argparse, os, subprocess
 
 p = argparse.ArgumentParser(description='c-chess-cli build script')
 p.add_argument('-c', '--compiler', help='Compiler', choices=['cc', 'gcc', 'clang', 'musl-gcc',
@@ -11,7 +11,8 @@ p.add_argument('-p', '--task', help='Task to run', choices=['main', 'test', 'eng
 args = p.parse_args()
 
 # Determine flags for: compilation, warning, and linking
-cflags = '-I./src -std=gnu11 -mpopcnt {}'.format('-DNDEBUG -Os -ffast-math -flto -s' if not args.debug else '-g -O1')
+version = subprocess.run(['git', 'show','-s','--format=%ci'], capture_output=True).stdout.split()[0].decode('utf-8')
+cflags = '-I./src -std=gnu11 -mpopcnt {} -DVERSION=\\"{}\\"'.format('-DNDEBUG -Os -ffast-math -flto -s' if not args.debug else '-g -O1', version)
 
 wflags = '-Wfatal-errors -Wall -Wextra -Wstrict-prototypes -Wsign-conversion -Wshadow -Wpadded -Wmissing-prototypes'
 if 'clang' in args.compiler:

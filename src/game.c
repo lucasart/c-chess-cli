@@ -300,8 +300,9 @@ int game_play(Worker *w, Game *g, const Options *o, const Engine engines[2],
             resignCount[ei] = 0;
 
         // Write sample: position (compactly encoded) + score
-        if (!(o->sp.resolve && is_mate(info.score)) && prngf(&w->seed) <=
-                o->sp.freq * exp(-o->sp.decay * g->pos[g->ply].rule50)) {
+        if (o->sp.fileName.len
+                && !(o->sp.resolve && is_mate(info.score))
+                && prngf(&w->seed) <= o->sp.freq * exp(-o->sp.decay * g->pos[g->ply].rule50)) {
             Sample sample = (Sample){
                 .pos = o->sp.resolve ? resolved : g->pos[g->ply],
                 .score = sample.pos.turn == g->pos[g->ply].turn ? info.score : -info.score,

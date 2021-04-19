@@ -12,6 +12,7 @@ See `make.py --help` for more options.
 
 ```
 c-chess-cli [-each [eng_options]] -engine [eng_options] -engine [eng_options] ... [options]
+c-chess-cli -version
 ```
 
 ### Example
