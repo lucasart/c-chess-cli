@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 import argparse, os, subprocess
 
 p = argparse.ArgumentParser(description='c-chess-cli build script')
