@@ -136,6 +136,11 @@ static void run_go(const Position *pos, const Go *go, uint64_t *seed)
 
 int main(int argc, char **argv)
 {
+    if (argc >= 2 && !strcmp(argv[1], "-version")) {
+        puts("c-chess-cli/test " VERSION);
+        return 0;
+    }
+
     Position pos = {0};
     Go go = {0};
     bool uciChess960 = false;

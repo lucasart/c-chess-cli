@@ -47,7 +47,7 @@ static int options_parse_sample(int argc, const char **argv, int i, Options *o)
     }
 
     if (!o->sp.fileName.len)
-        str_cat_c(str_cpy_c(&o->sp.fileName, "sample."), o->sp.bin ? "bin" : "csv");
+        str_cpy_fmt(&o->sp.fileName, "sample.%s", o->sp.bin ? "bin" : "csv");
 
     return i - 1;
 }
