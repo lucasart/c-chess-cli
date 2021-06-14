@@ -93,10 +93,12 @@ static void *thread_start(void *arg)
         // Engine stop/start, as needed
         for (int i = 0; i < 2; i++)
             if (job.ei[i] != ei[i]) {
+                ei[i] = job.ei[i];
+                engines[i].timeOut = eo[ei[i]].timeOut;
+
                 if (engines[i].pid)
                     engine_destroy(w, &engines[i]);
 
-                ei[i] = job.ei[i];
                 engines[i] = engine_init(w, eo[ei[i]].cmd.buf, eo[ei[i]].name.buf, eo[ei[i]].options);
                 job_queue_set_name(&jq, ei[i], engines[i].name.buf);
             }

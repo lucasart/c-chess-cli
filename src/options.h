@@ -40,7 +40,7 @@ typedef struct {
 
 typedef struct {
     str_t cmd, name, *options;
-    int64_t time, increment, movetime, nodes;
+    int64_t time, increment, movetime, nodes, timeOut;
     int depth, movestogo;
 } EngineOptions;
 

@@ -24,6 +24,7 @@
 typedef struct {
     FILE *in, *out;
     str_t name;
+    int64_t timeOut;
     pid_t pid;
     bool supportChess960;
     char pad[3];

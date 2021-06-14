@@ -149,7 +149,7 @@ Engine engine_init(Worker *w, const char *cmd, const char *name, const str_t *op
     free(argv);
 
     // Start the uci..uciok dialogue
-    deadline_set(w, e.name.buf, system_msec() + 4000);
+    deadline_set(w, e.name.buf, system_msec() + e.timeOut);
     engine_writeln(w, &e, "uci");
     scope(str_destroy) str_t line = str_init();
 
@@ -184,7 +184,7 @@ void engine_destroy(Worker *w, Engine *e)
         return;
 
     // Order the engine to quit, and grant 1s deadline for obeying
-    deadline_set(w, e->name.buf, system_msec() + 1000);
+    deadline_set(w, e->name.buf, system_msec() + e->timeOut);
     engine_writeln(w, e, "quit");
     waitpid(e->pid, NULL, 0);
     deadline_clear(w);
@@ -217,7 +217,7 @@ void engine_writeln(const Worker *w, const Engine *e, char *buf)
 
 void engine_sync(Worker *w, const Engine *e)
 {
-    deadline_set(w, e->name.buf, system_msec() + 2000);
+    deadline_set(w, e->name.buf, system_msec() + e->timeOut);
     engine_writeln(w, e, "isready");
     scope(str_destroy) str_t line = str_init();
 
@@ -236,7 +236,7 @@ bool engine_bestmove(Worker *w, const Engine *e, int64_t *timeLeft, str_t *best,
     str_clear(pv);
 
     const int64_t start = system_msec(), timeLimit = start + *timeLeft;
-    deadline_set(w, e->name.buf, timeLimit + 1000);
+    deadline_set(w, e->name.buf, timeLimit + e->timeOut);
 
     while (*timeLeft >= 0 && !result) {
         engine_readln(w, e, &line);

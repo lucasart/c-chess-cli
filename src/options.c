@@ -97,6 +97,8 @@ static int options_parse_eo(int argc, const char **argv, int i, EngineOptions *e
             eo->movetime = (int64_t)(atof(tail) * 1000);
         else if ((tail = str_prefix(argv[i], "tc=")))
             options_parse_tc(tail, eo);
+        else if ((tail = str_prefix(argv[i], "timeout=")))
+            eo->timeOut = (int64_t)(atof(tail) * 1000);
         else
             DIE("Illegal syntax '%s'\n", argv[i]);
 
@@ -184,7 +186,8 @@ EngineOptions engine_options_init(void)
     return (EngineOptions){
         .cmd = str_init(),
         .name = str_init(),
-        .options = vec_init(str_t)
+        .options = vec_init(str_t),
+        .timeOut = 4000
     };
 }
 

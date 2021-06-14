@@ -63,6 +63,7 @@ c-chess-cli -version
  * `movetime=N`: time limit per move, in seconds (can be fractional like `movetime=0.123`).
  * `depth=N`: depth limit per move.
  * `nodes=N`: node limit per move.
+ * `timeout=N`: tolerance (in seconds) for c-chess-cli to determine when an engine hangs (which is an unrecovrable error at this point). Default value is `N=4`.
  * `option.O=V`: Set UCI option `O` to value `V`.
 
 ### Sampling (advanced)
