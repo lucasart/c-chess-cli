@@ -14,7 +14,7 @@ args = p.parse_args()
 version = subprocess.run(['git', 'show','-s','--format=%ci'], stdout=subprocess.PIPE).stdout.split()[0].decode('utf-8')
 cflags = '-I./src -std=gnu11 -mpopcnt {} -DVERSION=\\"{}\\"'.format('-DNDEBUG -Os -ffast-math -flto -s' if not args.debug else '-g -O1', version)
 
-wflags = '-Wfatal-errors -Wall -Wextra -Wstrict-prototypes -Wsign-conversion -Wshadow -Wpadded -Wmissing-prototypes'
+wflags = '-Wfatal-errors -Wall -Wextra -Wstrict-prototypes -Wsign-conversion -Wshadow -Wmissing-prototypes'
 if 'clang' in args.compiler:
     wflags += ' -Wcast-align -Wmissing-variable-declarations -Wshorten-64-to-32 -Wimplicit-int-conversion -Wcomma'
 

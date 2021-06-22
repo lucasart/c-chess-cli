@@ -34,12 +34,10 @@ typedef struct {
         int64_t timeLimit;
         str_t engineName;
         bool set;
-        char pad[7];
     } deadline;
     FILE *log;
     uint64_t seed;  // seed for prng()
     int id;  // starts at 1 (0 is for main thread)
-    char pad[4];
 } Worker;
 
 extern Worker *Workers;

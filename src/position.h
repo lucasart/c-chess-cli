@@ -36,7 +36,6 @@ typedef struct {
     bitboard_t occ;
     uint8_t turn:1, rule50:7;
     uint8_t packedPieces[16];
-    char pad[7];
 } PackedPos;
 
 bool pos_set(Position *pos, const char *fen, bool force960);

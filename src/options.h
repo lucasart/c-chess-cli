@@ -22,7 +22,6 @@ typedef struct {
     str_t fileName;
     double freq, decay;
     bool resolve, bin;
-    char pad[6];
 } SampleParams;
 
 typedef struct {
@@ -35,7 +34,6 @@ typedef struct {
     int drawNumber, drawCount, drawScore;
     int pgnVerbosity;
     bool log, random, repeat, sprt, gauntlet;
-    char pad[3];
 } Options;
 
 typedef struct {

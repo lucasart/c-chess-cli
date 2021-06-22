@@ -37,7 +37,6 @@ typedef struct {
     pid_t pid;
 #endif
     bool supportChess960;
-    char pad[3];
 } Engine;
 
 // Elements remembered from parsing info lines (for writing PGN comments)
