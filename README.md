@@ -1,6 +1,6 @@
 ## c-chess-cli
 
-c-chess-cli is a command line interface for UCI chess engines written in C. Free from [dependency hell](https://en.wikipedia.org/wiki/Dependency_hell), it only uses the C standard library, and POSIX. Primarily developped on Linux, it should work on all POSIX operating systems, including MacOS and Android. Windows is not supported.
+c-chess-cli is a command line interface for UCI chess engines written in C. Free from [dependency hell](https://en.wikipedia.org/wiki/Dependency_hell), it only uses the C standard library, and POSIX. Primarily developped on Linux, it should work on all POSIX operating systems, including MacOS and Android. Windows support was added recently, and is still experimental at this stage.
 
 ## How to compile ?
 
@@ -68,7 +68,7 @@ c-chess-cli -version
 
 ### Sampling (advanced)
 
-The purpose of this feature is to the generate training data, which can be used to fit the parameters of a chess engine evaluation, otherwise known as supervised learning. It produces a human readable and easily parsable CSV file.
+The purpose of this feature is to the generate training data, which can be used to fit the parameters of a chess engine evaluation, otherwise known as supervised learning.
 
 Syntax is `-sample [freq=%f] [decay=%f] [resolve=y|n] [file=%s] [format=csv|bin]`. Example `-sample freq=0.25 resolve=y file=out.csv format=csv`.
  * `freq` is the sampling frequency (floating point number between `0` and `1`). Defaults to `1` if omitted.
@@ -85,7 +85,7 @@ Entries in binary format (28 bytes max, average 24 or less):
 uint64_t occ;    // occupied squares (bitboard)
 uint8_t turn:1, rule50:7;  // turn: 0=WHITE, 1=BLACK; rule50: half-move clock for 50-move rule
 uint8_t packedPieces[(count(occ) + 1) / 2];  // 4 bits per piece, max 16 bytes
-int16_t score;   // score in cp as returned by the engine
+int16_t score;   // score in cp; mating scores INT16_MAX - dtm; mated scores INT16_MIN + dtm
 uint8_t result;  // 0=loss, 1=draw, 2=win
 ```
 Encoding for `packedPieces[]` elements is:
