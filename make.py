@@ -3,7 +3,7 @@ import argparse, os, subprocess
 
 p = argparse.ArgumentParser(description='c-chess-cli build script')
 p.add_argument('-c', '--compiler', help='Compiler', choices=['cc', 'gcc', 'clang', 'musl-gcc',
-    'musl-clang'], default='cc')
+    'musl-clang', 'x86_64-w64-mingw32-gcc'], default='cc')
 p.add_argument('-o', '--output', help='Output file', default='')
 p.add_argument('-d', '--debug', action='store_true', help='Debug compile')
 p.add_argument('-s', '--static', action='store_true', help='Static compile')

@@ -12,13 +12,18 @@
  * You should have received a copy of the GNU General Public License along with this program. If
  * not, see <http://www.gnu.org/licenses/>.
 */
-#ifdef __linux__
+#ifdef __MINGW32__
+    #include <io.h>
+    #include <fcntl.h>
+#elif defined __linux__
     #define _GNU_SOURCE
     #include <unistd.h>
     #include <fcntl.h>
     #include <sys/prctl.h>
+    #include <sys/wait.h>
 #else
     #include <unistd.h>
+    #include <sys/wait.h>
 #endif
 
 #include <assert.h>
@@ -28,7 +33,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <sys/wait.h>
 
 #include "engine.h"
 #include "util.h"
@@ -39,24 +43,98 @@ static void engine_spawn(const Worker *w, Engine *e, const char *cwd, const char
 {
     assert(argv[0]);
 
+#ifdef __MINGW32__  // Windows (mingw only)
+    (void)argv;  // FIXME: support engine arguments
+
+    SECURITY_ATTRIBUTES saAttr = {
+        .nLength = sizeof(SECURITY_ATTRIBUTES),
+        .bInheritHandle = TRUE,
+        .lpSecurityDescriptor = NULL,
+    };
+
+    // Pipe handler: read=0, write=1
+    HANDLE into[2] = {0}, outof[2] = {0};
+
+    // Setup job handler and job info
+    HANDLE hJob = CreateJobObject(NULL, NULL);
+    DIE_IF(w->id, !hJob);
+
+    JOBOBJECT_BASIC_LIMIT_INFORMATION jobBasicInfo = {
+        .LimitFlags = JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE
+    };
+    JOBOBJECT_EXTENDED_LIMIT_INFORMATION jobExtendedInfo = {
+        .BasicLimitInformation = jobBasicInfo
+    };
+
+    DIE_IF(w->id, !SetInformationJobObject(hJob, JobObjectExtendedLimitInformation,
+        &jobExtendedInfo, sizeof(JOBOBJECT_EXTENDED_LIMIT_INFORMATION)));
+
+    // Create a pipe for child process's STDOUT
+    DIE_IF(w->id, !CreatePipe(&outof[0], &outof[1], &saAttr, 0));
+    DIE_IF(w->id, !SetHandleInformation(outof[0], HANDLE_FLAG_INHERIT, 0));
+
+    // Create a pipe for child process's STDIN
+    DIE_IF(w->id, !CreatePipe(&into[0], &into[1], &saAttr, 0));
+    DIE_IF(w->id, !SetHandleInformation(into[1], HANDLE_FLAG_INHERIT, 0));
+
+    // Create the child process
+    PROCESS_INFORMATION piProcInfo = {0};
+    STARTUPINFO siStartInfo = {
+        .cb = sizeof(STARTUPINFO),
+        .hStdOutput = outof[1],
+        .hStdInput = into[0],
+        .dwFlags = STARTF_USESTDHANDLES,
+        .hStdError = readStdErr ? outof[1] : 0
+    };
+
+    scope(str_destroy) str_t runCpy = str_init_from_c(run);  // FIXME: does Windows need a non-const copy?
+    const int flag = CREATE_NO_WINDOW | BELOW_NORMAL_PRIORITY_CLASS;
+
+    DIE_IF(w->id, !CreateProcessA(NULL, runCpy.buf, NULL, NULL, TRUE, flag, NULL, cwd, &siStartInfo,
+        &piProcInfo));
+
+    // Keep the handle to the child process
+    e->hProcess = piProcInfo.hProcess;
+
+    // Close the handle to the child's primary thread
+    DIE_IF(w->id, !CloseHandle(piProcInfo.hThread));
+
+    // Close handles to the stdin and stdout pipes no longer needed
+    DIE_IF(w->id, !CloseHandle(into[0]));
+    DIE_IF(w->id, !CloseHandle(outof[1]));
+
+    // Reopen stdin and stdout pipes using C style FILE
+    int stdin_fd = _open_osfhandle((intptr_t)into[1], _O_RDONLY | _O_TEXT);  // FIXME: why RDONLY?
+    int stdout_fd = _open_osfhandle((intptr_t)outof[0], _O_RDONLY | _O_TEXT);
+    DIE_IF(w->id, stdin_fd == -1);
+    DIE_IF(w->id, stdout_fd == -1);
+    DIE_IF(w->id, !(e->in = _fdopen(stdout_fd, "r")));
+    DIE_IF(w->id, !(e->out = _fdopen(stdin_fd, "w")));
+
+    // Bind child process and parent process to one job, so child process is
+    // killed when parent process exits
+    DIE_IF(w->id, !AssignProcessToJobObject(hJob, GetCurrentProcess()));
+    DIE_IF(w->id, !AssignProcessToJobObject(hJob, e->hProcess));
+
+#else  // POSIX: Linux/Android == __linux__, otherwise assume __APPLE__
     // Pipe diagram: Parent -> [1]into[0] -> Child -> [1]outof[0] -> Parent
     // 'into' and 'outof' are pipes, each with 2 ends: read=0, write=1
     int outof[2] = {0}, into[2] = {0};
 
-#ifdef __linux__
-    DIE_IF(w->id, pipe2(outof, O_CLOEXEC) < 0);
-    DIE_IF(w->id, pipe2(into, O_CLOEXEC) < 0);
-#else
-    DIE_IF(w->id, pipe(outof) < 0);
-    DIE_IF(w->id, pipe(into) < 0);
-#endif
+    #ifdef __linux__
+        DIE_IF(w->id, pipe2(outof, O_CLOEXEC) < 0);
+        DIE_IF(w->id, pipe2(into, O_CLOEXEC) < 0);
+    #else
+        DIE_IF(w->id, pipe(outof) < 0);
+        DIE_IF(w->id, pipe(into) < 0);
+    #endif
 
     DIE_IF(w->id, (e->pid = fork()) < 0);
 
     if (e->pid == 0) {
-#ifdef __linux__
-        prctl(PR_SET_PDEATHSIG, SIGHUP);  // delegate zombie purge to the kernel
-#endif
+        #ifdef __linux__
+            prctl(PR_SET_PDEATHSIG, SIGHUP);  // delegate zombie purge to the kernel
+        #endif
         // Plug stdin and stdout
         DIE_IF(w->id, dup2(into[0], STDIN_FILENO) < 0);
         DIE_IF(w->id, dup2(outof[1], STDOUT_FILENO) < 0);
@@ -72,11 +150,11 @@ static void engine_spawn(const Worker *w, Engine *e, const char *cwd, const char
         if (readStdErr)
             DIE_IF(w->id, dup2(outof[1], STDERR_FILENO) < 0);
 
-#ifndef __linux__
-        // Ugly (and slow) workaround for non-Linux POSIX systems that lack the ability to
-        // atomically set O_CLOEXEC when creating pipes.
-        for (int fd = 3; fd < sysconf(FOPEN_MAX); close(fd++));
-#endif
+        #ifndef __linux__
+            // Ugly (and slow) workaround for Apple's BSD-based kernels that lack the ability to
+            // atomically set O_CLOEXEC when creating pipes.
+            for (int fd = 3; fd < sysconf(FOPEN_MAX); close(fd++));
+        #endif
 
         // Set cwd as current directory, and execute run with argv[]
         DIE_IF(w->id, chdir(cwd) < 0);
@@ -91,6 +169,7 @@ static void engine_spawn(const Worker *w, Engine *e, const char *cwd, const char
         DIE_IF(w->id, !(e->in = fdopen(outof[0], "r")));
         DIE_IF(w->id, !(e->out = fdopen(into[1], "w")));
     }
+#endif
 }
 
 static void engine_parse_cmd(const char *cmd, str_t *cwd, str_t *run, str_t **args)
@@ -180,13 +259,20 @@ Engine engine_init(Worker *w, const char *cmd, const char *name, const str_t *op
 void engine_destroy(Worker *w, Engine *e)
 {
     // Engine was not instanciated with engine_init()
-    if (!e->pid)
+    if (!e->in)
         return;
 
     // Order the engine to quit, and grant 1s deadline for obeying
     deadline_set(w, e->name.buf, system_msec() + e->timeOut);
     engine_writeln(w, e, "quit");
-    waitpid(e->pid, NULL, 0);
+
+    #ifdef __MINGW32__
+        WaitForSingleObject(e->hProcess, INFINITE);
+        CloseHandle(e->hProcess);
+    #else
+        waitpid(e->pid, NULL, 0);
+    #endif
+
     deadline_clear(w);
 
     str_destroy(&e->name);

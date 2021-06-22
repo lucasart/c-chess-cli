@@ -16,7 +16,13 @@
 #include <inttypes.h>
 #include <stdbool.h>
 #include <stdio.h>
-#include <sys/types.h>
+#ifdef __MINGW32__
+    #define WIN32_LEAN_AND_MEAN
+    #define NOMINMAX
+    #include <windows.h>
+#else
+    #include <sys/types.h>
+#endif
 #include "str.h"
 #include "workers.h"
 
@@ -25,7 +31,11 @@ typedef struct {
     FILE *in, *out;
     str_t name;
     int64_t timeOut;
+#ifdef __MINGW32__
+    HANDLE hProcess;
+#else
     pid_t pid;
+#endif
     bool supportChess960;
     char pad[3];
 } Engine;

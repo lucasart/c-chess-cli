@@ -469,12 +469,20 @@ static void game_export_samples_bin(const Game *g, FILE *out)
 
 void game_export_samples(const Game *g, FILE *out, bool bin)
 {
-    flockfile(out);
+    #ifdef __MINGW32__
+        _lock_file(out);
+    #else
+        flockfile(out);
+    #endif
 
     if (bin)
         game_export_samples_bin(g, out);
     else
         game_export_samples_csv(g, out);
 
-    funlockfile(out);
+    #ifdef __MINGW32__
+        _unlock_file(out);
+    #else
+        funlockfile(out);
+    #endif
 }

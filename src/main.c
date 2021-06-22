@@ -96,7 +96,7 @@ static void *thread_start(void *arg)
                 ei[i] = job.ei[i];
                 engines[i].timeOut = eo[ei[i]].timeOut;
 
-                if (engines[i].pid)
+                if (engines[i].in)
                     engine_destroy(w, &engines[i]);
 
                 engines[i] = engine_init(w, eo[ei[i]].cmd.buf, eo[ei[i]].name.buf, eo[ei[i]].options);
