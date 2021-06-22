@@ -61,10 +61,14 @@ static void main_init(int argc, const char **argv)
     openings = openings_init(options.openings.buf, options.random, options.srand, 0);
 
     if (options.pgn.len)
-        pgnSeqWriter = seq_writer_init(options.pgn.buf, "ae");
+        pgnSeqWriter = seq_writer_init(options.pgn.buf, "a" FOPEN_TEXT);
 
-    if (options.sp.fileName.len)
-        DIE_IF(0, !(sampleFile = fopen(options.sp.fileName.buf, "ae")));
+    if (options.sp.fileName.len) {
+        if (options.sp.bin)
+            DIE_IF(0, !(sampleFile = fopen(options.sp.fileName.buf, "a" FOPEN_BINARY)));
+        else
+            DIE_IF(0, !(sampleFile = fopen(options.sp.fileName.buf, "a" FOPEN_TEXT)));
+    }
 
     // Prepare Workers[]
     Workers = vec_init(Worker);

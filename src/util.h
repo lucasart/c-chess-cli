@@ -33,6 +33,16 @@
     y = _x; \
 })
 
+#ifdef __MINGW32__
+    // Opt in to CR+LF translation for text files, and opt out for binary files
+    #define FOPEN_TEXT "t"
+    #define FOPEN_BINARY "b"
+#else
+    // Set the CLOEXEC flag to prevent inheritance to child processes
+    #define FOPEN_TEXT "e"
+    #define FOPEN_BINARY "e"
+#endif
+
 uint64_t prng(uint64_t *state);
 double prngf(uint64_t *state);
 

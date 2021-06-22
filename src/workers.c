@@ -77,7 +77,7 @@ Worker worker_init(int i, const char *logName)
     w.deadline.engineName = str_init();
 
     if (*logName) {
-        w.log = fopen(logName, "we");
+        w.log = fopen(logName, "w" FOPEN_TEXT);
         DIE_IF(0, !w.log);
     }
 
