@@ -90,8 +90,8 @@ static void engine_spawn(const Worker *w, Engine *e, const char *cwd, const char
     scope(str_destroy) str_t runCpy = str_init_from_c(run);  // FIXME: does Windows need a non-const copy?
     const int flag = CREATE_NO_WINDOW | BELOW_NORMAL_PRIORITY_CLASS;
 
-    DIE_IF(w->id, !CreateProcessA(NULL, runCpy.buf, NULL, NULL, FALSE, flag, NULL, cwd,
-        &siStartInfo, &piProcInfo));
+    DIE_IF(w->id, !CreateProcessA(NULL, runCpy.buf, NULL, NULL, TRUE, flag, NULL, cwd, &siStartInfo,
+        &piProcInfo));
 
     // Keep the handle to the child process
     e->hProcess = piProcInfo.hProcess;
