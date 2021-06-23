@@ -38,8 +38,7 @@
 #include "util.h"
 #include "vec.h"
 
-static void engine_spawn(const Worker *w, Engine *e, const char *cwd, const char *run, char **argv,
-    bool readStdErr)
+static void engine_spawn(const Worker *w, Engine *e, const char *cwd, char **argv, bool readStdErr)
 {
     assert(argv[0]);
 
@@ -87,11 +86,17 @@ static void engine_spawn(const Worker *w, Engine *e, const char *cwd, const char
         .hStdError = readStdErr ? outof[1] : 0
     };
 
-    scope(str_destroy) str_t runCpy = str_init_from_c(run);  // FIXME: does Windows need a non-const copy?
-    const int flag = CREATE_NO_WINDOW | BELOW_NORMAL_PRIORITY_CLASS;
+    // Recompose cmdFromCwd = "argv[0] argv[1] ... argv[argc-1]", which is the command to execute
+    // from the context of cwd. This may differ from cmd in engine_spawn(), because argv[0] strips
+    // out path specification (which goes into cwd).
+    scope(str_destroy) str_t cmdFromCwd = str_init_from_c(argv[0]);
 
-    DIE_IF(w->id, !CreateProcessA(NULL, runCpy.buf, NULL, NULL, TRUE, flag, NULL, cwd, &siStartInfo,
-        &piProcInfo));
+    for (int i = 1; argv[i]; i++)
+        str_cat_fmt(&cmdFromCwd, " %s", argv[i]);
+
+    // Launch engine process
+    DIE_IF(w->id, !CreateProcessA(NULL, cmdFromCwd.buf, NULL, NULL, TRUE,
+        CREATE_NO_WINDOW | BELOW_NORMAL_PRIORITY_CLASS, NULL, cwd, &siStartInfo, &piProcInfo));
 
     // Keep the handle to the child process
     e->hProcess = piProcInfo.hProcess;
@@ -158,7 +163,7 @@ static void engine_spawn(const Worker *w, Engine *e, const char *cwd, const char
 
         // Set cwd as current directory, and execute run with argv[]
         DIE_IF(w->id, chdir(cwd) < 0);
-        DIE_IF(w->id, execvp(run, argv) < 0);
+        DIE_IF(w->id, execvp(argv[0], argv) < 0);
     } else {
         assert(e->pid > 0);
 
@@ -222,7 +227,7 @@ Engine engine_init(Worker *w, const char *cmd, const char *name, const str_t *op
         argv[i] = args[i].buf;
 
     // Spawn child process and plug pipes
-    engine_spawn(w, &e, cwd.buf, run.buf, argv, w->log != NULL);
+    engine_spawn(w, &e, cwd.buf, argv, w->log != NULL);
 
     vec_destroy_rec(args, str_destroy);
     free(argv);
