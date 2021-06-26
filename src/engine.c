@@ -267,7 +267,8 @@ Engine engine_init(Worker *w, const char *cmd, const char *name, const str_t *op
         scope(str_destroy) str_t oname = str_init(), ovalue = str_init();
         const char *tail = NULL;
 
-        if ((tail = str_tok(options[i].buf, &oname, "=")) && (tail = str_tok(tail, &ovalue, "="))) {
+        if ((tail = str_tok_esc(options[i].buf, &oname, '=', ESC_SEQ))
+                && (tail = str_tok_esc(tail, &ovalue, '=', ESC_SEQ))) {
             str_cpy_fmt(&line, "setoption name %S value %S", oname, ovalue);
             engine_writeln(w, &e, line.buf);
         } else
