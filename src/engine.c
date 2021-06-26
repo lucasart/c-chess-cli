@@ -265,9 +265,13 @@ Engine engine_init(Worker *w, const char *cmd, const char *name, const str_t *op
 
     for (size_t i = 0; i < vec_size(options); i++) {
         scope(str_destroy) str_t oname = str_init(), ovalue = str_init();
-        str_tok(str_tok(options[i].buf, &oname, "="), &ovalue, "=");
-        str_cpy_fmt(&line, "setoption name %S value %S", oname, ovalue);
-        engine_writeln(w, &e, line.buf);
+        const char *tail = NULL;
+
+        if ((tail = str_tok(options[i].buf, &oname, "=")) && (tail = str_tok(tail, &ovalue, "="))) {
+            str_cpy_fmt(&line, "setoption name %S value %S", oname, ovalue);
+            engine_writeln(w, &e, line.buf);
+        } else
+            DIE("Cannot parse '%s'\n", options[i].buf);
     }
 
     return e;
