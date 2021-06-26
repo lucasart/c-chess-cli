@@ -177,31 +177,43 @@ static void engine_spawn(const Worker *w, Engine *e, const char *cwd, char **arg
 #endif
 }
 
+#ifdef __MINGW32__
+    // Use Windows backslash for file system, and PowerShell's '`' as escape sequence
+    #define CUR_DIR ".\\"
+    #define DIR_SEP '\\'
+    #define ESC_SEQ '`'
+#else
+    // Use POSIX forward slash for file system, and Bash '\\' as escape sequence
+    #define CUR_DIR "./"
+    #define DIR_SEP '/'
+    #define ESC_SEQ '\\'
+#endif
+
 static void engine_parse_cmd(const char *cmd, str_t *cwd, str_t *run, str_t **args)
 {
     // Isolate the first token being the command to run.
     scope(str_destroy) str_t token = str_init();
     const char *tail = cmd;
-    tail = str_tok_esc(tail, &token, ' ', '\\');
+    tail = str_tok_esc(tail, &token, ' ', ESC_SEQ);
 
     // Split token into (cwd, run). Possible cases:
     // (a) unqualified path, like "demolito" (which evecvp() will search in PATH)
     // (b) qualified path (absolute starting with "/", or relative starting with "./" or "../")
     // For (b), we want to separate into executable and directory, so instead of running
     // "../Engines/demolito" from the cwd, we execute run="./demolito" from cwd="../Engines"
-    str_cpy_c(cwd, "./");
+    str_cpy_c(cwd, CUR_DIR);
     str_cpy(run, token);
-    const char *lastSlash = strrchr(token.buf, '/');
+    const char *lastSlash = strrchr(token.buf, DIR_SEP);
 
     if (lastSlash) {
         str_ncpy(cwd, token, (size_t)(lastSlash - token.buf));
-        str_cpy_fmt(run, "./%s", lastSlash + 1);
+        str_cpy_fmt(run, CUR_DIR "%s", lastSlash + 1);
     }
 
     // Collect the arguments into a vec of str_t, args[]
     vec_push(*args, str_init_from(*run));  // argv[0] is the executed command
 
-    while ((tail = str_tok_esc(tail, &token, ' ', '\\')))
+    while ((tail = str_tok_esc(tail, &token, ' ', ESC_SEQ)))
         vec_push(*args, str_init_from(token));
 }
 
