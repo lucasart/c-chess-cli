@@ -13,6 +13,7 @@
  * not, see <http://www.gnu.org/licenses/>.
 */
 #include <assert.h>
+#include <ctype.h>
 #include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
@@ -354,4 +355,41 @@ size_t str_getline(str_t *out, FILE *in)
 
     assert(str_ok(*out));
     return n;
+}
+
+bool str_to_uintmax(const char *s, uintmax_t *result)
+{
+    *result = 0;
+    int c = 0;
+
+    while ((c = *s++)) {
+        if (isdigit(c))
+            *result = 10 * *result + (uintmax_t)(c - '0');
+        else
+            return false;
+    }
+
+    return true;
+}
+
+bool str_to_uint8(const char *s, uint8_t *result)
+{
+    uintmax_t tmp = 0;
+
+    if (str_to_uintmax(s, &tmp) && tmp <= UINT8_MAX) {
+        *result = (uint8_t)tmp;
+        return true;
+    } else
+        return false;
+}
+
+bool str_to_uint16(const char *s, uint16_t *result)
+{
+    uintmax_t tmp = 0;
+
+    if (str_to_uintmax(s, &tmp) && tmp <= UINT16_MAX) {
+        *result = (uint16_t)tmp;
+        return true;
+    } else
+        return false;
 }

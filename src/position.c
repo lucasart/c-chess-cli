@@ -180,7 +180,7 @@ bool pos_set(Position *pos, const char *fen, bool force960)
 // Set position from FEN string.
 // force960: if true, set pos.chess60=true, else auto-detect.
 {
-    *pos = (Position){0};
+    *pos = (Position){.fullMove = 1};
     scope(str_destroy) str_t token = str_init();
 
     // Piece placement
@@ -274,16 +274,14 @@ bool pos_set(Position *pos, const char *fen, bool force960)
 
     pos->key ^= ZobristEnPassant[pos->epSquare];
 
-    // 50 move counter (in plies, starts at 0): optional, default 0
-    pos->rule50 = (fen = str_tok(fen, &token, " ")) ? (uint8_t)atoi(token.buf) : 0;
-
-    if (pos->rule50 >= 100)
+    // Optional: 50 move counter (in plies, starts at 0)
+    if ((fen = str_tok(fen, &token, " "))
+            && (!str_to_uint8(token.buf, &pos->rule50) || pos->rule50 >= 100))
         return false;
 
-    // Full move counter (in moves, starts at 1): optional, default 1
-    pos->fullMove = str_tok(fen, &token, " ") ? (uint16_t)atoi(token.buf) : 1;
-
-    if (pos->fullMove < 1)
+    // Optional: full move counter (in moves, starts at 1)
+    if ((fen = str_tok(fen, &token, " "))
+            && (!str_to_uint16(token.buf, &pos->fullMove) || pos->fullMove < 1))
         return false;
 
     // Verify piece counts

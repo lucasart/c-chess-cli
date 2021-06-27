@@ -88,3 +88,7 @@ const char *str_prefix(const char *s, const char *prefix);
 // reads a line from file 'in', into valid string 'out', and return the number of characters read
 // (including the '\n' if any). The '\n' is discarded from the output, but still counted.
 size_t str_getline(str_t *out, FILE *in);
+
+bool str_to_uintmax(const char *s, uintmax_t *result);
+bool str_to_uint8(const char *s, uint8_t *result);
+bool str_to_uint16(const char *s, uint16_t *result);
