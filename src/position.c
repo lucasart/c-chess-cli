@@ -69,9 +69,16 @@ static void square_to_string(int square, char str[3])
 
 static int string_to_square(const char *str)
 {
-    return str[0] != '-'
-        ? square_from(str[1] - '1', str[0] - 'a')
-        : NB_SQUARE;
+    if (str[0] == '-')
+        return NB_SQUARE;  // none
+    else {
+        const int rank = str[1] - '1', file = str[0] - 'a';
+
+        if ((unsigned)rank > RANK_8 || (unsigned)file > FILE_H)
+            return NB_SQUARE + 1;  // syntax error
+        else
+            return square_from(rank, file);
+    }
 }
 
 // Remove 'piece' of 'color' on 'square'. Such a piece must be there first.
@@ -261,6 +268,10 @@ bool pos_set(Position *pos, const char *fen, bool force960)
         return false;
 
     pos->epSquare = (uint8_t)string_to_square(token.buf);
+
+    if (pos->epSquare > NB_SQUARE)
+        return false;
+
     pos->key ^= ZobristEnPassant[pos->epSquare];
 
     // 50 move counter (in plies, starts at 0): optional, default 0
