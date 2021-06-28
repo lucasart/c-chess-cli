@@ -107,15 +107,20 @@ static void *thread_start(void *arg)
                 job_queue_set_name(&jq, ei[i], engines[i].name.buf);
             }
 
-        // Choose opening position
-        openings_next(&openings, &fen, options.repeat ? idx / 2 : idx, w->id);
 
-        // Play 1 game
         Game game = game_init(job.round, job.game);
-        int color = WHITE;
 
-        if (!game_load_fen(&game, fen.buf, &color))
-            DIE("[%d] illegal FEN '%s'\n", w->id, fen.buf);
+        // Choose opening position
+        int color = 0;
+        bool ok = false;
+
+        while (!ok) {
+            openings_next(&openings, &fen, options.repeat ? idx / 2 : idx, w->id);
+            ok = game_load_fen(&game, fen.buf, &color);
+
+            if (!ok)
+                printf("[%d] illegal FEN '%s'\n", w->id, fen.buf);
+        }
 
         const int whiteIdx = color ^ job.reverse;
 

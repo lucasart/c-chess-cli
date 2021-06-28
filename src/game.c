@@ -165,7 +165,7 @@ static Position resolve_pv(const Worker *w, const Game *g, const char *pv)
 
 Game game_init(int round, int game)
 {
-    return (Game){
+    Game g = {
         .round = round,
         .game = game,
         .names = {str_init(), str_init()},
@@ -173,12 +173,13 @@ Game game_init(int round, int game)
         .info = vec_init(Info),
         .samples = vec_init(Sample)
     };
+
+    vec_push(g.pos, (Position){0});
+    return g;
 }
 
 bool game_load_fen(Game *g, const char *fen, int *color)
 {
-    vec_push(g->pos, (Position){0});
-
     if (pos_set(&g->pos[0], fen, false)) {
         *color = g->pos[0].turn;
         return true;
