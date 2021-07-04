@@ -119,7 +119,7 @@ static void *thread_start(void *arg)
             ok = game_load_fen(&game, fen.buf, &color);
 
             if (!ok)
-                printf("[%d] illegal FEN '%s'\n", w->id, fen.buf);
+                fprintf(stderr, "[%d] Illegal FEN '%s'\n", w->id, fen.buf);
         }
 
         const int whiteIdx = color ^ job.reverse;

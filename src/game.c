@@ -142,8 +142,8 @@ static Position resolve_pv(const Worker *w, const Game *g, const char *pv)
         moves = gen_all_moves(&p[idx], moves);
 
         if (illegal_move(m, moves)) {
-            printf("[%d] WARNING: Illegal move in PV '%s%s' from %s\n", w->id, token.buf, pv,
-                g->names[g->pos[g->ply].turn].buf);
+            fprintf(stderr, "[%d] WARNING: Illegal move in PV '%s%s' from %s\n", w->id, token.buf,
+                pv, g->names[g->pos[g->ply].turn].buf);
 
             if (w->log)
                 DIE_IF(w->id, fprintf(w->log, "WARNING: illegal move in PV '%s%s'\n", token.buf,
