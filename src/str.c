@@ -360,13 +360,19 @@ size_t str_getline(str_t *out, FILE *in)
 bool str_to_uintmax(const char *s, uintmax_t *result)
 {
     *result = 0;
+    uintmax_t previous = 0;
     int c = 0;
 
     while ((c = *s++)) {
-        if (isdigit(c))
+        if (isdigit(c)) {
             *result = 10 * *result + (uintmax_t)(c - '0');
-        else
+
+            if (*result < previous)
+                return false;  // overflow
+        } else
             return false;
+
+        previous = *result;
     }
 
     return true;
