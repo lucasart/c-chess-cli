@@ -11,17 +11,17 @@
  *
  * You should have received a copy of the GNU General Public License along with this program. If
  * not, see <http://www.gnu.org/licenses/>.
-*/
+ */
 #pragma once
 #include <inttypes.h>
 #include <stdbool.h>
-#include <stdlib.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 typedef struct {
-    char *restrict buf;  // C-string ('\0' terminated)
-    size_t alloc;  // allocated size (including '\0' terminator)
-    size_t len;  // number of characters for string content, excluding '\0' terminator
+    char *restrict buf; // C-string ('\0' terminated)
+    size_t alloc;       // allocated size (including '\0' terminator)
+    size_t len;         // number of characters for string content, excluding '\0' terminator
 } str_t;
 
 // checks if string 's' is valid
@@ -33,21 +33,22 @@ bool str_eq(str_t s1, str_t s2);
 str_t str_ref(const char *src);
 
 // constructors
-str_t str_init(void);  // empty string ""
-str_t str_init_from(str_t src);  // copy from string
-#define str_init_from_c(c_str) str_init_from(str_ref(c_str))  // copy from C-string
+str_t str_init(void);                                        // empty string ""
+str_t str_init_from(str_t src);                              // copy from string
+#define str_init_from_c(c_str) str_init_from(str_ref(c_str)) // copy from C-string
 
 // set s = "", but faster than using str_cpy_c(s, "")
 void str_clear(str_t *s);
 
 void str_destroy(str_t *s);
-#define scope(func) __attribute__ ((cleanup(func)))
+#define scope(func) __attribute__((cleanup(func)))
 
-#define str_destroy_n(...) do { \
-    str_t *_s[] = {__VA_ARGS__}; \
-    for (size_t _i = 0; _i < sizeof(_s) / sizeof(*_s); _i++) \
-        str_destroy(_s[_i]); \
-} while (0)
+#define str_destroy_n(...)                                                                         \
+    do {                                                                                           \
+        str_t *_s[] = {__VA_ARGS__};                                                               \
+        for (size_t _i = 0; _i < sizeof(_s) / sizeof(*_s); _i++)                                   \
+            str_destroy(_s[_i]);                                                                   \
+    } while (0)
 
 // copies 'src' into 'dest'
 str_t *str_cpy(str_t *dest, str_t src);
@@ -82,7 +83,7 @@ const char *str_tok(const char *s, str_t *token, const char *delim);
 // s = "alice\ bob charlie", delim=' ', esc='\' => token="alice bob", returns tail="charlie"
 const char *str_tok_esc(const char *s, str_t *token, char delim, char esc);
 
-//If s starts with prefix, return the tail (from s = prefix + tail), otherwise return NULL.
+// If s starts with prefix, return the tail (from s = prefix + tail), otherwise return NULL.
 const char *str_prefix(const char *s, const char *prefix);
 
 // reads a line from file 'in', into valid string 'out', and return the number of characters read

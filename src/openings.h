@@ -11,18 +11,18 @@
  *
  * You should have received a copy of the GNU General Public License along with this program. If
  * not, see <http://www.gnu.org/licenses/>.
-*/
+ */
 #pragma once
+#include "str.h"
 #include <inttypes.h>
 #include <pthread.h>
 #include <stdbool.h>
 #include <stdio.h>
-#include "str.h"
 
 typedef struct {
     pthread_mutex_t mtx;
     FILE *file;
-    long *index;  // vector of file offsets
+    long *index; // vector of file offsets
 } Openings;
 
 Openings openings_init(const char *fileName, bool random, uint64_t srand, int threadId);

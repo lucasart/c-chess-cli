@@ -11,40 +11,30 @@
  *
  * You should have received a copy of the GNU General Public License along with this program. If
  * not, see <http://www.gnu.org/licenses/>.
-*/
+ */
 #include "vec.h"
 
-vec_t *vec_ptr(void *v)
-{
+vec_t *vec_ptr(void *v) {
     assert(v);
-    return (vec_t *)((size_t *)(v) - offsetof(vec_t, buf) / sizeof(size_t));
+    return (vec_t *)((size_t *)(v)-offsetof(vec_t, buf) / sizeof(size_t));
 }
 
-const vec_t *vec_cptr(const void *v)
-{
-    return (const vec_t *)((const size_t *)(v) - offsetof(vec_t, buf) / sizeof(size_t));
+const vec_t *vec_cptr(const void *v) {
+    return (const vec_t *)((const size_t *)(v)-offsetof(vec_t, buf) / sizeof(size_t));
 }
 
-void *vec_do_init(size_t capacity, size_t esize)
-{
+void *vec_do_init(size_t capacity, size_t esize) {
     vec_t *p = malloc(sizeof(vec_t) + capacity * esize);
     p->capacity = capacity;
     p->size = 0;
     return (void *)p->buf;
 }
 
-size_t vec_size(const void *v)
-{
-    return v ? vec_cptr(v)->size : 0;
-}
+size_t vec_size(const void *v) { return v ? vec_cptr(v)->size : 0; }
 
-size_t vec_capacity(const void *v)
-{
-    return vec_cptr(v)->capacity;
-}
+size_t vec_capacity(const void *v) { return vec_cptr(v)->capacity; }
 
-void *vec_do_grow(void *v, size_t esize, size_t additional)
-{
+void *vec_do_grow(void *v, size_t esize, size_t additional) {
     vec_t *p = vec_ptr(v);
     size_t n = p->capacity;
 
@@ -72,7 +62,4 @@ void *vec_do_grow(void *v, size_t esize, size_t additional)
     return p->buf;
 }
 
-void vec_clear(void *v)
-{
-    vec_ptr(v)->size = 0;
-}
+void vec_clear(void *v) { vec_ptr(v)->size = 0; }

@@ -11,40 +11,32 @@
  *
  * You should have received a copy of the GNU General Public License along with this program. If
  * not, see <http://www.gnu.org/licenses/>.
-*/
-#include <math.h>
+ */
 #include "sprt.h"
+#include <math.h>
 
-static double elo_to_score(double elo)
-{
-    return 1 / (1 + exp(-elo * log(10) / 400));
-}
+static double elo_to_score(double elo) { return 1 / (1 + exp(-elo * log(10) / 400)); }
 
 // Uses asymptotic LLR approximation in the trinomial GSPRT model. See:
 // http://hardy.uhasselt.be/Toga/GSPRT_approximation.pdf
-static double sprt_llr(int wldCount[NB_RESULT], double elo0, double elo1)
-{
-    if (!!wldCount[0] + !!wldCount[1] + !!wldCount[2] < 2)  // at least 2 among 3 must be non zero
+static double sprt_llr(int wldCount[NB_RESULT], double elo0, double elo1) {
+    if (!!wldCount[0] + !!wldCount[1] + !!wldCount[2] < 2) // at least 2 among 3 must be non zero
         return 0;
 
     const int n = wldCount[RESULT_WIN] + wldCount[RESULT_LOSS] + wldCount[RESULT_DRAW];
     const double w = (double)wldCount[RESULT_WIN] / n, l = (double)wldCount[RESULT_LOSS] / n,
-        d = 1 - w - l;
+                 d = 1 - w - l;
     const double s = w + d / 2, var = (w + d / 4) - s * s;
     const double s0 = elo_to_score(elo0), s1 = elo_to_score(elo1);
 
     return (s1 - s0) * (2 * s - s0 - s1) / (2 * var / n);
 }
 
-bool sprt_validate(const SPRTParam *sp)
-{
-    return 0 < sp->alpha && sp->alpha < 1
-        && 0 < sp->beta && sp->beta < 1
-        && sp->elo0 < sp->elo1;
+bool sprt_validate(const SPRTParam *sp) {
+    return 0 < sp->alpha && sp->alpha < 1 && 0 < sp->beta && sp->beta < 1 && sp->elo0 < sp->elo1;
 }
 
-bool sprt_done(int wldCount[NB_RESULT], const SPRTParam *sp)
-{
+bool sprt_done(int wldCount[NB_RESULT], const SPRTParam *sp) {
     const double lbound = log(sp->beta / (1 - sp->alpha));
     const double ubound = log((1 - sp->beta) / sp->alpha);
     const double llr = sprt_llr(wldCount, sp->elo0, sp->elo1);

@@ -11,44 +11,31 @@
  *
  * You should have received a copy of the GNU General Public License along with this program. If
  * not, see <http://www.gnu.org/licenses/>.
-*/
-#include <string.h>
+ */
 #include "seqwriter.h"
 #include "vec.h"
+#include <string.h>
 
-static SeqStr seq_str_init(size_t idx, str_t str)
-{
-    return (SeqStr){
-        .idx = idx,
-        .str = str_init_from(str)
-    };
+static SeqStr seq_str_init(size_t idx, str_t str) {
+    return (SeqStr){.idx = idx, .str = str_init_from(str)};
 }
 
-static void seq_str_destroy(SeqStr *ss)
-{
-    str_destroy(&ss->str);
-}
+static void seq_str_destroy(SeqStr *ss) { str_destroy(&ss->str); }
 
-SeqWriter seq_writer_init(const char *fileName, const char *mode)
-{
-    SeqWriter sw = {
-        .out = fopen(fileName, mode),
-        .buf = vec_init(SeqStr)
-    };
+SeqWriter seq_writer_init(const char *fileName, const char *mode) {
+    SeqWriter sw = {.out = fopen(fileName, mode), .buf = vec_init(SeqStr)};
 
     pthread_mutex_init(&sw.mtx, NULL);
     return sw;
 }
 
-void seq_writer_destroy(SeqWriter *sw)
-{
+void seq_writer_destroy(SeqWriter *sw) {
     pthread_mutex_destroy(&sw->mtx);
     vec_destroy_rec(sw->buf, seq_str_destroy);
     fclose(sw->out);
 }
 
-void seq_writer_push(SeqWriter *sw, size_t idx, str_t str)
-{
+void seq_writer_push(SeqWriter *sw, size_t idx, str_t str) {
     pthread_mutex_lock(&sw->mtx);
 
     // Append to sw->buf[n]

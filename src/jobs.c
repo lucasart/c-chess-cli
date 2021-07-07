@@ -11,35 +11,25 @@
  *
  * You should have received a copy of the GNU General Public License along with this program. If
  * not, see <http://www.gnu.org/licenses/>.
-*/
+ */
 #include "jobs.h"
 #include "vec.h"
 #include "workers.h"
 #include <stdio.h>
 
 static void job_queue_init_pair(int games, int e1, int e2, int pair, int *added, int round,
-    Job **jobs)
-{
+                                Job **jobs) {
     for (int g = 0; g < games; g++) {
         const Job j = {
-            .ei = {e1, e2},
-            .pair = pair,
-            .round = round, .game = (*added)++,
-            .reverse = g % 2
-        };
+            .ei = {e1, e2}, .pair = pair, .round = round, .game = (*added)++, .reverse = g % 2};
         vec_push(*jobs, j);
     }
 }
 
-JobQueue job_queue_init(int engines, int rounds, int games, bool gauntlet)
-{
+JobQueue job_queue_init(int engines, int rounds, int games, bool gauntlet) {
     assert(engines >= 2 && rounds >= 1 && games >= 1);
 
-    JobQueue jq = {
-        .jobs = vec_init(Job),
-        .results = vec_init(Result),
-        .names = vec_init(str_t)
-    };
+    JobQueue jq = {.jobs = vec_init(Job), .results = vec_init(Result), .names = vec_init(str_t)};
     pthread_mutex_init(&jq.mtx, NULL);
 
     // Prepare engine names: blank for now, will be discovered at run time (concurrently)
@@ -54,7 +44,7 @@ JobQueue job_queue_init(int engines, int rounds, int games, bool gauntlet)
         }
 
         for (int r = 0; r < rounds; r++) {
-            int added = 0;  // number of games already added to the current round
+            int added = 0; // number of games already added to the current round
 
             for (int e2 = 1; e2 < engines; e2++)
                 job_queue_init_pair(games, 0, e2, e2 - 1, &added, r, &jq.jobs);
@@ -69,7 +59,7 @@ JobQueue job_queue_init(int engines, int rounds, int games, bool gauntlet)
 
         for (int r = 0; r < rounds; r++) {
             int pair = 0;  // enumerate pairs in order
-            int added = 0;  // number of games already added to the current round
+            int added = 0; // number of games already added to the current round
 
             for (int e1 = 0; e1 < engines - 1; e1++)
                 for (int e2 = e1 + 1; e2 < engines; e2++)
@@ -80,16 +70,14 @@ JobQueue job_queue_init(int engines, int rounds, int games, bool gauntlet)
     return jq;
 }
 
-void job_queue_destroy(JobQueue *jq)
-{
+void job_queue_destroy(JobQueue *jq) {
     vec_destroy(jq->results);
     vec_destroy(jq->jobs);
     vec_destroy_rec(jq->names, str_destroy);
     pthread_mutex_destroy(&jq->mtx);
 }
 
-bool job_queue_pop(JobQueue *jq, Job *j, size_t *idx, size_t *count)
-{
+bool job_queue_pop(JobQueue *jq, Job *j, size_t *idx, size_t *count) {
     pthread_mutex_lock(&jq->mtx);
     const bool ok = jq->idx < vec_size(jq->jobs);
 
@@ -104,8 +92,7 @@ bool job_queue_pop(JobQueue *jq, Job *j, size_t *idx, size_t *count)
 }
 
 // Add game outcome, and return updated totals
-void job_queue_add_result(JobQueue *jq, int pair, int outcome, int count[3])
-{
+void job_queue_add_result(JobQueue *jq, int pair, int outcome, int count[3]) {
     pthread_mutex_lock(&jq->mtx);
     jq->results[pair].count[outcome]++;
     jq->completed++;
@@ -116,8 +103,7 @@ void job_queue_add_result(JobQueue *jq, int pair, int outcome, int count[3])
     pthread_mutex_unlock(&jq->mtx);
 }
 
-bool job_queue_done(JobQueue *jq)
-{
+bool job_queue_done(JobQueue *jq) {
     pthread_mutex_lock(&jq->mtx);
     assert(jq->idx <= vec_size(jq->jobs));
     const bool done = jq->idx == vec_size(jq->jobs);
@@ -125,15 +111,13 @@ bool job_queue_done(JobQueue *jq)
     return done;
 }
 
-void job_queue_stop(JobQueue *jq)
-{
+void job_queue_stop(JobQueue *jq) {
     pthread_mutex_lock(&jq->mtx);
     jq->idx = vec_size(jq->jobs);
     pthread_mutex_unlock(&jq->mtx);
 }
 
-void job_queue_set_name(JobQueue *jq, int ei, const char *name)
-{
+void job_queue_set_name(JobQueue *jq, int ei, const char *name) {
     pthread_mutex_lock(&jq->mtx);
 
     if (!jq->names[ei].len)
@@ -142,8 +126,7 @@ void job_queue_set_name(JobQueue *jq, int ei, const char *name)
     pthread_mutex_unlock(&jq->mtx);
 }
 
-void job_queue_print_results(JobQueue *jq, size_t frequency)
-{
+void job_queue_print_results(JobQueue *jq, size_t frequency) {
     pthread_mutex_lock(&jq->mtx);
 
     if (jq->completed && jq->completed % frequency == 0) {
@@ -157,8 +140,8 @@ void job_queue_print_results(JobQueue *jq, size_t frequency)
                 char score[8] = "";
                 sprintf(score, "%.3f", (r.count[RESULT_WIN] + 0.5 * r.count[RESULT_DRAW]) / n);
                 str_cat_fmt(&out, "%S vs %S: %i - %i - %i  [%s] %i\n", jq->names[r.ei[0]],
-                    jq->names[r.ei[1]], r.count[RESULT_WIN], r.count[RESULT_LOSS],
-                    r.count[RESULT_DRAW], score, n);
+                            jq->names[r.ei[1]], r.count[RESULT_WIN], r.count[RESULT_LOSS],
+                            r.count[RESULT_DRAW], score, n);
             }
         }
 

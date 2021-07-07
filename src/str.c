@@ -11,14 +11,14 @@
  *
  * You should have received a copy of the GNU General Public License along with this program. If
  * not, see <http://www.gnu.org/licenses/>.
-*/
+ */
+#include "str.h"
+#include "util.h"
 #include <assert.h>
 #include <ctype.h>
 #include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
-#include "str.h"
-#include "util.h"
 
 static size_t str_round_up(size_t n)
 // Round to the next power of 2, at least the size of 2 machine words
@@ -27,9 +27,8 @@ static size_t str_round_up(size_t n)
         return 2 * sizeof(size_t);
     else if (n < 4096)
         // growth rate 2
-        return n & (n - 1)
-            ? 1ULL << (64 - __builtin_clzll(n))  // next power of 2
-            : n;  // already a power of 2
+        return n & (n - 1) ? 1ULL << (64 - __builtin_clzll(n)) // next power of 2
+                           : n;                                // already a power of 2
     else {
         // growth rate 1.5
         size_t p = 4096;
@@ -61,30 +60,23 @@ static void str_resize(str_t *s, size_t len)
     assert(s->alloc > s->len && s->buf && s->buf[s->len] == '\0');
 }
 
-void str_clear(str_t *s)
-{
-    str_resize(s, 0);
-}
+void str_clear(str_t *s) { str_resize(s, 0); }
 
-bool str_ok(const str_t s)
-{
+bool str_ok(const str_t s) {
     return s.alloc > s.len && s.buf && s.buf[s.len] == '\0' && !memchr(s.buf, 0, s.len);
 }
 
-bool str_eq(const str_t s1, const str_t s2)
-{
+bool str_eq(const str_t s1, const str_t s2) {
     assert(str_ok(s1) && str_ok(s2));
     return s1.len == s2.len && !memcmp(s1.buf, s2.buf, s1.len);
 }
 
-str_t str_ref(const char *src)
-{
+str_t str_ref(const char *src) {
     const size_t len = strlen(src);
     return (str_t){.len = len, .alloc = len + 1, .buf = (char *)src};
 }
 
-static str_t *do_str_cat(str_t *dest, const char *src, size_t n)
-{
+static str_t *do_str_cat(str_t *dest, const char *src, size_t n) {
     assert(str_ok(*dest) && src);
 
     const size_t oldLen = dest->len;
@@ -95,15 +87,13 @@ static str_t *do_str_cat(str_t *dest, const char *src, size_t n)
     return dest;
 }
 
-str_t str_init(void)
-{
+str_t str_init(void) {
     str_t s = {0};
     str_resize(&s, 0);
     return s;
 }
 
-str_t str_init_from(const str_t src)
-{
+str_t str_init_from(const str_t src) {
     str_t s = {0};
     str_resize(&s, src.len);
     memcpy(s.buf, src.buf, s.len);
@@ -111,46 +101,37 @@ str_t str_init_from(const str_t src)
     return s;
 }
 
-void str_destroy(str_t *s)
-{
+void str_destroy(str_t *s) {
     free(s->buf);
     s->buf = NULL;
 }
 
-str_t *str_cpy(str_t *dest, const str_t src)
-{
+str_t *str_cpy(str_t *dest, const str_t src) {
     str_resize(dest, 0);
     return do_str_cat(dest, src.buf, src.len);
 }
 
-str_t *str_ncpy(str_t *dest, const str_t src, size_t n)
-{
+str_t *str_ncpy(str_t *dest, const str_t src, size_t n) {
     n = min(n, src.len);
     str_resize(dest, 0);
     return do_str_cat(dest, src.buf, n);
 }
 
-str_t *str_push(str_t *dest, char c)
-{
+str_t *str_push(str_t *dest, char c) {
     str_resize(dest, dest->len + 1);
     dest->buf[dest->len - 1] = c;
     assert(str_ok(*dest));
     return dest;
 }
 
-str_t *str_ncat(str_t *dest, const str_t src, size_t n)
-{
+str_t *str_ncat(str_t *dest, const str_t src, size_t n) {
     n = min(n, src.len);
     return do_str_cat(dest, src.buf, n);
 }
 
-str_t *str_cat(str_t *dest, const str_t src)
-{
-    return do_str_cat(dest, src.buf, src.len);
-}
+str_t *str_cat(str_t *dest, const str_t src) { return do_str_cat(dest, src.buf, src.len); }
 
-static char *do_fmt_u(uintmax_t n, char *s)
-{
+static char *do_fmt_u(uintmax_t n, char *s) {
     *s-- = '\0';
 
     do {
@@ -160,9 +141,8 @@ static char *do_fmt_u(uintmax_t n, char *s)
     return s + 1;
 }
 
-str_t *str_cat_int(str_t *dest, intmax_t i)
-{
-    char buf[40];  // enough for sizeof(uintmax_t) <= 16
+str_t *str_cat_int(str_t *dest, intmax_t i) {
+    char buf[40]; // enough for sizeof(uintmax_t) <= 16
     char *s = do_fmt_u((uintmax_t)imaxabs(i), &buf[sizeof(buf) - 1]);
 
     if (i < 0)
@@ -171,9 +151,8 @@ str_t *str_cat_int(str_t *dest, intmax_t i)
     return str_cat_c(dest, s);
 }
 
-str_t *str_cat_uint(str_t *dest, uintmax_t u)
-{
-    char buf[40];  // enough for sizeof(uintmax_t) <= 16
+str_t *str_cat_uint(str_t *dest, uintmax_t u) {
+    char buf[40]; // enough for sizeof(uintmax_t) <= 16
     return str_cat_c(dest, do_fmt_u(u, &buf[sizeof(buf) - 1]));
 }
 
@@ -202,7 +181,7 @@ static void do_str_cat_fmt(str_t *dest, const char *fmt, va_list args)
             do_str_cat(dest, fmt, (size_t)(pct - fmt));
 
         bytesLeft -= (size_t)((pct + 2) - fmt);
-        fmt = pct + 2;  // move past the '%?' to prepare next loop iteration
+        fmt = pct + 2; // move past the '%?' to prepare next loop iteration
         assert(strlen(fmt) == bytesLeft);
 
         if (pct[1] == 's')
@@ -218,14 +197,13 @@ static void do_str_cat_fmt(str_t *dest, const char *fmt, va_list args)
         else if (pct[1] == 'U')
             str_cat_uint(dest, va_arg(args, uintmax_t));
         else
-            assert(false);  // add your format specifier handler here
+            assert(false); // add your format specifier handler here
     }
 
     assert(str_ok(*dest));
 }
 
-str_t *str_cpy_fmt(str_t *dest, const char *fmt, ...)
-{
+str_t *str_cpy_fmt(str_t *dest, const char *fmt, ...) {
     va_list args;
     va_start(args, fmt);
     str_resize(dest, 0);
@@ -234,8 +212,7 @@ str_t *str_cpy_fmt(str_t *dest, const char *fmt, ...)
     return dest;
 }
 
-str_t *str_cat_fmt(str_t *dest, const char *fmt, ...)
-{
+str_t *str_cat_fmt(str_t *dest, const char *fmt, ...) {
     va_list args;
     va_start(args, fmt);
     do_str_cat_fmt(dest, fmt, args);
@@ -243,8 +220,7 @@ str_t *str_cat_fmt(str_t *dest, const char *fmt, ...)
     return dest;
 }
 
-const char *str_tok(const char *s, str_t *token, const char *delim)
-{
+const char *str_tok(const char *s, str_t *token, const char *delim) {
     assert(str_ok(*token) && delim && *delim);
 
     // empty tail: no-op
@@ -268,8 +244,7 @@ const char *str_tok(const char *s, str_t *token, const char *delim)
 
 // Read next character using escape character. Result in *out. Retuns tail pointer, and sets
 // escaped=true if escape character parsed.
-static const char *str_getc_esc(const char *s, char *out, bool *escaped, char esc)
-{
+static const char *str_getc_esc(const char *s, char *out, bool *escaped, char esc) {
     if (*s != esc) {
         *escaped = false;
         *out = *s;
@@ -282,8 +257,7 @@ static const char *str_getc_esc(const char *s, char *out, bool *escaped, char es
     }
 }
 
-const char *str_tok_esc(const char *s, str_t *token, char delim, char esc)
-{
+const char *str_tok_esc(const char *s, str_t *token, char delim, char esc) {
     assert(str_ok(*token) && delim && esc);
 
     // empty tail: no-op
@@ -314,14 +288,12 @@ const char *str_tok_esc(const char *s, str_t *token, char delim, char esc)
     return token->len ? tail : NULL;
 }
 
-const char *str_prefix(const char *s, const char *prefix)
-{
+const char *str_prefix(const char *s, const char *prefix) {
     size_t len = strlen(prefix);
     return strncmp(s, prefix, len) ? NULL : s + len;
 }
 
-size_t str_getline(str_t *out, FILE *in)
-{
+size_t str_getline(str_t *out, FILE *in) {
     assert(str_ok(*out) && in);
     str_resize(out, 0);
     int c;
@@ -333,11 +305,11 @@ size_t str_getline(str_t *out, FILE *in)
 #endif
 
     while (true) {
-        #ifdef __MINGW32__
-            c = _getc_nolock(in);
-        #else
-            c = getc_unlocked(in);
-        #endif
+#ifdef __MINGW32__
+        c = _getc_nolock(in);
+#else
+        c = getc_unlocked(in);
+#endif
 
         if (c != '\n' && c != EOF)
             str_push(out, (char)c);
@@ -357,8 +329,7 @@ size_t str_getline(str_t *out, FILE *in)
     return n;
 }
 
-bool str_to_uintmax(const char *s, uintmax_t *result)
-{
+bool str_to_uintmax(const char *s, uintmax_t *result) {
     *result = 0;
     uintmax_t previous = 0;
     int c = 0;
@@ -368,7 +339,7 @@ bool str_to_uintmax(const char *s, uintmax_t *result)
             *result = 10 * *result + (uintmax_t)(c - '0');
 
             if (*result < previous)
-                return false;  // overflow
+                return false; // overflow
         } else
             return false;
 
@@ -378,8 +349,7 @@ bool str_to_uintmax(const char *s, uintmax_t *result)
     return true;
 }
 
-bool str_to_uint8(const char *s, uint8_t *result)
-{
+bool str_to_uint8(const char *s, uint8_t *result) {
     uintmax_t tmp = 0;
 
     if (str_to_uintmax(s, &tmp) && tmp <= UINT8_MAX) {
@@ -389,8 +359,7 @@ bool str_to_uint8(const char *s, uint8_t *result)
         return false;
 }
 
-bool str_to_uint16(const char *s, uint16_t *result)
-{
+bool str_to_uint16(const char *s, uint16_t *result) {
     uintmax_t tmp = 0;
 
     if (str_to_uintmax(s, &tmp) && tmp <= UINT16_MAX) {

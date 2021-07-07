@@ -11,7 +11,7 @@
  *
  * You should have received a copy of the GNU General Public License along with this program. If
  * not, see <http://www.gnu.org/licenses/>.
-*/
+ */
 #pragma once
 #include <assert.h>
 #include <inttypes.h>
@@ -19,13 +19,13 @@
 
 #define BOUNDS(v, ub) assert((unsigned)(v) < (ub))
 
-enum {RANK_1, RANK_2, RANK_3, RANK_4, RANK_5, RANK_6, RANK_7, RANK_8, NB_RANK};
-enum {FILE_A, FILE_B, FILE_C, FILE_D, FILE_E, FILE_F, FILE_G, FILE_H, NB_FILE};
-enum {NB_SQUARE = 64};  // square = 8 * rank + file
+enum { RANK_1, RANK_2, RANK_3, RANK_4, RANK_5, RANK_6, RANK_7, RANK_8, NB_RANK };
+enum { FILE_A, FILE_B, FILE_C, FILE_D, FILE_E, FILE_F, FILE_G, FILE_H, NB_FILE };
+enum { NB_SQUARE = 64 }; // square = 8 * rank + file
 
-enum {UP = 8, DOWN = -8, LEFT = -1, RIGHT = 1};
-enum {WHITE, BLACK, NB_COLOR};
-enum {KNIGHT, BISHOP, ROOK, QUEEN, KING, PAWN, NB_PIECE};
+enum { UP = 8, DOWN = -8, LEFT = -1, RIGHT = 1 };
+enum { WHITE, BLACK, NB_COLOR };
+enum { KNIGHT, BISHOP, ROOK, QUEEN, KING, PAWN, NB_PIECE };
 
 int opposite(int color);
 int push_inc(int color);
@@ -36,17 +36,18 @@ int file_of(int square);
 
 int relative_rank(int color, int rank);
 
-typedef uint16_t move_t;  // move encoding: from:6, to:6, prom: 4 (NB_PIECE if none)
+typedef uint16_t move_t; // move encoding: from:6, to:6, prom: 4 (NB_PIECE if none)
 
 move_t move_build(int from, int to, int prom);
 int move_from(move_t m);
 int move_to(move_t m);
 int move_prom(move_t m);
 
-typedef uint64_t bitboard_t;  // bitfield to represent a set of squares
+typedef uint64_t bitboard_t; // bitfield to represent a set of squares
 
 extern bitboard_t Rank[NB_RANK], File[NB_FILE];
-extern bitboard_t PawnAttacks[NB_COLOR][NB_SQUARE], KnightAttacks[NB_SQUARE], KingAttacks[NB_SQUARE];
+extern bitboard_t PawnAttacks[NB_COLOR][NB_SQUARE], KnightAttacks[NB_SQUARE],
+    KingAttacks[NB_SQUARE];
 extern bitboard_t Segment[NB_SQUARE][NB_SQUARE];
 extern bitboard_t Ray[NB_SQUARE][NB_SQUARE];
 

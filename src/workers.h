@@ -11,21 +11,16 @@
  *
  * You should have received a copy of the GNU General Public License along with this program. If
  * not, see <http://www.gnu.org/licenses/>.
-*/
+ */
 #pragma once
-#include <pthread.h>
+#include "str.h"
 #include <inttypes.h>
+#include <pthread.h>
 #include <stdbool.h>
 #include <stdio.h>
-#include "str.h"
 
 // Game results
-enum {
-    RESULT_LOSS,
-    RESULT_DRAW,
-    RESULT_WIN,
-    NB_RESULT
-};
+enum { RESULT_LOSS, RESULT_DRAW, RESULT_WIN, NB_RESULT };
 
 // Per thread data
 typedef struct {
@@ -36,8 +31,8 @@ typedef struct {
         bool set;
     } deadline;
     FILE *log;
-    uint64_t seed;  // seed for prng()
-    int id;  // starts at 1 (0 is for main thread)
+    uint64_t seed; // seed for prng()
+    int id;        // starts at 1 (0 is for main thread)
 } Worker;
 
 extern Worker *Workers;

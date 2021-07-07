@@ -11,17 +11,14 @@
  *
  * You should have received a copy of the GNU General Public License along with this program. If
  * not, see <http://www.gnu.org/licenses/>.
-*/
-#include <assert.h>
+ */
 #include "openings.h"
 #include "util.h"
 #include "vec.h"
+#include <assert.h>
 
-Openings openings_init(const char *fileName, bool random, uint64_t srand, int threadId)
-{
-    Openings o = {
-        .index = vec_init(size_t)
-    };
+Openings openings_init(const char *fileName, bool random, uint64_t srand, int threadId) {
+    Openings o = {.index = vec_init(size_t)};
 
     if (*fileName)
         DIE_IF(threadId, !(o.file = fopen(fileName, "r" FOPEN_TEXT)));
@@ -34,7 +31,7 @@ Openings openings_init(const char *fileName, bool random, uint64_t srand, int th
             vec_push(o.index, ftell(o.file));
         } while (str_getline(&line, o.file));
 
-        vec_pop(o.index);  // EOF offset must be removed
+        vec_pop(o.index); // EOF offset must be removed
 
         if (random) {
             // Shuffle o.index[], which will be read sequentially from the beginning. This allows
@@ -54,8 +51,7 @@ Openings openings_init(const char *fileName, bool random, uint64_t srand, int th
     return o;
 }
 
-void openings_destroy(Openings *o, int threadId)
-{
+void openings_destroy(Openings *o, int threadId) {
     if (o->file)
         DIE_IF(threadId, fclose(o->file) < 0);
 
@@ -63,8 +59,7 @@ void openings_destroy(Openings *o, int threadId)
     vec_destroy(o->index);
 }
 
-void openings_next(Openings *o, str_t *fen, size_t idx, int threadId)
-{
+void openings_next(Openings *o, str_t *fen, size_t idx, int threadId) {
     if (!o->file) {
         str_cpy_c(fen, "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
         return;

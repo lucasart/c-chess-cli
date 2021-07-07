@@ -11,16 +11,15 @@
  *
  * You should have received a copy of the GNU General Public License along with this program. If
  * not, see <http://www.gnu.org/licenses/>.
-*/
-#include <stdlib.h>
+ */
 #include "workers.h"
 #include "util.h"
 #include "vec.h"
+#include <stdlib.h>
 
 Worker *Workers;
 
-void deadline_set(Worker *w, const char *engineName, int64_t timeLimit)
-{
+void deadline_set(Worker *w, const char *engineName, int64_t timeLimit) {
     assert(timeLimit > 0);
 
     pthread_mutex_lock(&w->deadline.mtx);
@@ -33,24 +32,22 @@ void deadline_set(Worker *w, const char *engineName, int64_t timeLimit)
 
     if (w->log)
         DIE_IF(w->id, fprintf(w->log, "deadline: %s must respond by %" PRId64 "\n", engineName,
-            timeLimit) < 0);
+                              timeLimit) < 0);
 }
 
-void deadline_clear(Worker *w)
-{
+void deadline_clear(Worker *w) {
     pthread_mutex_lock(&w->deadline.mtx);
 
     w->deadline.set = false;
 
     if (w->log)
         DIE_IF(w->id, fprintf(w->log, "deadline: %s responded before %" PRId64 "\n",
-            w->deadline.engineName.buf, w->deadline.timeLimit) < 0);
+                              w->deadline.engineName.buf, w->deadline.timeLimit) < 0);
 
     pthread_mutex_unlock(&w->deadline.mtx);
 }
 
-int64_t deadline_overdue(Worker *w)
-{
+int64_t deadline_overdue(Worker *w) {
     pthread_mutex_lock(&w->deadline.mtx);
 
     const int64_t timeLimit = w->deadline.timeLimit;
@@ -66,12 +63,8 @@ int64_t deadline_overdue(Worker *w)
         return 0;
 }
 
-Worker worker_init(int i, const char *logName)
-{
-    Worker w = {
-        .seed = (uint64_t)i,
-        .id = i + 1
-    };
+Worker worker_init(int i, const char *logName) {
+    Worker w = {.seed = (uint64_t)i, .id = i + 1};
 
     pthread_mutex_init(&w.deadline.mtx, NULL);
     w.deadline.engineName = str_init();
@@ -84,8 +77,7 @@ Worker worker_init(int i, const char *logName)
     return w;
 }
 
-void worker_destroy(Worker *w)
-{
+void worker_destroy(Worker *w) {
     str_destroy(&w->deadline.engineName);
     pthread_mutex_destroy(&w->deadline.mtx);
 

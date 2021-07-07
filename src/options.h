@@ -11,12 +11,12 @@
  *
  * You should have received a copy of the GNU General Public License along with this program. If
  * not, see <http://www.gnu.org/licenses/>.
-*/
+ */
 #pragma once
-#include <inttypes.h>
-#include "workers.h"
 #include "sprt.h"
 #include "str.h"
+#include "workers.h"
+#include <inttypes.h>
 
 typedef struct {
     str_t fileName;

@@ -11,39 +11,39 @@
  *
  * You should have received a copy of the GNU General Public License along with this program. If
  * not, see <http://www.gnu.org/licenses/>.
-*/
+ */
 #ifdef __MINGW32__
-    #include <io.h>
     #include <fcntl.h>
+    #include <io.h>
 #elif defined __linux__
     #define _GNU_SOURCE
-    #include <unistd.h>
     #include <fcntl.h>
     #include <sys/prctl.h>
     #include <sys/wait.h>
-#else
     #include <unistd.h>
+#else
     #include <sys/wait.h>
+    #include <unistd.h>
 #endif
 
 #include <assert.h>
 #include <limits.h>
 #include <pthread.h>
 #include <signal.h>
-#include <stdlib.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "engine.h"
 #include "util.h"
 #include "vec.h"
 
-static void engine_spawn(const Worker *w, Engine *e, const char *cwd, char **argv, bool readStdErr)
-{
+static void engine_spawn(const Worker *w, Engine *e, const char *cwd, char **argv,
+                         bool readStdErr) {
     assert(argv[0]);
 
-#ifdef __MINGW32__  // Windows (mingw only)
-    (void)argv;  // FIXME: support engine arguments
+#ifdef __MINGW32__ // Windows (mingw only)
+    (void)argv;    // FIXME: support engine arguments
 
     SECURITY_ATTRIBUTES saAttr = {
         .nLength = sizeof(SECURITY_ATTRIBUTES),
@@ -58,15 +58,13 @@ static void engine_spawn(const Worker *w, Engine *e, const char *cwd, char **arg
     HANDLE hJob = CreateJobObject(NULL, NULL);
     DIE_IF(w->id, !hJob);
 
-    JOBOBJECT_BASIC_LIMIT_INFORMATION jobBasicInfo = {
-        .LimitFlags = JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE
-    };
-    JOBOBJECT_EXTENDED_LIMIT_INFORMATION jobExtendedInfo = {
-        .BasicLimitInformation = jobBasicInfo
-    };
+    JOBOBJECT_BASIC_LIMIT_INFORMATION jobBasicInfo = {.LimitFlags =
+                                                          JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE};
+    JOBOBJECT_EXTENDED_LIMIT_INFORMATION jobExtendedInfo = {.BasicLimitInformation = jobBasicInfo};
 
-    DIE_IF(w->id, !SetInformationJobObject(hJob, JobObjectExtendedLimitInformation,
-        &jobExtendedInfo, sizeof(JOBOBJECT_EXTENDED_LIMIT_INFORMATION)));
+    DIE_IF(w->id,
+           !SetInformationJobObject(hJob, JobObjectExtendedLimitInformation, &jobExtendedInfo,
+                                    sizeof(JOBOBJECT_EXTENDED_LIMIT_INFORMATION)));
 
     // Create a pipe for child process's STDOUT
     DIE_IF(w->id, !CreatePipe(&outof[0], &outof[1], &saAttr, 0));
@@ -78,13 +76,11 @@ static void engine_spawn(const Worker *w, Engine *e, const char *cwd, char **arg
 
     // Create the child process
     PROCESS_INFORMATION piProcInfo = {0};
-    STARTUPINFO siStartInfo = {
-        .cb = sizeof(STARTUPINFO),
-        .hStdOutput = outof[1],
-        .hStdInput = into[0],
-        .dwFlags = STARTF_USESTDHANDLES,
-        .hStdError = readStdErr ? outof[1] : 0
-    };
+    STARTUPINFO siStartInfo = {.cb = sizeof(STARTUPINFO),
+                               .hStdOutput = outof[1],
+                               .hStdInput = into[0],
+                               .dwFlags = STARTF_USESTDHANDLES,
+                               .hStdError = readStdErr ? outof[1] : 0};
 
     // Recompose cmdFromCwd = "argv[0] argv[1] ... argv[argc-1]", which is the command to execute
     // from the context of cwd. This may differ from cmd in engine_spawn(), because argv[0] strips
@@ -96,7 +92,8 @@ static void engine_spawn(const Worker *w, Engine *e, const char *cwd, char **arg
 
     // Launch engine process
     DIE_IF(w->id, !CreateProcessA(NULL, cmdFromCwd.buf, NULL, NULL, TRUE,
-        CREATE_NO_WINDOW | BELOW_NORMAL_PRIORITY_CLASS, NULL, cwd, &siStartInfo, &piProcInfo));
+                                  CREATE_NO_WINDOW | BELOW_NORMAL_PRIORITY_CLASS, NULL, cwd,
+                                  &siStartInfo, &piProcInfo));
 
     // Keep the handle to the child process
     e->hProcess = piProcInfo.hProcess;
@@ -109,7 +106,7 @@ static void engine_spawn(const Worker *w, Engine *e, const char *cwd, char **arg
     DIE_IF(w->id, !CloseHandle(outof[1]));
 
     // Reopen stdin and stdout pipes using C style FILE
-    int stdin_fd = _open_osfhandle((intptr_t)into[1], _O_RDONLY | _O_TEXT);  // FIXME: why RDONLY?
+    int stdin_fd = _open_osfhandle((intptr_t)into[1], _O_RDONLY | _O_TEXT); // FIXME: why RDONLY?
     int stdout_fd = _open_osfhandle((intptr_t)outof[0], _O_RDONLY | _O_TEXT);
     DIE_IF(w->id, stdin_fd == -1);
     DIE_IF(w->id, stdout_fd == -1);
@@ -121,25 +118,25 @@ static void engine_spawn(const Worker *w, Engine *e, const char *cwd, char **arg
     DIE_IF(w->id, !AssignProcessToJobObject(hJob, GetCurrentProcess()));
     DIE_IF(w->id, !AssignProcessToJobObject(hJob, e->hProcess));
 
-#else  // POSIX: Linux/Android == __linux__, otherwise assume __APPLE__
+#else // POSIX: Linux/Android == __linux__, otherwise assume __APPLE__
     // Pipe diagram: Parent -> [1]into[0] -> Child -> [1]outof[0] -> Parent
     // 'into' and 'outof' are pipes, each with 2 ends: read=0, write=1
     int outof[2] = {0}, into[2] = {0};
 
     #ifdef __linux__
-        DIE_IF(w->id, pipe2(outof, O_CLOEXEC) < 0);
-        DIE_IF(w->id, pipe2(into, O_CLOEXEC) < 0);
+    DIE_IF(w->id, pipe2(outof, O_CLOEXEC) < 0);
+    DIE_IF(w->id, pipe2(into, O_CLOEXEC) < 0);
     #else
-        DIE_IF(w->id, pipe(outof) < 0);
-        DIE_IF(w->id, pipe(into) < 0);
+    DIE_IF(w->id, pipe(outof) < 0);
+    DIE_IF(w->id, pipe(into) < 0);
     #endif
 
     DIE_IF(w->id, (e->pid = fork()) < 0);
 
     if (e->pid == 0) {
-        #ifdef __linux__
-            prctl(PR_SET_PDEATHSIG, SIGHUP);  // delegate zombie purge to the kernel
-        #endif
+    #ifdef __linux__
+        prctl(PR_SET_PDEATHSIG, SIGHUP); // delegate zombie purge to the kernel
+    #endif
         // Plug stdin and stdout
         DIE_IF(w->id, dup2(into[0], STDIN_FILENO) < 0);
         DIE_IF(w->id, dup2(outof[1], STDOUT_FILENO) < 0);
@@ -147,19 +144,20 @@ static void engine_spawn(const Worker *w, Engine *e, const char *cwd, char **arg
         // For stderr we have 2 choices:
         // - readStdErr=true: dump it into stdout, like doing '2>&1' in bash. This is useful, if we
         // want to see error messages from engines in their respective log file (notably assert()
-        // writes to stderr). Of course, such error messages should not be UCI commands, otherwise we
-        // will be fooled into parsing them as such.
+        // writes to stderr). Of course, such error messages should not be UCI commands, otherwise
+        // we will be fooled into parsing them as such.
         // - readStdErr=false: do nothing, which means stderr is inherited from the parent process.
         // Typcically, this means all engines write their error messages to the terminal (unless
         // redirected otherwise).
         if (readStdErr)
             DIE_IF(w->id, dup2(outof[1], STDERR_FILENO) < 0);
 
-        #ifndef __linux__
-            // Ugly (and slow) workaround for Apple's BSD-based kernels that lack the ability to
-            // atomically set O_CLOEXEC when creating pipes.
-            for (int fd = 3; fd < sysconf(FOPEN_MAX); close(fd++));
-        #endif
+    #ifndef __linux__
+        // Ugly (and slow) workaround for Apple's BSD-based kernels that lack the ability to
+        // atomically set O_CLOEXEC when creating pipes.
+        for (int fd = 3; fd < sysconf(FOPEN_MAX); close(fd++))
+            ;
+    #endif
 
         // Set cwd as current directory, and execute run with argv[]
         DIE_IF(w->id, chdir(cwd) < 0);
@@ -189,8 +187,7 @@ static void engine_spawn(const Worker *w, Engine *e, const char *cwd, char **arg
     #define ESC_SEQ '\\'
 #endif
 
-static void engine_parse_cmd(const char *cmd, str_t *cwd, str_t *run, str_t **args)
-{
+static void engine_parse_cmd(const char *cmd, str_t *cwd, str_t *run, str_t **args) {
     // Isolate the first token being the command to run.
     scope(str_destroy) str_t token = str_init();
     const char *tail = cmd;
@@ -211,14 +208,13 @@ static void engine_parse_cmd(const char *cmd, str_t *cwd, str_t *run, str_t **ar
     }
 
     // Collect the arguments into a vec of str_t, args[]
-    vec_push(*args, str_init_from(*run));  // argv[0] is the executed command
+    vec_push(*args, str_init_from(*run)); // argv[0] is the executed command
 
     while ((tail = str_tok_esc(tail, &token, ' ', ESC_SEQ)))
         vec_push(*args, str_init_from(token));
 }
 
-Engine engine_init(Worker *w, const char *cmd, const char *name, const str_t *options)
-{
+Engine engine_init(Worker *w, const char *cmd, const char *name, const str_t *options) {
     if (!*cmd)
         DIE("[%d] missing command to start engine.\n", w->id);
 
@@ -267,8 +263,8 @@ Engine engine_init(Worker *w, const char *cmd, const char *name, const str_t *op
         scope(str_destroy) str_t oname = str_init(), ovalue = str_init();
         const char *tail = NULL;
 
-        if ((tail = str_tok_esc(options[i].buf, &oname, '=', ESC_SEQ))
-                && (tail = str_tok_esc(tail, &ovalue, '=', ESC_SEQ))) {
+        if ((tail = str_tok_esc(options[i].buf, &oname, '=', ESC_SEQ)) &&
+            (tail = str_tok_esc(tail, &ovalue, '=', ESC_SEQ))) {
             str_cpy_fmt(&line, "setoption name %S value %S", oname, ovalue);
             engine_writeln(w, &e, line.buf);
         } else
@@ -278,8 +274,7 @@ Engine engine_init(Worker *w, const char *cmd, const char *name, const str_t *op
     return e;
 }
 
-void engine_destroy(Worker *w, Engine *e)
-{
+void engine_destroy(Worker *w, Engine *e) {
     // Engine was not instanciated with engine_init()
     if (!e->in)
         return;
@@ -288,12 +283,12 @@ void engine_destroy(Worker *w, Engine *e)
     deadline_set(w, e->name.buf, system_msec() + e->timeOut);
     engine_writeln(w, e, "quit");
 
-    #ifdef __MINGW32__
-        WaitForSingleObject(e->hProcess, INFINITE);
-        CloseHandle(e->hProcess);
-    #else
-        waitpid(e->pid, NULL, 0);
-    #endif
+#ifdef __MINGW32__
+    WaitForSingleObject(e->hProcess, INFINITE);
+    CloseHandle(e->hProcess);
+#else
+    waitpid(e->pid, NULL, 0);
+#endif
 
     deadline_clear(w);
 
@@ -302,8 +297,7 @@ void engine_destroy(Worker *w, Engine *e)
     DIE_IF(w->id, fclose(e->out) < 0);
 }
 
-void engine_readln(const Worker *w, const Engine *e, str_t *line)
-{
+void engine_readln(const Worker *w, const Engine *e, str_t *line) {
     if (!str_getline(line, e->in))
         DIE("[%d] could not read from %s\n", w->id, e->name.buf);
 
@@ -311,8 +305,7 @@ void engine_readln(const Worker *w, const Engine *e, str_t *line)
         DIE_IF(w->id, fprintf(w->log, "%s -> %s\n", e->name.buf, line->buf) < 0);
 }
 
-void engine_writeln(const Worker *w, const Engine *e, char *buf)
-{
+void engine_writeln(const Worker *w, const Engine *e, char *buf) {
     DIE_IF(w->id, fputs(buf, e->out) < 0);
     DIE_IF(w->id, fputc('\n', e->out) < 0);
     DIE_IF(w->id, fflush(e->out) < 0);
@@ -323,8 +316,7 @@ void engine_writeln(const Worker *w, const Engine *e, char *buf)
     }
 }
 
-void engine_sync(Worker *w, const Engine *e)
-{
+void engine_sync(Worker *w, const Engine *e) {
     deadline_set(w, e->name.buf, system_msec() + e->timeOut);
     engine_writeln(w, e, "isready");
     scope(str_destroy) str_t line = str_init();
@@ -337,8 +329,7 @@ void engine_sync(Worker *w, const Engine *e)
 }
 
 bool engine_bestmove(Worker *w, const Engine *e, int64_t *timeLeft, str_t *best, str_t *pv,
-    Info *info)
-{
+                     Info *info) {
     int result = false;
     scope(str_destroy) str_t line = str_init(), token = str_init();
     str_clear(pv);
@@ -364,9 +355,11 @@ bool engine_bestmove(Worker *w, const Engine *e, int64_t *timeLeft, str_t *best,
                     if ((tail = str_tok(tail, &token, " "))) {
                         if (!strcmp(token.buf, "cp") && (tail = str_tok(tail, &token, " ")))
                             info->score = atoi(token.buf);
-                        else if (!strcmp(token.buf, "mate") && (tail = str_tok(tail, &token, " "))) {
+                        else if (!strcmp(token.buf, "mate") &&
+                                 (tail = str_tok(tail, &token, " "))) {
                             const int movesToMate = atoi(token.buf);
-                            info->score = movesToMate < 0 ? INT16_MIN - movesToMate : INT16_MAX - movesToMate;
+                            info->score =
+                                movesToMate < 0 ? INT16_MIN - movesToMate : INT16_MAX - movesToMate;
                         } else
                             DIE("illegal syntax after 'score' in '%s'\n", line.buf);
                     }

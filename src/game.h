@@ -11,44 +11,44 @@
  *
  * You should have received a copy of the GNU General Public License along with this program. If
  * not, see <http://www.gnu.org/licenses/>.
-*/
+ */
 #pragma once
-#include <stdio.h>
-#include "position.h"
 #include "engine.h"
 #include "options.h"
+#include "position.h"
 #include "str.h"
+#include <stdio.h>
 
 enum {
     STATE_NONE,
 
     // All possible ways to lose
-    STATE_CHECKMATE,  // lost by being checkmated
-    STATE_TIME_LOSS,  // lost on time
-    STATE_ILLEGAL_MOVE,  // lost by playing an illegal move
-    STATE_RESIGN,  // resigned on behalf of the engine
+    STATE_CHECKMATE,    // lost by being checkmated
+    STATE_TIME_LOSS,    // lost on time
+    STATE_ILLEGAL_MOVE, // lost by playing an illegal move
+    STATE_RESIGN,       // resigned on behalf of the engine
 
-    STATE_SEPARATOR,  // invalid result, just a market to separate losses from draws
+    STATE_SEPARATOR, // invalid result, just a market to separate losses from draws
 
     // All possible ways to draw
-    STATE_STALEMATE,  // draw by stalemate
-    STATE_THREEFOLD,  // draw by 3 position repetition
-    STATE_FIFTY_MOVES,  // draw by 50 moves rule
-    STATE_INSUFFICIENT_MATERIAL,  // draw due to insufficient material to deliver checkmate
-    STATE_DRAW_ADJUDICATION  // draw by adjudication
+    STATE_STALEMATE,             // draw by stalemate
+    STATE_THREEFOLD,             // draw by 3 position repetition
+    STATE_FIFTY_MOVES,           // draw by 50 moves rule
+    STATE_INSUFFICIENT_MATERIAL, // draw due to insufficient material to deliver checkmate
+    STATE_DRAW_ADJUDICATION      // draw by adjudication
 };
 
 typedef struct {
     Position pos;
     int score;  // score returned by the engine (in cp)
-    int result;  // game result from pos.turn's pov
+    int result; // game result from pos.turn's pov
 } Sample;
 
 typedef struct {
-    str_t names[NB_COLOR];  // names of players, by color
-    Position *pos;  // list of positions (including moves) since game start
-    Info *info;  // remembered from parsing info lines (for PGN comments)
-    Sample *samples;  // list of samples when generating training data
+    str_t names[NB_COLOR]; // names of players, by color
+    Position *pos;         // list of positions (including moves) since game start
+    Info *info;            // remembered from parsing info lines (for PGN comments)
+    Sample *samples;       // list of samples when generating training data
     int round, game, ply, state;
 } Game;
 
@@ -58,7 +58,7 @@ void game_destroy(Game *g);
 bool game_load_fen(Game *g, const char *fen, int *color);
 
 int game_play(Worker *w, Game *g, const Options *o, const Engine engines[2],
-    const EngineOptions *eo[2], bool reverse);
+              const EngineOptions *eo[2], bool reverse);
 
 void game_decode_state(const Game *g, str_t *result, str_t *reason);
 void game_export_pgn(const Game *g, int verbosity, str_t *out);

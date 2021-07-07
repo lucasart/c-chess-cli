@@ -11,12 +11,12 @@
  *
  * You should have received a copy of the GNU General Public License along with this program. If
  * not, see <http://www.gnu.org/licenses/>.
-*/
+ */
 // Stand alone program: minimal UCI engine (random mover) used for testing and benchmarking
-#include <string.h>
 #include "gen.h"
 #include "util.h"
 #include "vec.h"
+#include <string.h>
 
 #define uci_printf(...) printf(__VA_ARGS__), fflush(stdout)
 #define uci_puts(str) puts(str), fflush(stdout)
@@ -25,22 +25,19 @@ typedef struct {
     int depth;
 } Go;
 
-static uint64_t hash_mix(uint64_t block)
-{
+static uint64_t hash_mix(uint64_t block) {
     block ^= block >> 23;
     block *= 0x2127599bf4325c37ULL;
     return block ^= block >> 47;
 }
 
-static void hash_block(uint64_t block, uint64_t *hash)
-{
+static void hash_block(uint64_t block, uint64_t *hash) {
     *hash ^= hash_mix(block);
     *hash *= 0x880355f21e6d1965ULL;
 }
 
 // Based on FastHash64, without length hashing, to make it capable of incremental updates
-static void hash_blocks(const void *buffer, size_t length, uint64_t *hash)
-{
+static void hash_blocks(const void *buffer, size_t length, uint64_t *hash) {
     assert((uintptr_t)buffer % 8 == 0);
     const uint64_t *blocks = (const uint64_t *)buffer;
 
@@ -58,8 +55,7 @@ static void hash_blocks(const void *buffer, size_t length, uint64_t *hash)
     }
 }
 
-static void parse_position(const char *tail, Position *pos, bool uciChess960)
-{
+static void parse_position(const char *tail, Position *pos, bool uciChess960) {
     scope(str_destroy) str_t token = str_init();
     tail = str_tok(tail, &token, " ");
     assert(tail);
@@ -93,8 +89,7 @@ static void parse_position(const char *tail, Position *pos, bool uciChess960)
     }
 }
 
-static void random_pv(const Position *pos, uint64_t *seed, int len, str_t *pv)
-{
+static void random_pv(const Position *pos, uint64_t *seed, int len, str_t *pv) {
     str_clear(pv);
     Position p[2];
     p[0] = *pos;
@@ -118,15 +113,13 @@ static void random_pv(const Position *pos, uint64_t *seed, int len, str_t *pv)
     vec_destroy(moves);
 }
 
-static void run_go(const Position *pos, const Go *go, uint64_t *seed)
-{
+static void run_go(const Position *pos, const Go *go, uint64_t *seed) {
     scope(str_destroy) str_t pv = str_init();
 
     for (int depth = 1; depth <= go->depth; depth++) {
         random_pv(pos, seed, depth, &pv);
         uci_printf("info depth %d score cp %d pv %s\n", depth,
-            (int)((prng(seed) & 0xFFFF) - 0x8000),
-            pv.buf);
+                   (int)((prng(seed) & 0xFFFF) - 0x8000), pv.buf);
     }
 
     scope(str_destroy) str_t token = str_init();
@@ -134,8 +127,7 @@ static void run_go(const Position *pos, const Go *go, uint64_t *seed)
     uci_printf("bestmove %s\n", token.buf);
 }
 
-int main(int argc, char **argv)
-{
+int main(int argc, char **argv) {
     if (argc >= 2 && !strcmp(argv[1], "-version")) {
         puts("c-chess-cli/test " VERSION);
         return 0;
@@ -155,10 +147,10 @@ int main(int argc, char **argv)
         if (!strcmp(line.buf, "uci")) {
             uci_puts("id name engine");
             uci_printf("option name UCI_Chess960 type check default %s\n",
-                uciChess960 ? "true" : "false");
+                       uciChess960 ? "true" : "false");
             uci_puts("uciok");
         } else if (!strcmp(line.buf, "ucinewgame"))
-            seed = originalSeed;  // make results reproducible across ucinewgame
+            seed = originalSeed; // make results reproducible across ucinewgame
         else if (!strcmp(line.buf, "isready"))
             uci_puts("readyok");
         else if ((tail = str_prefix(line.buf, "setoption "))) {

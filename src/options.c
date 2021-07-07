@@ -11,17 +11,16 @@
  *
  * You should have received a copy of the GNU General Public License along with this program. If
  * not, see <http://www.gnu.org/licenses/>.
-*/
+ */
+#include "options.h"
+#include "util.h"
+#include "vec.h"
 #include <assert.h>
 #include <ctype.h>
 #include <limits.h>
 #include <string.h>
-#include "options.h"
-#include "util.h"
-#include "vec.h"
 
-static int options_parse_sample(int argc, const char **argv, int i, Options *o)
-{
+static int options_parse_sample(int argc, const char **argv, int i, Options *o) {
     while (i < argc && argv[i][0] != '-') {
         const char *tail = NULL;
 
@@ -54,8 +53,7 @@ static int options_parse_sample(int argc, const char **argv, int i, Options *o)
 
 // Parse time control. Expects 'mtg/time+inc' or 'time+inc'. Note that time and inc are provided by
 // the user in seconds, instead of msec.
-static void options_parse_tc(const char *s, EngineOptions *eo)
-{
+static void options_parse_tc(const char *s, EngineOptions *eo) {
     double time = 0, increment = 0;
 
     // s = left+increment
@@ -78,8 +76,7 @@ static void options_parse_tc(const char *s, EngineOptions *eo)
     eo->increment = (int64_t)(increment * 1000);
 }
 
-static int options_parse_eo(int argc, const char **argv, int i, EngineOptions *eo)
-{
+static int options_parse_eo(int argc, const char **argv, int i, EngineOptions *eo) {
     while (i < argc && argv[i][0] != '-') {
         const char *tail = NULL;
 
@@ -88,7 +85,7 @@ static int options_parse_eo(int argc, const char **argv, int i, EngineOptions *e
         else if ((tail = str_prefix(argv[i], "name=")))
             str_cpy_c(&eo->name, tail);
         else if ((tail = str_prefix(argv[i], "option.")))
-            vec_push(eo->options, str_init_from_c(tail));  // store "name=value" string
+            vec_push(eo->options, str_init_from_c(tail)); // store "name=value" string
         else if ((tail = str_prefix(argv[i], "depth=")))
             eo->depth = atoi(tail);
         else if ((tail = str_prefix(argv[i], "nodes=")))
@@ -108,8 +105,7 @@ static int options_parse_eo(int argc, const char **argv, int i, EngineOptions *e
     return i - 1;
 }
 
-static int options_parse_openings(int argc, const char **argv, int i, Options *o)
-{
+static int options_parse_openings(int argc, const char **argv, int i, Options *o) {
     while (i < argc && argv[i][0] != '-') {
         const char *tail = NULL;
 
@@ -132,8 +128,7 @@ static int options_parse_openings(int argc, const char **argv, int i, Options *o
 }
 
 static int options_parse_adjudication(int argc, const char **argv, int i, int *number, int *count,
-    int *score)
-{
+                                      int *score) {
     const int i0 = i;
 
     while (i < argc && argv[i][0] != '-') {
@@ -154,8 +149,7 @@ static int options_parse_adjudication(int argc, const char **argv, int i, int *n
     return i - 1;
 }
 
-static int options_parse_sprt(int argc, const char **argv, int i, Options *o)
-{
+static int options_parse_sprt(int argc, const char **argv, int i, Options *o) {
     o->sprt = true;
 
     while (i < argc && argv[i][0] != '-') {
@@ -181,61 +175,37 @@ static int options_parse_sprt(int argc, const char **argv, int i, Options *o)
     return i - 1;
 }
 
-EngineOptions engine_options_init(void)
-{
+EngineOptions engine_options_init(void) {
     return (EngineOptions){
-        .cmd = str_init(),
-        .name = str_init(),
-        .options = vec_init(str_t),
-        .timeOut = 4000
-    };
+        .cmd = str_init(), .name = str_init(), .options = vec_init(str_t), .timeOut = 4000};
 }
 
-void engine_options_destroy(EngineOptions *eo)
-{
+void engine_options_destroy(EngineOptions *eo) {
     str_destroy_n(&eo->cmd, &eo->name);
     vec_destroy_rec(eo->options, str_destroy);
 }
 
-SampleParams sample_params_init(void)
-{
-    return (SampleParams){
-        .fileName = str_init(),
-        .freq = 1
-    };
+SampleParams sample_params_init(void) { return (SampleParams){.fileName = str_init(), .freq = 1}; }
+
+void sample_params_destroy(SampleParams *sp) { str_destroy(&sp->fileName); }
+
+Options options_init(void) {
+    return (Options){.sp = sample_params_init(),
+                     .openings = str_init(),
+                     .pgn = str_init(),
+                     .concurrency = 1,
+                     .games = 1,
+                     .rounds = 1,
+                     .sprtParam = (SPRTParam){.alpha = 0.05, .beta = 0.05, .elo1 = 4},
+                     .pgnVerbosity = 3};
 }
 
-void sample_params_destroy(SampleParams *sp)
-{
-    str_destroy(&sp->fileName);
-}
-
-Options options_init(void)
-{
-    return (Options){
-        .sp = sample_params_init(),
-        .openings = str_init(),
-        .pgn = str_init(),
-        .concurrency = 1,
-        .games = 1,
-        .rounds = 1,
-        .sprtParam = (SPRTParam){
-            .alpha = 0.05,
-            .beta = 0.05,
-            .elo1 = 4
-        },
-        .pgnVerbosity = 3
-    };
-}
-
-void options_destroy(Options *o)
-{
+void options_destroy(Options *o) {
     sample_params_destroy(&o->sp);
     str_destroy_n(&o->openings, &o->pgn);
 }
 
-void options_parse(int argc, const char **argv, Options *o, EngineOptions **eo)
-{
+void options_parse(int argc, const char **argv, Options *o, EngineOptions **eo) {
     scope(engine_options_destroy) EngineOptions each = engine_options_init();
     bool eachSet = false;
 
@@ -254,7 +224,7 @@ void options_parse(int argc, const char **argv, Options *o, EngineOptions **eo)
         } else if (!strcmp(argv[i], "-engine")) {
             EngineOptions new = engine_options_init();
             i = options_parse_eo(argc, argv, i + 1, &new);
-            vec_push(*eo, new);  // new gets moved here
+            vec_push(*eo, new); // new gets moved here
         } else if (!strcmp(argv[i], "-games"))
             o->games = atoi(argv[++i]);
         else if (!strcmp(argv[i], "-rounds"))
@@ -268,10 +238,10 @@ void options_parse(int argc, const char **argv, Options *o, EngineOptions **eo)
                 o->pgnVerbosity = atoi(argv[++i]);
         } else if (!strcmp(argv[i], "-resign"))
             i = options_parse_adjudication(argc, argv, i + 1, &o->resignNumber, &o->resignCount,
-                &o->resignScore);
+                                           &o->resignScore);
         else if (!strcmp(argv[i], "-draw"))
             i = options_parse_adjudication(argc, argv, i + 1, &o->drawNumber, &o->drawCount,
-                &o->drawScore);
+                                           &o->drawScore);
         else if (!strcmp(argv[i], "-sprt"))
             i = options_parse_sprt(argc, argv, i + 1, o);
         else if (!strcmp(argv[i], "-sample"))

@@ -11,11 +11,11 @@
  *
  * You should have received a copy of the GNU General Public License along with this program. If
  * not, see <http://www.gnu.org/licenses/>.
-*/
+ */
 #pragma once
+#include "str.h"
 #include <pthread.h>
 #include <stdbool.h>
-#include "str.h"
 
 // Result for each pair (e1, e2); e1 < e2. Stores count of game outcomes from e1's point of view.
 typedef struct {
@@ -25,17 +25,17 @@ typedef struct {
 
 // Job: instruction to play a single game
 typedef struct {
-    int ei[2], pair;  // ei[0] plays ei[1]
-    int round, game;  // round and game number (start at 0)
-    bool reverse;  // if true, e1 plays second
+    int ei[2], pair; // ei[0] plays ei[1]
+    int round, game; // round and game number (start at 0)
+    bool reverse;    // if true, e1 plays second
 } Job;
 
 // Job Queue: consumed by workers to play tournament (thread safe)
 typedef struct {
     pthread_mutex_t mtx;
     Job *jobs;
-    size_t idx;  // next job index
-    size_t completed;  // number of jobs completed
+    size_t idx;       // next job index
+    size_t completed; // number of jobs completed
     str_t *names;
     Result *results;
 } JobQueue;

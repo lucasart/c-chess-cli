@@ -11,10 +11,7 @@
  *
  * You should have received a copy of the GNU General Public License along with this program. If
  * not, see <http://www.gnu.org/licenses/>.
-*/
-#include <pthread.h>
-#include <stdlib.h>
-#include <string.h>
+ */
 #include "engine.h"
 #include "game.h"
 #include "jobs.h"
@@ -25,6 +22,9 @@
 #include "util.h"
 #include "vec.h"
 #include "workers.h"
+#include <pthread.h>
+#include <stdlib.h>
+#include <string.h>
 
 static Options options;
 static EngineOptions *eo;
@@ -33,8 +33,7 @@ static SeqWriter pgnSeqWriter;
 static FILE *sampleFile;
 static JobQueue jq;
 
-static void main_destroy(void)
-{
+static void main_destroy(void) {
     vec_destroy_rec(Workers, worker_destroy);
 
     if (options.sp.fileName.len)
@@ -49,8 +48,7 @@ static void main_destroy(void)
     vec_destroy_rec(eo, engine_options_destroy);
 }
 
-static void main_init(int argc, const char **argv)
-{
+static void main_init(int argc, const char **argv) {
     atexit(main_destroy);
 
     eo = vec_init(EngineOptions);
@@ -83,15 +81,14 @@ static void main_init(int argc, const char **argv)
     }
 }
 
-static void *thread_start(void *arg)
-{
+static void *thread_start(void *arg) {
     Worker *w = arg;
     Engine engines[2] = {0};
 
     scope(str_destroy) str_t fen = str_init();
     Job job = {0};
-    int ei[2] = {-1, -1};  // eo[ei[0]] plays eo[ei[1]]: initialize with invalid values to start
-    size_t idx = 0, count = 0;  // game idx and count (shared across workers)
+    int ei[2] = {-1, -1};      // eo[ei[0]] plays eo[ei[1]]: initialize with invalid values to start
+    size_t idx = 0, count = 0; // game idx and count (shared across workers)
 
     while (job_queue_pop(&jq, &job, &idx, &count)) {
         // Engine stop/start, as needed
@@ -103,10 +100,10 @@ static void *thread_start(void *arg)
                 if (engines[i].in)
                     engine_destroy(w, &engines[i]);
 
-                engines[i] = engine_init(w, eo[ei[i]].cmd.buf, eo[ei[i]].name.buf, eo[ei[i]].options);
+                engines[i] =
+                    engine_init(w, eo[ei[i]].cmd.buf, eo[ei[i]].name.buf, eo[ei[i]].options);
                 job_queue_set_name(&jq, ei[i], engines[i].name.buf);
             }
-
 
         Game game = game_init(job.round, job.game);
 
@@ -125,7 +122,7 @@ static void *thread_start(void *arg)
         const int whiteIdx = color ^ job.reverse;
 
         printf("[%d] Started game %zu of %zu (%s vs %s)\n", w->id, idx + 1, count,
-            engines[whiteIdx].name.buf, engines[opposite(whiteIdx)].name.buf);
+               engines[whiteIdx].name.buf, engines[opposite(whiteIdx)].name.buf);
 
         const EngineOptions *eoPair[2] = {&eo[ei[0]], &eo[ei[1]]};
         const int wld = game_play(w, &game, &options, engines, eoPair, job.reverse);
@@ -146,15 +143,16 @@ static void *thread_start(void *arg)
         game_decode_state(&game, &result, &reason);
 
         printf("[%d] Finished game %zu (%s vs %s): %s {%s}\n", w->id, idx + 1,
-            engines[whiteIdx].name.buf, engines[opposite(whiteIdx)].name.buf, result.buf, reason.buf);
+               engines[whiteIdx].name.buf, engines[opposite(whiteIdx)].name.buf, result.buf,
+               reason.buf);
 
         // Pair update
         int wldCount[3] = {0};
         job_queue_add_result(&jq, job.pair, wld, wldCount);
         const int n = wldCount[RESULT_WIN] + wldCount[RESULT_LOSS] + wldCount[RESULT_DRAW];
         printf("Score of %s vs %s: %d - %d - %d  [%.3f] %d\n", engines[0].name.buf,
-            engines[1].name.buf, wldCount[RESULT_WIN], wldCount[RESULT_LOSS], wldCount[RESULT_DRAW],
-            (wldCount[RESULT_WIN] + 0.5 * wldCount[RESULT_DRAW]) / n, n);
+               engines[1].name.buf, wldCount[RESULT_WIN], wldCount[RESULT_LOSS],
+               wldCount[RESULT_DRAW], (wldCount[RESULT_WIN] + 0.5 * wldCount[RESULT_DRAW]) / n, n);
 
         // SPRT update
         if (options.sprt && sprt_done(wldCount, &options.sprtParam))
@@ -173,8 +171,7 @@ static void *thread_start(void *arg)
     return NULL;
 }
 
-int main(int argc, const char **argv)
-{
+int main(int argc, const char **argv) {
     if (argc >= 2 && !strcmp(argv[1], "-version")) {
         puts("c-chess-cli " VERSION);
         return 0;

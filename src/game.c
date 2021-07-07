@@ -11,28 +11,19 @@
  *
  * You should have received a copy of the GNU General Public License along with this program. If
  * not, see <http://www.gnu.org/licenses/>.
-*/
-#include <limits.h>
-#include <math.h>
+ */
 #include "game.h"
 #include "gen.h"
 #include "util.h"
 #include "vec.h"
+#include <limits.h>
+#include <math.h>
 
-static bool is_mating(int score)
-{
-    return score > INT16_MAX - 1024;
-}
+static bool is_mating(int score) { return score > INT16_MAX - 1024; }
 
-static bool is_mated(int score)
-{
-    return score < INT16_MIN + 1024;
-}
+static bool is_mated(int score) { return score < INT16_MIN + 1024; }
 
-static bool is_mate(int score)
-{
-    return is_mating(score) || is_mated(score);
-}
+static bool is_mate(int score) { return is_mating(score) || is_mated(score); }
 
 static void uci_position_command(const Game *g, str_t *cmd)
 // Builds a string of the form "position fen ... [moves ...]". Implements rule50 pruning: start from
@@ -58,8 +49,7 @@ static void uci_position_command(const Game *g, str_t *cmd)
 }
 
 static void uci_go_command(Game *g, const EngineOptions *eo[2], int ei, const int64_t timeLeft[2],
-    str_t *cmd)
-{
+                           str_t *cmd) {
     str_cpy_c(cmd, "go");
 
     if (eo[ei]->nodes)
@@ -74,14 +64,13 @@ static void uci_go_command(Game *g, const EngineOptions *eo[2], int ei, const in
     if (eo[ei]->time || eo[ei]->increment) {
         const int color = g->pos[g->ply].turn;
 
-        str_cat_fmt(cmd, " wtime %I winc %I btime %I binc %I",
-            timeLeft[ei ^ color], eo[ei ^ color]->increment,
-            timeLeft[ei ^ color ^ BLACK], eo[ei ^ color ^ BLACK]->increment);
+        str_cat_fmt(cmd, " wtime %I winc %I btime %I binc %I", timeLeft[ei ^ color],
+                    eo[ei ^ color]->increment, timeLeft[ei ^ color ^ BLACK],
+                    eo[ei ^ color ^ BLACK]->increment);
     }
 
     if (eo[ei]->movestogo)
-        str_cat_fmt(cmd, " movestogo %i",
-            eo[ei]->movestogo - ((g->ply / 2) % eo[ei]->movestogo));
+        str_cat_fmt(cmd, " movestogo %i", eo[ei]->movestogo - ((g->ply / 2) % eo[ei]->movestogo));
 }
 
 static int game_apply_chess_rules(const Game *g, move_t **moves)
@@ -110,8 +99,7 @@ static int game_apply_chess_rules(const Game *g, move_t **moves)
     return STATE_NONE;
 }
 
-static bool illegal_move(move_t move, const move_t *moves)
-{
+static bool illegal_move(move_t move, const move_t *moves) {
     for (size_t i = 0; i < vec_size(moves); i++)
         if (moves[i] == move)
             return false;
@@ -119,8 +107,7 @@ static bool illegal_move(move_t move, const move_t *moves)
     return true;
 }
 
-static Position resolve_pv(const Worker *w, const Game *g, const char *pv)
-{
+static Position resolve_pv(const Worker *w, const Game *g, const char *pv) {
     scope(str_destroy) str_t token = str_init();
 
     // Start with current position. We can't guarantee that the resolved position won't be in check,
@@ -143,11 +130,11 @@ static Position resolve_pv(const Worker *w, const Game *g, const char *pv)
 
         if (illegal_move(m, moves)) {
             fprintf(stderr, "[%d] WARNING: Illegal move in PV '%s%s' from %s\n", w->id, token.buf,
-                pv, g->names[g->pos[g->ply].turn].buf);
+                    pv, g->names[g->pos[g->ply].turn].buf);
 
             if (w->log)
-                DIE_IF(w->id, fprintf(w->log, "WARNING: illegal move in PV '%s%s'\n", token.buf,
-                    pv) < 0);
+                DIE_IF(w->id,
+                       fprintf(w->log, "WARNING: illegal move in PV '%s%s'\n", token.buf, pv) < 0);
 
             break;
         }
@@ -163,23 +150,19 @@ static Position resolve_pv(const Worker *w, const Game *g, const char *pv)
     return resolved;
 }
 
-Game game_init(int round, int game)
-{
-    Game g = {
-        .round = round,
-        .game = game,
-        .names = {str_init(), str_init()},
-        .pos = vec_init(Position),
-        .info = vec_init(Info),
-        .samples = vec_init(Sample)
-    };
+Game game_init(int round, int game) {
+    Game g = {.round = round,
+              .game = game,
+              .names = {str_init(), str_init()},
+              .pos = vec_init(Position),
+              .info = vec_init(Info),
+              .samples = vec_init(Sample)};
 
     vec_push(g.pos, (Position){0});
     return g;
 }
 
-bool game_load_fen(Game *g, const char *fen, int *color)
-{
+bool game_load_fen(Game *g, const char *fen, int *color) {
     if (pos_set(&g->pos[0], fen, false)) {
         *color = g->pos[0].turn;
         return true;
@@ -187,8 +170,7 @@ bool game_load_fen(Game *g, const char *fen, int *color)
         return false;
 }
 
-void game_destroy(Game *g)
-{
+void game_destroy(Game *g) {
     vec_destroy(g->samples);
     vec_destroy(g->info);
     vec_destroy(g->pos);
@@ -197,7 +179,7 @@ void game_destroy(Game *g)
 }
 
 int game_play(Worker *w, Game *g, const Options *o, const Engine engines[2],
-    const EngineOptions *eo[2], bool reverse)
+              const EngineOptions *eo[2], bool reverse)
 // Play a game:
 // - engines[reverse] plays the first move (which does not mean white, that depends on the FEN)
 // - sets g->state value: see enum STATE_* codes
@@ -222,12 +204,12 @@ int game_play(Worker *w, Game *g, const Options *o, const Engine engines[2],
     move_t played = 0;
     int drawPlyCount = 0;
     int resignCount[NB_COLOR] = {0};
-    int ei = reverse;  // engines[ei] has the move
+    int ei = reverse; // engines[ei] has the move
     int64_t timeLeft[2] = {eo[0]->time, eo[1]->time};
     scope(str_destroy) str_t pv = str_init();
     move_t *legalMoves = vec_init_reserve(64, move_t);
 
-    for (g->ply = 0; ; ei = 1 - ei, g->ply++) {
+    for (g->ply = 0;; ei = 1 - ei, g->ply++) {
         if (played)
             pos_move(&g->pos[g->ply], &g->pos[g->ply - 1], played);
 
@@ -251,7 +233,7 @@ int game_play(Worker *w, Game *g, const Options *o, const Engine engines[2],
                 timeLeft[ei] += eo[ei]->time;
         } else
             // Only depth and/or nodes limit
-            timeLeft[ei] = INT64_MAX / 2;  // HACK: system_msec() + timeLeft must not overflow
+            timeLeft[ei] = INT64_MAX / 2; // HACK: system_msec() + timeLeft must not overflow
 
         uci_go_command(g, eo, ei, timeLeft, &cmd);
         engine_writeln(w, &engines[ei], cmd.buf);
@@ -265,7 +247,7 @@ int game_play(Worker *w, Game *g, const Options *o, const Engine engines[2],
         // current one if that's impossible).
         Position resolved = resolve_pv(w, g, pv.buf);
 
-        if (!ok) {  // engine_bestmove() time out before parsing a bestmove
+        if (!ok) { // engine_bestmove() time out before parsing a bestmove
             g->state = STATE_TIME_LOSS;
             break;
         }
@@ -301,13 +283,12 @@ int game_play(Worker *w, Game *g, const Options *o, const Engine engines[2],
             resignCount[ei] = 0;
 
         // Write sample: position (compactly encoded) + score
-        if (o->sp.fileName.len
-                && !(o->sp.resolve && is_mate(info.score))
-                && prngf(&w->seed) <= o->sp.freq * exp(-o->sp.decay * g->pos[g->ply].rule50)) {
+        if (o->sp.fileName.len && !(o->sp.resolve && is_mate(info.score)) &&
+            prngf(&w->seed) <= o->sp.freq * exp(-o->sp.decay * g->pos[g->ply].rule50)) {
             Sample sample = (Sample){
                 .pos = o->sp.resolve ? resolved : g->pos[g->ply],
                 .score = sample.pos.turn == g->pos[g->ply].turn ? info.score : -info.score,
-                .result = NB_RESULT  // mark as invalid for now, computed after the game
+                .result = NB_RESULT // mark as invalid for now, computed after the game
             };
 
             // Record sample, except if resolvePv=true and the position is in check (becuase PV
@@ -323,20 +304,20 @@ int game_play(Worker *w, Game *g, const Options *o, const Engine engines[2],
     vec_destroy(legalMoves);
 
     // Signed result from white's pov: -1 (loss), 0 (draw), +1 (win)
-    const int wpov = g->state < STATE_SEPARATOR
-        ? (g->pos[g->ply].turn == WHITE ? RESULT_LOSS : RESULT_WIN)  // lost from turn's pov
-        : RESULT_DRAW;
+    const int wpov =
+        g->state < STATE_SEPARATOR
+            ? (g->pos[g->ply].turn == WHITE ? RESULT_LOSS : RESULT_WIN) // lost from turn's pov
+            : RESULT_DRAW;
 
     for (size_t i = 0; i < vec_size(g->samples); i++)
         g->samples[i].result = g->samples[i].pos.turn == WHITE ? wpov : 2 - wpov;
 
     return g->state < STATE_SEPARATOR
-        ? (ei == 0 ? RESULT_LOSS : RESULT_WIN)  // engine on the move has lost
-        : RESULT_DRAW;
+               ? (ei == 0 ? RESULT_LOSS : RESULT_WIN) // engine on the move has lost
+               : RESULT_DRAW;
 }
 
-void game_decode_state(const Game *g, str_t *result, str_t *reason)
-{
+void game_decode_state(const Game *g, str_t *result, str_t *reason) {
     str_cpy_c(result, "1/2-1/2");
     str_clear(reason);
 
@@ -352,7 +333,7 @@ void game_decode_state(const Game *g, str_t *result, str_t *reason)
         str_cpy_c(reason, "3-fold repetition");
     else if (g->state == STATE_FIFTY_MOVES)
         str_cpy_c(reason, "50 moves rule");
-    else if (g->state ==STATE_INSUFFICIENT_MATERIAL)
+    else if (g->state == STATE_INSUFFICIENT_MATERIAL)
         str_cpy_c(reason, "insufficient material");
     else if (g->state == STATE_ILLEGAL_MOVE) {
         str_cpy_c(result, g->pos[g->ply].turn == WHITE ? "0-1" : "1-0");
@@ -369,8 +350,7 @@ void game_decode_state(const Game *g, str_t *result, str_t *reason)
         assert(false);
 }
 
-void game_export_pgn(const Game *g, int verbosity, str_t *out)
-{
+void game_export_pgn(const Game *g, int verbosity, str_t *out) {
     str_cpy_fmt(out, "[Round \"%i.%i\"]\n", g->round + 1, g->game + 1);
     str_cat_fmt(out, "[White \"%S\"]\n", g->names[WHITE]);
     str_cat_fmt(out, "[Black \"%S\"]\n", g->names[BLACK]);
@@ -395,15 +375,13 @@ void game_export_pgn(const Game *g, int verbosity, str_t *out)
         // Print the moves
         str_push(out, '\n');
 
-        const int pliesPerLine = verbosity == 2 ? 6
-            : verbosity == 3 ? 5
-            : 16;
+        const int pliesPerLine = verbosity == 2 ? 6 : verbosity == 3 ? 5 : 16;
 
         for (int ply = 1; ply <= g->ply; ply++) {
             // Write move number
             if (g->pos[ply - 1].turn == WHITE || ply == 1)
                 str_cat_fmt(out, g->pos[ply - 1].turn == WHITE ? "%i. " : "%i... ",
-                    g->pos[ply - 1].fullMove);
+                            g->pos[ply - 1].fullMove);
 
             // Append SAN move
             pos_move_to_san(&g->pos[ply - 1], g->pos[ply].lastMove, &san);
@@ -412,9 +390,9 @@ void game_export_pgn(const Game *g, int verbosity, str_t *out)
             // Append check marker
             if (g->pos[ply].checkers) {
                 if (ply == g->ply && g->state == STATE_CHECKMATE)
-                    str_push(out, '#');  // checkmate
+                    str_push(out, '#'); // checkmate
                 else
-                    str_push(out, '+');  // normal check
+                    str_push(out, '+'); // normal check
             }
 
             // Write PGN comment
@@ -446,8 +424,7 @@ void game_export_pgn(const Game *g, int verbosity, str_t *out)
     str_cat_c(str_cat(out, result), "\n\n");
 }
 
-static void game_export_samples_csv(const Game *g, FILE *out)
-{
+static void game_export_samples_csv(const Game *g, FILE *out) {
     scope(str_destroy) str_t fen = str_init();
 
     for (size_t i = 0; i < vec_size(g->samples); i++) {
@@ -456,8 +433,7 @@ static void game_export_samples_csv(const Game *g, FILE *out)
     }
 }
 
-static void game_export_samples_bin(const Game *g, FILE *out)
-{
+static void game_export_samples_bin(const Game *g, FILE *out) {
     for (size_t i = 0; i < vec_size(g->samples); i++) {
         PackedPos packed = {0};
         const size_t bytes = pos_pack(&g->samples[i].pos, &packed);
@@ -468,22 +444,21 @@ static void game_export_samples_bin(const Game *g, FILE *out)
     }
 }
 
-void game_export_samples(const Game *g, FILE *out, bool bin)
-{
-    #ifdef __MINGW32__
-        _lock_file(out);
-    #else
-        flockfile(out);
-    #endif
+void game_export_samples(const Game *g, FILE *out, bool bin) {
+#ifdef __MINGW32__
+    _lock_file(out);
+#else
+    flockfile(out);
+#endif
 
     if (bin)
         game_export_samples_bin(g, out);
     else
         game_export_samples_csv(g, out);
 
-    #ifdef __MINGW32__
-        _unlock_file(out);
-    #else
-        funlockfile(out);
-    #endif
+#ifdef __MINGW32__
+    _unlock_file(out);
+#else
+    funlockfile(out);
+#endif
 }
