@@ -328,10 +328,35 @@ void engine_sync(Worker *w, const Engine *e) {
     deadline_clear(w);
 }
 
+static void engine_parse_info(const char *tail, Info *info, str_t *pv) {
+    scope(str_destroy) str_t token = str_init();
+
+    while ((tail = str_tok(tail, &token, " "))) {
+        if (!strcmp(token.buf, "depth")) {
+            if ((tail = str_tok(tail, &token, " ")))
+                info->depth = atoi(token.buf);
+        } else if (!strcmp(token.buf, "score")) {
+            if ((tail = str_tok(tail, &token, " "))) {
+                if (!strcmp(token.buf, "cp") && (tail = str_tok(tail, &token, " ")))
+                    info->score = atoi(token.buf);
+                else if (!strcmp(token.buf, "mate") && (tail = str_tok(tail, &token, " "))) {
+                    const int movesToMate = atoi(token.buf);
+                    info->score =
+                        movesToMate < 0 ? INT16_MIN - movesToMate : INT16_MAX - movesToMate;
+                } else
+                    DIE("%s(): illegal syntax after 'score' here '%s'\n", __func__, tail);
+            }
+        } else if (!strcmp(token.buf, "pv"))
+            // FIXME: pv really belongs in Info. This means Info must have ctor/dtor, of course. But
+            // the benefit is that we can print the PV in the PGN afterwards.
+            str_cpy_c(pv, tail + strspn(tail, " "));
+    }
+}
+
 bool engine_bestmove(Worker *w, const Engine *e, int64_t *timeLeft, str_t *best, str_t *pv,
                      Info *info) {
     int result = false;
-    scope(str_destroy) str_t line = str_init(), token = str_init();
+    scope(str_destroy) str_t line = str_init();
     str_clear(pv);
 
     const int64_t start = system_msec(), timeLimit = start + *timeLeft;
@@ -346,27 +371,10 @@ bool engine_bestmove(Worker *w, const Engine *e, int64_t *timeLeft, str_t *best,
 
         const char *tail = NULL;
 
-        if ((tail = str_prefix(line.buf, "info "))) {
-            while ((tail = str_tok(tail, &token, " "))) {
-                if (!strcmp(token.buf, "depth")) {
-                    if ((tail = str_tok(tail, &token, " ")))
-                        info->depth = atoi(token.buf);
-                } else if (!strcmp(token.buf, "score")) {
-                    if ((tail = str_tok(tail, &token, " "))) {
-                        if (!strcmp(token.buf, "cp") && (tail = str_tok(tail, &token, " ")))
-                            info->score = atoi(token.buf);
-                        else if (!strcmp(token.buf, "mate") &&
-                                 (tail = str_tok(tail, &token, " "))) {
-                            const int movesToMate = atoi(token.buf);
-                            info->score =
-                                movesToMate < 0 ? INT16_MIN - movesToMate : INT16_MAX - movesToMate;
-                        } else
-                            DIE("illegal syntax after 'score' in '%s'\n", line.buf);
-                    }
-                } else if (!strcmp(token.buf, "pv"))
-                    str_cpy_c(pv, tail + strspn(tail, " "));
-            }
-        } else if ((tail = str_prefix(line.buf, "bestmove "))) {
+        if ((tail = str_prefix(line.buf, "info ")))
+            engine_parse_info(tail, info, pv);
+        else if ((tail = str_prefix(line.buf, "bestmove "))) {
+            scope(str_destroy) str_t token = str_init();
             str_tok(tail, &token, " ");
             str_cpy(best, token);
             result = true;
