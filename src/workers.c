@@ -47,7 +47,7 @@ void deadline_clear(Worker *w) {
     pthread_mutex_unlock(&w->deadline.mtx);
 }
 
-int64_t deadline_overdue(Worker *w) {
+bool deadline_overdue(Worker *w) {
     pthread_mutex_lock(&w->deadline.mtx);
 
     const int64_t timeLimit = w->deadline.timeLimit;
@@ -55,12 +55,7 @@ int64_t deadline_overdue(Worker *w) {
 
     pthread_mutex_unlock(&w->deadline.mtx);
 
-    const int64_t time = system_msec();
-
-    if (set && time > timeLimit)
-        return time - timeLimit;
-    else
-        return 0;
+    return set && system_msec() > timeLimit;
 }
 
 Worker worker_init(int i, const char *logName) {

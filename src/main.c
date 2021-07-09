@@ -196,7 +196,7 @@ int main(int argc, const char **argv) {
         // are likely to face a completely unresponsive engine, where any attempt at I/O will block
         // the master thread, on top of the already blocked worker. Hence, we must DIE().
         for (int i = 0; i < options.concurrency; i++)
-            if (deadline_overdue(&Workers[i]) > 1000)
+            if (deadline_overdue(&Workers[i]))
                 DIE("[%d] engine %s is unresponsive\n", Workers[i].id,
                     Workers[i].deadline.engineName.buf);
     } while (!job_queue_done(&jq));
