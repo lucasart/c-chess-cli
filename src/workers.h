@@ -42,7 +42,7 @@ void worker_destroy(Worker *w);
 
 void deadline_set(Worker *w, const char *engineName, int64_t timeLimit);
 void deadline_clear(Worker *w);
-int64_t deadline_overdue(Worker *w);
+bool deadline_overdue(Worker *w);
 
 void workers_busy_add(int n);
 int workers_busy_count(void);

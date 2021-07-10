@@ -214,13 +214,13 @@ static void engine_parse_cmd(const char *cmd, str_t *cwd, str_t *run, str_t **ar
         vec_push(*args, str_init_from(token));
 }
 
-Engine engine_init(Worker *w, const char *cmd, const char *name, const str_t *options) {
+Engine engine_init(Worker *w, const char *cmd, const char *name, const str_t *options,
+                   int64_t timeOut) {
     if (!*cmd)
         DIE("[%d] missing command to start engine.\n", w->id);
 
-    Engine e = {
-        .name = str_init_from_c(*name ? name : cmd) // default value
-    };
+    Engine e = {.name = str_init_from_c(*name ? name : cmd), // default value
+                .timeOut = timeOut};
 
     // Parse cmd into (cwd, run, args): we want to execute run from cwd with args.
     scope(str_destroy) str_t cwd = str_init(), run = str_init();

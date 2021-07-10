@@ -95,13 +95,12 @@ static void *thread_start(void *arg) {
         for (int i = 0; i < 2; i++)
             if (job.ei[i] != ei[i]) {
                 ei[i] = job.ei[i];
-                engines[i].timeOut = eo[ei[i]].timeOut;
 
                 if (engines[i].in)
                     engine_destroy(w, &engines[i]);
 
-                engines[i] =
-                    engine_init(w, eo[ei[i]].cmd.buf, eo[ei[i]].name.buf, eo[ei[i]].options);
+                engines[i] = engine_init(w, eo[ei[i]].cmd.buf, eo[ei[i]].name.buf,
+                                         eo[ei[i]].options, eo[ei[i]].timeOut);
                 job_queue_set_name(&jq, ei[i], engines[i].name.buf);
             }
 
@@ -196,7 +195,7 @@ int main(int argc, const char **argv) {
         // are likely to face a completely unresponsive engine, where any attempt at I/O will block
         // the master thread, on top of the already blocked worker. Hence, we must DIE().
         for (int i = 0; i < options.concurrency; i++)
-            if (deadline_overdue(&Workers[i]) > 1000)
+            if (deadline_overdue(&Workers[i]))
                 DIE("[%d] engine %s is unresponsive\n", Workers[i].id,
                     Workers[i].deadline.engineName.buf);
     } while (!job_queue_done(&jq));
