@@ -49,15 +49,15 @@ elif args.task == 'test':
 
     if compile('engine', './test/engine') == 0 and compile('main', './c-chess-cli') == 0:
         print('\nRun tests:')
-        run('./c-chess-cli -each cmd=./test/engine depth=6 option.Hash=4 ' \
-            '-engine name=engine=1 option.Threads=2 -engine name=engine2 depth=5 ' \
-            '-openings file=test/chess960.epd order=random srand=1 -resign count=4 score=13733 ' \
+        run('./c-chess-cli -each cmd=./test/engine depth=6 option.Hash=4 '
+            '-engine name=engine=1 option.Threads=2 -engine name=engine2 depth=5 '
+            '-openings file=test/chess960.epd order=random srand=1 -resign count=4 score=13733 '
             '-draw number=40 count=3 score=11077 -games 965 -pgn out1.pgn 2 -concurrency 8 > /dev/null')
 
-        run('./c-chess-cli -each "cmd=./test/engine 123" depth=3 ' \
-            '-engine option.Hash=2 tc=10/0 -engine name=e2 tc=20/0 -engine name=e3 ' \
-            '-sample freq=0.5 decay=0.05 resolve=y file=training.csv format=csv ' \
-            '-openings file=test/chess960.epd -repeat ' \
+        run('./c-chess-cli -each "cmd=./test/engine 123" depth=3 '
+            '-engine option.Hash=2 tc=10/0 -engine name=e2 tc=20/0 -engine name=e3 '
+            '-sample freq=0.5 decay=0.05 resolve=y file=training.csv format=csv '
+            '-openings file=test/chess960.epd -repeat '
             '-rounds 3 -games 30 -resign number=35 count=5 score=8192 -pgn out2.pgn 2 -log > stdout')
         run('grep -v ^deadline c-chess-cli.1.log > log')
 
