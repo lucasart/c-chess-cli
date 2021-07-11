@@ -20,6 +20,8 @@
 #include <string.h>
 #include <time.h>
 
+_Thread_local int threadId = 0;
+
 // SplitMix64 PRNG, based on http://xoroshiro.di.unimi.it/splitmix64.c
 uint64_t prng(uint64_t *state) {
     uint64_t rnd = (*state += 0x9E3779B97F4A7C15);
@@ -42,7 +44,7 @@ void system_sleep(int64_t msec) {
     nanosleep(&t, NULL);
 }
 
-_Noreturn void die_errno(const int threadId, const char *fileName, int line) {
+_Noreturn void die_errno(const char *fileName, int line) {
     fprintf(stderr, "[%d] error in %s: (%d). %s\n", threadId, fileName, line, strerror(errno));
     exit(EXIT_FAILURE);
 }

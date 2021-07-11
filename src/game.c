@@ -129,12 +129,11 @@ static Position resolve_pv(const Worker *w, const Game *g, const char *pv) {
         moves = gen_all_moves(&p[idx], moves);
 
         if (illegal_move(m, moves)) {
-            fprintf(stderr, "[%d] WARNING: Illegal move in PV '%s%s' from %s\n", w->id, token.buf,
-                    pv, g->names[g->pos[g->ply].turn].buf);
+            fprintf(stderr, "[%d] WARNING: Illegal move in PV '%s%s' from %s\n", threadId,
+                    token.buf, pv, g->names[g->pos[g->ply].turn].buf);
 
             if (w->log)
-                DIE_IF(w->id,
-                       fprintf(w->log, "WARNING: illegal move in PV '%s%s'\n", token.buf, pv) < 0);
+                DIE_IF(fprintf(w->log, "WARNING: illegal move in PV '%s%s'\n", token.buf, pv) < 0);
 
             break;
         }
@@ -193,7 +192,7 @@ int game_play(Worker *w, Game *g, const Options *o, const Engine engines[2],
             if (engines[i].supportChess960)
                 engine_writeln(w, &engines[i], "setoption name UCI_Chess960 value true");
             else
-                DIE("[%d] '%s' does not support Chess960\n", w->id, engines[i].name.buf);
+                DIE("[%d] '%s' does not support Chess960\n", threadId, engines[i].name.buf);
         }
 
         engine_writeln(w, &engines[i], "ucinewgame");

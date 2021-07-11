@@ -42,7 +42,7 @@ static void main_destroy(void) {
     if (options.pgn.len)
         seq_writer_destroy(&pgnSeqWriter);
 
-    openings_destroy(&openings, 0);
+    openings_destroy(&openings);
     job_queue_destroy(&jq);
     options_destroy(&options);
     vec_destroy_rec(eo, engine_options_destroy);
@@ -56,16 +56,16 @@ static void main_init(int argc, const char **argv) {
     options_parse(argc, argv, &options, &eo);
 
     jq = job_queue_init((int)vec_size(eo), options.rounds, options.games, options.gauntlet);
-    openings = openings_init(options.openings.buf, options.random, options.srand, 0);
+    openings = openings_init(options.openings.buf, options.random, options.srand);
 
     if (options.pgn.len)
         pgnSeqWriter = seq_writer_init(options.pgn.buf, "a" FOPEN_TEXT);
 
     if (options.sp.fileName.len) {
         if (options.sp.bin)
-            DIE_IF(0, !(sampleFile = fopen(options.sp.fileName.buf, "a" FOPEN_BINARY)));
+            DIE_IF(!(sampleFile = fopen(options.sp.fileName.buf, "a" FOPEN_BINARY)));
         else
-            DIE_IF(0, !(sampleFile = fopen(options.sp.fileName.buf, "a" FOPEN_TEXT)));
+            DIE_IF(!(sampleFile = fopen(options.sp.fileName.buf, "a" FOPEN_TEXT)));
     }
 
     // Prepare Workers[]
@@ -83,6 +83,7 @@ static void main_init(int argc, const char **argv) {
 
 static void *thread_start(void *arg) {
     Worker *w = arg;
+    threadId = w->id;
     Engine engines[2] = {0};
 
     scope(str_destroy) str_t fen = str_init();
@@ -111,16 +112,16 @@ static void *thread_start(void *arg) {
         bool ok = false;
 
         while (!ok) {
-            openings_next(&openings, &fen, options.repeat ? idx / 2 : idx, w->id);
+            openings_next(&openings, &fen, options.repeat ? idx / 2 : idx);
             ok = game_load_fen(&game, fen.buf, &color);
 
             if (!ok)
-                fprintf(stderr, "[%d] Illegal FEN '%s'\n", w->id, fen.buf);
+                fprintf(stderr, "[%d] Illegal FEN '%s'\n", threadId, fen.buf);
         }
 
         const int whiteIdx = color ^ job.reverse;
 
-        printf("[%d] Started game %zu of %zu (%s vs %s)\n", w->id, idx + 1, count,
+        printf("[%d] Started game %zu of %zu (%s vs %s)\n", threadId, idx + 1, count,
                engines[whiteIdx].name.buf, engines[opposite(whiteIdx)].name.buf);
 
         const EngineOptions *eoPair[2] = {&eo[ei[0]], &eo[ei[1]]};
@@ -141,7 +142,7 @@ static void *thread_start(void *arg) {
         scope(str_destroy) str_t result = str_init(), reason = str_init();
         game_decode_state(&game, &result, &reason);
 
-        printf("[%d] Finished game %zu (%s vs %s): %s {%s}\n", w->id, idx + 1,
+        printf("[%d] Finished game %zu (%s vs %s): %s {%s}\n", threadId, idx + 1,
                engines[whiteIdx].name.buf, engines[opposite(whiteIdx)].name.buf, result.buf,
                reason.buf);
 

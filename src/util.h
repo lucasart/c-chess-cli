@@ -17,6 +17,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+extern _Thread_local int threadId;
+
 #define min(x, y)                                                                                  \
     ({                                                                                             \
         typeof(x) _x = (x), _y = (y);                                                              \
@@ -59,12 +61,12 @@ void system_sleep(int64_t msec);
         exit(EXIT_FAILURE);                                                                        \
     } while (0)
 
-_Noreturn void die_errno(const int threadId, const char *fileName, int line);
+_Noreturn void die_errno(const char *fileName, int line);
 
-#define DIE_IF(id, v)                                                                              \
+#define DIE_IF(v)                                                                                  \
     ({                                                                                             \
         if (v)                                                                                     \
-            die_errno(id, __FILE__, __LINE__);                                                     \
+            die_errno(__FILE__, __LINE__);                                                         \
     })
 
 void stdio_lock(FILE *f);

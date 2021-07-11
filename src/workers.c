@@ -31,8 +31,8 @@ void deadline_set(Worker *w, const char *engineName, int64_t timeLimit) {
     pthread_mutex_unlock(&w->deadline.mtx);
 
     if (w->log)
-        DIE_IF(w->id, fprintf(w->log, "deadline: %s must respond by %" PRId64 "\n", engineName,
-                              timeLimit) < 0);
+        DIE_IF(fprintf(w->log, "deadline: %s must respond by %" PRId64 "\n", engineName,
+                       timeLimit) < 0);
 }
 
 void deadline_clear(Worker *w) {
@@ -41,8 +41,8 @@ void deadline_clear(Worker *w) {
     w->deadline.set = false;
 
     if (w->log)
-        DIE_IF(w->id, fprintf(w->log, "deadline: %s responded before %" PRId64 "\n",
-                              w->deadline.engineName.buf, w->deadline.timeLimit) < 0);
+        DIE_IF(fprintf(w->log, "deadline: %s responded before %" PRId64 "\n",
+                       w->deadline.engineName.buf, w->deadline.timeLimit) < 0);
 
     pthread_mutex_unlock(&w->deadline.mtx);
 }
@@ -66,7 +66,7 @@ Worker worker_init(int i, const char *logName) {
 
     if (*logName) {
         w.log = fopen(logName, "w" FOPEN_TEXT);
-        DIE_IF(0, !w.log);
+        DIE_IF(!w.log);
     }
 
     return w;
@@ -77,7 +77,7 @@ void worker_destroy(Worker *w) {
     pthread_mutex_destroy(&w->deadline.mtx);
 
     if (w->log) {
-        DIE_IF(0, fclose(w->log) < 0);
+        DIE_IF(fclose(w->log) < 0);
         w->log = NULL;
     }
 }

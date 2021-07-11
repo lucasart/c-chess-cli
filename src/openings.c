@@ -17,11 +17,11 @@
 #include "vec.h"
 #include <assert.h>
 
-Openings openings_init(const char *fileName, bool random, uint64_t srand, int threadId) {
+Openings openings_init(const char *fileName, bool random, uint64_t srand) {
     Openings o = {.index = vec_init(size_t)};
 
     if (*fileName)
-        DIE_IF(threadId, !(o.file = fopen(fileName, "r" FOPEN_TEXT)));
+        DIE_IF(!(o.file = fopen(fileName, "r" FOPEN_TEXT)));
 
     if (o.file) {
         // Fill o.index[] to record file offsets for each lines
@@ -51,15 +51,15 @@ Openings openings_init(const char *fileName, bool random, uint64_t srand, int th
     return o;
 }
 
-void openings_destroy(Openings *o, int threadId) {
+void openings_destroy(Openings *o) {
     if (o->file)
-        DIE_IF(threadId, fclose(o->file) < 0);
+        DIE_IF(fclose(o->file) < 0);
 
     pthread_mutex_destroy(&o->mtx);
     vec_destroy(o->index);
 }
 
-void openings_next(Openings *o, str_t *fen, size_t idx, int threadId) {
+void openings_next(Openings *o, str_t *fen, size_t idx) {
     if (!o->file) {
         str_cpy_c(fen, "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
         return;
@@ -69,8 +69,8 @@ void openings_next(Openings *o, str_t *fen, size_t idx, int threadId) {
     scope(str_destroy) str_t line = str_init();
 
     pthread_mutex_lock(&o->mtx);
-    DIE_IF(threadId, fseek(o->file, o->index[idx % vec_size(o->index)], SEEK_SET) < 0);
-    DIE_IF(threadId, !str_getline(&line, o->file));
+    DIE_IF(fseek(o->file, o->index[idx % vec_size(o->index)], SEEK_SET) < 0);
+    DIE_IF(!str_getline(&line, o->file));
     pthread_mutex_unlock(&o->mtx);
 
     str_tok(line.buf, fen, ";");

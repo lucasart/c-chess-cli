@@ -38,8 +38,7 @@
 #include "util.h"
 #include "vec.h"
 
-static void engine_spawn(const Worker *w, Engine *e, const char *cwd, char **argv,
-                         bool readStdErr) {
+static void engine_spawn(Engine *e, const char *cwd, char **argv, bool readStdErr) {
     assert(argv[0]);
 
 #ifdef __MINGW32__ // Windows (mingw only)
@@ -56,23 +55,22 @@ static void engine_spawn(const Worker *w, Engine *e, const char *cwd, char **arg
 
     // Setup job handler and job info
     HANDLE hJob = CreateJobObject(NULL, NULL);
-    DIE_IF(w->id, !hJob);
+    DIE_IF(!hJob);
 
     JOBOBJECT_BASIC_LIMIT_INFORMATION jobBasicInfo = {.LimitFlags =
                                                           JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE};
     JOBOBJECT_EXTENDED_LIMIT_INFORMATION jobExtendedInfo = {.BasicLimitInformation = jobBasicInfo};
 
-    DIE_IF(w->id,
-           !SetInformationJobObject(hJob, JobObjectExtendedLimitInformation, &jobExtendedInfo,
+    DIE_IF(!SetInformationJobObject(hJob, JobObjectExtendedLimitInformation, &jobExtendedInfo,
                                     sizeof(JOBOBJECT_EXTENDED_LIMIT_INFORMATION)));
 
     // Create a pipe for child process's STDOUT
-    DIE_IF(w->id, !CreatePipe(&outof[0], &outof[1], &saAttr, 0));
-    DIE_IF(w->id, !SetHandleInformation(outof[0], HANDLE_FLAG_INHERIT, 0));
+    DIE_IF(!CreatePipe(&outof[0], &outof[1], &saAttr, 0));
+    DIE_IF(!SetHandleInformation(outof[0], HANDLE_FLAG_INHERIT, 0));
 
     // Create a pipe for child process's STDIN
-    DIE_IF(w->id, !CreatePipe(&into[0], &into[1], &saAttr, 0));
-    DIE_IF(w->id, !SetHandleInformation(into[1], HANDLE_FLAG_INHERIT, 0));
+    DIE_IF(!CreatePipe(&into[0], &into[1], &saAttr, 0));
+    DIE_IF(!SetHandleInformation(into[1], HANDLE_FLAG_INHERIT, 0));
 
     // Create the child process
     PROCESS_INFORMATION piProcInfo = {0};
@@ -91,32 +89,32 @@ static void engine_spawn(const Worker *w, Engine *e, const char *cwd, char **arg
         str_cat_fmt(&cmdFromCwd, " %s", argv[i]);
 
     // Launch engine process
-    DIE_IF(w->id, !CreateProcessA(NULL, cmdFromCwd.buf, NULL, NULL, TRUE,
-                                  CREATE_NO_WINDOW | BELOW_NORMAL_PRIORITY_CLASS, NULL, cwd,
-                                  &siStartInfo, &piProcInfo));
+    DIE_IF(!CreateProcessA(NULL, cmdFromCwd.buf, NULL, NULL, TRUE,
+                           CREATE_NO_WINDOW | BELOW_NORMAL_PRIORITY_CLASS, NULL, cwd, &siStartInfo,
+                           &piProcInfo));
 
     // Keep the handle to the child process
     e->hProcess = piProcInfo.hProcess;
 
     // Close the handle to the child's primary thread
-    DIE_IF(w->id, !CloseHandle(piProcInfo.hThread));
+    DIE_IF(!CloseHandle(piProcInfo.hThread));
 
     // Close handles to the stdin and stdout pipes no longer needed
-    DIE_IF(w->id, !CloseHandle(into[0]));
-    DIE_IF(w->id, !CloseHandle(outof[1]));
+    DIE_IF(!CloseHandle(into[0]));
+    DIE_IF(!CloseHandle(outof[1]));
 
     // Reopen stdin and stdout pipes using C style FILE
     int stdin_fd = _open_osfhandle((intptr_t)into[1], _O_RDONLY | _O_TEXT); // FIXME: why RDONLY?
     int stdout_fd = _open_osfhandle((intptr_t)outof[0], _O_RDONLY | _O_TEXT);
-    DIE_IF(w->id, stdin_fd == -1);
-    DIE_IF(w->id, stdout_fd == -1);
-    DIE_IF(w->id, !(e->in = _fdopen(stdout_fd, "r")));
-    DIE_IF(w->id, !(e->out = _fdopen(stdin_fd, "w")));
+    DIE_IF(stdin_fd == -1);
+    DIE_IF(stdout_fd == -1);
+    DIE_IF(!(e->in = _fdopen(stdout_fd, "r")));
+    DIE_IF(!(e->out = _fdopen(stdin_fd, "w")));
 
     // Bind child process and parent process to one job, so child process is
     // killed when parent process exits
-    DIE_IF(w->id, !AssignProcessToJobObject(hJob, GetCurrentProcess()));
-    DIE_IF(w->id, !AssignProcessToJobObject(hJob, e->hProcess));
+    DIE_IF(!AssignProcessToJobObject(hJob, GetCurrentProcess()));
+    DIE_IF(!AssignProcessToJobObject(hJob, e->hProcess));
 
 #else // POSIX: Linux/Android == __linux__, otherwise assume __APPLE__
     // Pipe diagram: Parent -> [1]into[0] -> Child -> [1]outof[0] -> Parent
@@ -124,22 +122,22 @@ static void engine_spawn(const Worker *w, Engine *e, const char *cwd, char **arg
     int outof[2] = {0}, into[2] = {0};
 
     #ifdef __linux__
-    DIE_IF(w->id, pipe2(outof, O_CLOEXEC) < 0);
-    DIE_IF(w->id, pipe2(into, O_CLOEXEC) < 0);
+    DIE_IF(pipe2(outof, O_CLOEXEC) < 0);
+    DIE_IF(pipe2(into, O_CLOEXEC) < 0);
     #else
-    DIE_IF(w->id, pipe(outof) < 0);
-    DIE_IF(w->id, pipe(into) < 0);
+    DIE_IF(pipe(outof) < 0);
+    DIE_IF(pipe(into) < 0);
     #endif
 
-    DIE_IF(w->id, (e->pid = fork()) < 0);
+    DIE_IF((e->pid = fork()) < 0);
 
     if (e->pid == 0) {
     #ifdef __linux__
         prctl(PR_SET_PDEATHSIG, SIGHUP); // delegate zombie purge to the kernel
     #endif
         // Plug stdin and stdout
-        DIE_IF(w->id, dup2(into[0], STDIN_FILENO) < 0);
-        DIE_IF(w->id, dup2(outof[1], STDOUT_FILENO) < 0);
+        DIE_IF(dup2(into[0], STDIN_FILENO) < 0);
+        DIE_IF(dup2(outof[1], STDOUT_FILENO) < 0);
 
         // For stderr we have 2 choices:
         // - readStdErr=true: dump it into stdout, like doing '2>&1' in bash. This is useful, if we
@@ -150,7 +148,7 @@ static void engine_spawn(const Worker *w, Engine *e, const char *cwd, char **arg
         // Typcically, this means all engines write their error messages to the terminal (unless
         // redirected otherwise).
         if (readStdErr)
-            DIE_IF(w->id, dup2(outof[1], STDERR_FILENO) < 0);
+            DIE_IF(dup2(outof[1], STDERR_FILENO) < 0);
 
     #ifndef __linux__
         // Ugly (and slow) workaround for Apple's BSD-based kernels that lack the ability to
@@ -160,17 +158,17 @@ static void engine_spawn(const Worker *w, Engine *e, const char *cwd, char **arg
     #endif
 
         // Set cwd as current directory, and execute run with argv[]
-        DIE_IF(w->id, chdir(cwd) < 0);
-        DIE_IF(w->id, execvp(argv[0], argv) < 0);
+        DIE_IF(chdir(cwd) < 0);
+        DIE_IF(execvp(argv[0], argv) < 0);
     } else {
         assert(e->pid > 0);
 
         // in the parent process
-        DIE_IF(w->id, close(into[0]) < 0);
-        DIE_IF(w->id, close(outof[1]) < 0);
+        DIE_IF(close(into[0]) < 0);
+        DIE_IF(close(outof[1]) < 0);
 
-        DIE_IF(w->id, !(e->in = fdopen(outof[0], "r")));
-        DIE_IF(w->id, !(e->out = fdopen(into[1], "w")));
+        DIE_IF(!(e->in = fdopen(outof[0], "r")));
+        DIE_IF(!(e->out = fdopen(into[1], "w")));
     }
 #endif
 }
@@ -217,7 +215,7 @@ static void engine_parse_cmd(const char *cmd, str_t *cwd, str_t *run, str_t **ar
 Engine engine_init(Worker *w, const char *cmd, const char *name, const str_t *options,
                    int64_t timeOut) {
     if (!*cmd)
-        DIE("[%d] missing command to start engine.\n", w->id);
+        DIE("[%d] missing command to start engine.\n", threadId);
 
     Engine e = {.name = str_init_from_c(*name ? name : cmd), // default value
                 .timeOut = timeOut};
@@ -235,7 +233,7 @@ Engine engine_init(Worker *w, const char *cmd, const char *name, const str_t *op
         argv[i] = args[i].buf;
 
     // Spawn child process and plug pipes
-    engine_spawn(w, &e, cwd.buf, argv, w->log != NULL);
+    engine_spawn(&e, cwd.buf, argv, w->log != NULL);
 
     vec_destroy_rec(args, str_destroy);
     free(argv);
@@ -293,26 +291,26 @@ void engine_destroy(Worker *w, Engine *e) {
     deadline_clear(w);
 
     str_destroy(&e->name);
-    DIE_IF(w->id, fclose(e->in) < 0);
-    DIE_IF(w->id, fclose(e->out) < 0);
+    DIE_IF(fclose(e->in) < 0);
+    DIE_IF(fclose(e->out) < 0);
 }
 
 void engine_readln(const Worker *w, const Engine *e, str_t *line) {
     if (!str_getline(line, e->in))
-        DIE("[%d] could not read from %s\n", w->id, e->name.buf);
+        DIE("[%d] could not read from %s\n", threadId, e->name.buf);
 
     if (w->log)
-        DIE_IF(w->id, fprintf(w->log, "%s -> %s\n", e->name.buf, line->buf) < 0);
+        DIE_IF(fprintf(w->log, "%s -> %s\n", e->name.buf, line->buf) < 0);
 }
 
 void engine_writeln(const Worker *w, const Engine *e, char *buf) {
-    DIE_IF(w->id, fputs(buf, e->out) < 0);
-    DIE_IF(w->id, fputc('\n', e->out) < 0);
-    DIE_IF(w->id, fflush(e->out) < 0);
+    DIE_IF(fputs(buf, e->out) < 0);
+    DIE_IF(fputc('\n', e->out) < 0);
+    DIE_IF(fflush(e->out) < 0);
 
     if (w->log) {
-        DIE_IF(w->id, fprintf(w->log, "%s <- %s\n", e->name.buf, buf) < 0);
-        DIE_IF(w->id, fflush(w->log) < 0);
+        DIE_IF(fprintf(w->log, "%s <- %s\n", e->name.buf, buf) < 0);
+        DIE_IF(fflush(w->log) < 0);
     }
 }
 
