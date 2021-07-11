@@ -37,7 +37,8 @@
     })
 
 #ifdef __MINGW32__
-    // Opt in to CR+LF translation for text files, and opt out for binary files. Use N to make handles not inheritable.
+    // Opt in to CR+LF translation for text files, and opt out for binary files. Use N to make
+    // handles not inheritable.
     #define FOPEN_TEXT "tN"
     #define FOPEN_BINARY "bN"
 #else

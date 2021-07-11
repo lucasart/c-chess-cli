@@ -7,7 +7,7 @@ p.add_argument('-c', '--compiler', help='Compiler', choices=['cc', 'gcc', 'clang
 p.add_argument('-o', '--output', help='Output file', default='')
 p.add_argument('-d', '--debug', action='store_true', help='Debug compile')
 p.add_argument('-s', '--static', action='store_true', help='Static compile')
-p.add_argument('-t', '--task', help='Task to run', choices=['main', 'test', 'engine', 'clean'], default='main')
+p.add_argument('-t', '--task', help='Task to run', choices=['main', 'test', 'engine', 'clean', 'format'], default='main')
 args = p.parse_args()
 
 # Determine flags for: compilation, warning, and linking
@@ -40,6 +40,9 @@ def clean():
 
 if args.task == 'clean':
     clean()
+
+elif args.task == 'format':
+    run('clang-format -i **/*.c **/*.h')
 
 elif args.task == 'test':
     clean()
