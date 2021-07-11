@@ -37,9 +37,9 @@
     })
 
 #ifdef __MINGW32__
-    // Opt in to CR+LF translation for text files, and opt out for binary files
-    #define FOPEN_TEXT "t"
-    #define FOPEN_BINARY "b"
+    // Opt in to CR+LF translation for text files, and opt out for binary files. Use N to make handles not inheritable.
+    #define FOPEN_TEXT "tN"
+    #define FOPEN_BINARY "bN"
 #else
     // Set the CLOEXEC flag to prevent inheritance to child processes
     #define FOPEN_TEXT "e"
