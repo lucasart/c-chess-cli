@@ -46,3 +46,19 @@ _Noreturn void die_errno(const int threadId, const char *fileName, int line) {
     fprintf(stderr, "[%d] error in %s: (%d). %s\n", threadId, fileName, line, strerror(errno));
     exit(EXIT_FAILURE);
 }
+
+void stdio_lock(FILE *f) {
+#ifdef __MINGW32__
+    _lock_file(f);
+#else
+    flockfile(f);
+#endif
+}
+
+void stdio_unlock(FILE *f) {
+#ifdef __MINGW32__
+    _unlock_file(f);
+#else
+    funlockfile(f);
+#endif
+}

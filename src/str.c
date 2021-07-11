@@ -298,11 +298,7 @@ size_t str_getline(str_t *out, FILE *in) {
     str_resize(out, 0);
     int c;
 
-#ifdef __MINGW32__
-    _lock_file(in);
-#else
-    flockfile(in);
-#endif
+    stdio_lock(in);
 
     while (true) {
 #ifdef __MINGW32__
@@ -317,11 +313,7 @@ size_t str_getline(str_t *out, FILE *in) {
             break;
     }
 
-#ifdef __MINGW32__
-    _unlock_file(in);
-#else
-    funlockfile(in);
-#endif
+    stdio_unlock(in);
 
     const size_t n = out->len + (c == '\n');
 

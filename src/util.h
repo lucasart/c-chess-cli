@@ -65,3 +65,6 @@ _Noreturn void die_errno(const int threadId, const char *fileName, int line);
         if (v)                                                                                     \
             die_errno(id, __FILE__, __LINE__);                                                     \
     })
+
+void stdio_lock(FILE *f);
+void stdio_unlock(FILE *f);
