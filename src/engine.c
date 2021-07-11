@@ -104,7 +104,7 @@ static void engine_spawn(Engine *e, const char *cwd, char **argv, bool readStdEr
     DIE_IF(!CloseHandle(outof[1]));
 
     // Reopen stdin and stdout pipes using C style FILE
-    int stdin_fd = _open_osfhandle((intptr_t)into[1], _O_RDONLY | _O_TEXT); // FIXME: why RDONLY?
+    int stdin_fd = _open_osfhandle((intptr_t)into[1], _O_WRONLY | _O_TEXT);
     int stdout_fd = _open_osfhandle((intptr_t)outof[0], _O_RDONLY | _O_TEXT);
     DIE_IF(stdin_fd == -1);
     DIE_IF(stdout_fd == -1);
