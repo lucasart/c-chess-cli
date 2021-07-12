@@ -77,8 +77,14 @@ static void engine_spawn(Engine *e, const char *cwd, char **argv, bool readStdEr
     STARTUPINFO siStartInfo = {.cb = sizeof(STARTUPINFO),
                                .hStdOutput = outof[1],
                                .hStdInput = into[0],
-                               .dwFlags = STARTF_USESTDHANDLES,
-                               .hStdError = readStdErr ? outof[1] : 0};
+                               .dwFlags = STARTF_USESTDHANDLES};
+
+    if (readStdErr) {
+        HANDLE hStdError = 0;
+        DIE_IF(!DuplicateHandle(GetCurrentProcess(), outof[1], GetCurrentProcess(), &hStdError, 0,
+                                TRUE, DUPLICATE_SAME_ACCESS));
+        siStartInfo.hStdError = hStdError;
+    }
 
     // Recompose cmdFromCwd = "argv[0] argv[1] ... argv[argc-1]", which is the command to execute
     // from the context of cwd. This may differ from cmd in engine_spawn(), because argv[0] strips
