@@ -115,8 +115,11 @@ static void *thread_start(void *arg) {
             openings_next(&openings, &fen, options.repeat ? idx / 2 : idx);
             ok = game_load_fen(&game, fen.buf, &color);
 
-            if (!ok)
+            if (!ok) {
+                stdio_lock(stdout); // lock both stderr and stdout to prevent interleaving
                 fprintf(stderr, "[%d] Illegal FEN '%s'\n", threadId, fen.buf);
+                stdio_unlock(stdout);
+            }
         }
 
         const int whiteIdx = color ^ job.reverse;

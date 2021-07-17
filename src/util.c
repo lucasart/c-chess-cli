@@ -45,7 +45,9 @@ void system_sleep(int64_t msec) {
 }
 
 _Noreturn void die_errno(const char *fileName, int line) {
+    stdio_lock(stdout); // lock stderr (fprintf) and stdout (explicitely), to prevent interleaving
     fprintf(stderr, "[%d] error in %s: (%d). %s\n", threadId, fileName, line, strerror(errno));
+    stdio_unlock(stdout);
     exit(EXIT_FAILURE);
 }
 
