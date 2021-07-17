@@ -38,6 +38,11 @@
 #include "util.h"
 #include "vec.h"
 
+#ifdef __MINGW32__
+// Process and pipe creation should be sequential to avoid handle inheritance bug
+static pthread_mutex_t mtxWindowsHandleInheritanceBug = PTHREAD_MUTEX_INITIALIZER;
+#endif
+
 static void engine_spawn(Engine *e, const char *cwd, char **argv, bool readStdErr) {
     assert(argv[0]);
 
@@ -64,6 +69,16 @@ static void engine_spawn(Engine *e, const char *cwd, char **argv, bool readStdEr
     DIE_IF(!SetInformationJobObject(hJob, JobObjectExtendedLimitInformation, &jobExtendedInfo,
                                     sizeof(JOBOBJECT_EXTENDED_LIMIT_INFORMATION)));
 
+    // Recompose cmdFromCwd = "argv[0] argv[1] ... argv[argc-1]", which is the command to execute
+    // from the context of cwd. This may differ from cmd in engine_spawn(), because argv[0] strips
+    // out path specification (which goes into cwd).
+    scope(str_destroy) str_t cmdFromCwd = str_init_from_c(argv[0]);
+
+    for (int i = 1; argv[i]; i++)
+        str_cat_fmt(&cmdFromCwd, " %s", argv[i]);
+
+    pthread_mutex_lock(&mtxWindowsHandleInheritanceBug);
+
     // Create a pipe for child process's STDOUT
     DIE_IF(!CreatePipe(&outof[0], &outof[1], &saAttr, 0));
     DIE_IF(!SetHandleInformation(outof[0], HANDLE_FLAG_INHERIT, 0));
@@ -86,28 +101,22 @@ static void engine_spawn(Engine *e, const char *cwd, char **argv, bool readStdEr
         siStartInfo.hStdError = hStdError;
     }
 
-    // Recompose cmdFromCwd = "argv[0] argv[1] ... argv[argc-1]", which is the command to execute
-    // from the context of cwd. This may differ from cmd in engine_spawn(), because argv[0] strips
-    // out path specification (which goes into cwd).
-    scope(str_destroy) str_t cmdFromCwd = str_init_from_c(argv[0]);
-
-    for (int i = 1; argv[i]; i++)
-        str_cat_fmt(&cmdFromCwd, " %s", argv[i]);
-
     // Launch engine process
     DIE_IF(!CreateProcessA(NULL, cmdFromCwd.buf, NULL, NULL, TRUE,
                            CREATE_NO_WINDOW | BELOW_NORMAL_PRIORITY_CLASS, NULL, cwd, &siStartInfo,
                            &piProcInfo));
+
+    // Close handles to the stdin and stdout pipes no longer needed
+    DIE_IF(!CloseHandle(into[0]));
+    DIE_IF(!CloseHandle(outof[1]));
+
+    pthread_mutex_unlock(&mtxWindowsHandleInheritanceBug);
 
     // Keep the handle to the child process
     e->hProcess = piProcInfo.hProcess;
 
     // Close the handle to the child's primary thread
     DIE_IF(!CloseHandle(piProcInfo.hThread));
-
-    // Close handles to the stdin and stdout pipes no longer needed
-    DIE_IF(!CloseHandle(into[0]));
-    DIE_IF(!CloseHandle(outof[1]));
 
     // Reopen stdin and stdout pipes using C style FILE
     int stdin_fd = _open_osfhandle((intptr_t)into[1], _O_WRONLY | _O_TEXT);
