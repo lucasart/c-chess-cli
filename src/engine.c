@@ -13,6 +13,7 @@
  * not, see <http://www.gnu.org/licenses/>.
  */
 #ifdef __MINGW32__
+    #include <direct.h>
     #include <fcntl.h>
     #include <io.h>
 #elif defined __linux__
@@ -39,8 +40,10 @@
 #include "vec.h"
 
 #ifdef __MINGW32__
-// Process and pipe creation should be sequential to avoid handle inheritance bug
-static pthread_mutex_t mtxWindowsHandleInheritanceBug = PTHREAD_MUTEX_INITIALIZER;
+// Spawning sub-processes must be sequential on Windows, for (at least) 2 reasons:
+// (1) handle inheritance bug as CreatePipe() and stuff are racy
+// (2) chdir is done in the context of the parent process (not child after fork like on POSIX)
+static pthread_mutex_t mtxSequentialSpawn = PTHREAD_MUTEX_INITIALIZER;
 #endif
 
 static void engine_spawn(Engine *e, const char *cwd, char **argv, bool readStdErr) {
@@ -70,14 +73,14 @@ static void engine_spawn(Engine *e, const char *cwd, char **argv, bool readStdEr
                                     sizeof(JOBOBJECT_EXTENDED_LIMIT_INFORMATION)));
 
     // Recompose cmdFromCwd = "argv[0] argv[1] ... argv[argc-1]", which is the command to execute
-    // from the context of cwd. This may differ from cmd in engine_spawn(), because argv[0] strips
+    // from the context of cwd. This may differ from cmd in engine_init(), because argv[0] strips
     // out path specification (which goes into cwd).
     scope(str_destroy) str_t cmdFromCwd = str_init_from_c(argv[0]);
 
     for (int i = 1; argv[i]; i++)
         str_cat_fmt(&cmdFromCwd, " %s", argv[i]);
 
-    pthread_mutex_lock(&mtxWindowsHandleInheritanceBug);
+    pthread_mutex_lock(&mtxSequentialSpawn);
 
     // Create a pipe for child process's STDOUT
     DIE_IF(!CreatePipe(&outof[0], &outof[1], &saAttr, 0));
@@ -102,6 +105,7 @@ static void engine_spawn(Engine *e, const char *cwd, char **argv, bool readStdEr
     }
 
     // Launch engine process
+    DIE_IF(_chdir(cwd) < 0);
     DIE_IF(!CreateProcessA(NULL, cmdFromCwd.buf, NULL, NULL, TRUE,
                            CREATE_NO_WINDOW | BELOW_NORMAL_PRIORITY_CLASS, NULL, cwd, &siStartInfo,
                            &piProcInfo));
@@ -110,7 +114,7 @@ static void engine_spawn(Engine *e, const char *cwd, char **argv, bool readStdEr
     DIE_IF(!CloseHandle(into[0]));
     DIE_IF(!CloseHandle(outof[1]));
 
-    pthread_mutex_unlock(&mtxWindowsHandleInheritanceBug);
+    pthread_mutex_unlock(&mtxSequentialSpawn);
 
     // Keep the handle to the child process
     e->hProcess = piProcInfo.hProcess;
