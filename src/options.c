@@ -278,6 +278,9 @@ void options_parse(int argc, const char **argv, Options *o, EngineOptions **eo) 
 
             if (each.movestogo)
                 (*eo)[i].movestogo = each.movestogo;
+
+            if (each.timeOut)
+                (*eo)[i].timeOut = each.timeOut;
         }
     }
 

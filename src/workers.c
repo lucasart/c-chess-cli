@@ -31,7 +31,10 @@ void deadline_set(Worker *w, const char *engineName, int64_t now, int64_t durati
     pthread_mutex_unlock(&w->deadline.mtx);
 
     if (w->log)
-        DIE_IF(fprintf(w->log, "deadline_set: now is T0=%" PRId64 ". %s must respond in less than D=%" PRId64 ".\n", now, engineName, duration) < 0);
+        DIE_IF(fprintf(w->log,
+                       "deadline_set: now is T0=%" PRId64
+                       ". %s must respond in less than D=%" PRId64 ".\n",
+                       now, engineName, duration) < 0);
 }
 
 void deadline_clear(Worker *w) {
@@ -40,7 +43,10 @@ void deadline_clear(Worker *w) {
     w->deadline.set = false;
 
     if (w->log)
-        DIE_IF(fprintf(w->log, "deadline_clear: now is T1=%" PRId64 ". %s responded before T0+D=%" PRId64 ".\n", system_msec(), w->deadline.engineName.buf, w->deadline.timeLimit) < 0);
+        DIE_IF(fprintf(w->log,
+                       "deadline_clear: now is T1=%" PRId64 ". %s responded before T0+D=%" PRId64
+                       ".\n",
+                       system_msec(), w->deadline.engineName.buf, w->deadline.timeLimit) < 0);
 
     pthread_mutex_unlock(&w->deadline.mtx);
 }
