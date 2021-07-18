@@ -237,7 +237,8 @@ void options_destroy(Options *o) {
     str_destroy_n(&o->openings, &o->pgn);
 }
 
-void options_parse(int argc, const char **argv, Options *o, EngineOptions **eo) {
+EngineOptions *options_parse(int argc, const char **argv, Options *o) {
+    EngineOptions *vecEO = vec_init(EngineOptions);
     scope(engine_options_destroy) EngineOptions each = engine_options_init();
     bool eachSet = false;
 
@@ -256,7 +257,7 @@ void options_parse(int argc, const char **argv, Options *o, EngineOptions **eo) 
         } else if (!strcmp(argv[i], "-engine")) {
             EngineOptions new = engine_options_init();
             i = options_parse_eo(argc, argv, i + 1, &new);
-            vec_push(*eo, new); // new gets moved here
+            vec_push(vecEO, new); // new gets moved here
         } else if (!strcmp(argv[i], "-games"))
             o->games = atoi(argv[++i]);
         else if (!strcmp(argv[i], "-rounds"))
@@ -283,13 +284,15 @@ void options_parse(int argc, const char **argv, Options *o, EngineOptions **eo) 
     }
 
     if (eachSet) {
-        for (size_t i = 0; i < vec_size(*eo); i++)
-            engine_options_apply(&each, *eo + i);
+        for (size_t i = 0; i < vec_size(vecEO); i++)
+            engine_options_apply(&each, &vecEO[i]);
     }
 
-    if (vec_size(*eo) < 2)
+    if (vec_size(vecEO) < 2)
         DIE("at least 2 engines are needed\n");
 
-    if (vec_size(*eo) > 2 && o->sprt)
+    if (vec_size(vecEO) > 2 && o->sprt)
         DIE("only 2 engines for SPRT\n");
+
+    return vecEO;
 }

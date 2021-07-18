@@ -201,9 +201,11 @@ static void engine_spawn(Engine *e, const char *cwd, char **argv, bool readStdEr
     #define ESC_SEQ '\\'
 #endif
 
-static void engine_parse_cmd(const char *cmd, str_t *cwd, str_t *run, str_t **vecArgs) {
-    // Isolate the first token being the command to run.
+static str_t *engine_parse_cmd(const char *cmd, str_t *cwd, str_t *run) {
+    str_t *vecArgs = vec_init(str_t);
     scope(str_destroy) str_t token = str_init();
+
+    // Isolate the first token being the command to run.
     const char *tail = cmd;
     tail = str_tok_esc(tail, &token, ' ', ESC_SEQ);
 
@@ -221,11 +223,13 @@ static void engine_parse_cmd(const char *cmd, str_t *cwd, str_t *run, str_t **ve
         str_cpy_fmt(run, CUR_DIR "%s", lastSlash + 1);
     }
 
-    // Collect the arguments into a vec of str_t, *vecArgs[]
-    vec_push(*vecArgs, str_init_from(*run)); // argv[0] is the executed command
+    // Collect the arguments into a vec of str_t, vecArgs[]
+    vec_push(vecArgs, str_init_from(*run)); // argv[0] is the executed command
 
     while ((tail = str_tok_esc(tail, &token, ' ', ESC_SEQ)))
-        vec_push(*vecArgs, str_init_from(token));
+        vec_push(vecArgs, str_init_from(token));
+
+    return vecArgs;
 }
 
 Engine engine_init(Worker *w, const char *cmd, const char *name, const str_t *options,
@@ -238,8 +242,7 @@ Engine engine_init(Worker *w, const char *cmd, const char *name, const str_t *op
 
     // Parse cmd into (cwd, run, vecArgs): we want to execute run from cwd with vecArgs.
     scope(str_destroy) str_t cwd = str_init(), run = str_init();
-    str_t *vecArgs = vec_init(str_t);
-    engine_parse_cmd(cmd, &cwd, &run, &vecArgs);
+    str_t *vecArgs = engine_parse_cmd(cmd, &cwd, &run);
 
     // execvp() needs NULL terminated char **, not vec of str_t. Prepare a char **, whose elements
     // point to the C-string buffers of the elements of vecArgs, with the required NULL at the end.

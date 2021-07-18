@@ -49,5 +49,5 @@ SampleParams sample_params_init(void);
 void sample_params_destroy(SampleParams *sp);
 
 Options options_init(void);
-void options_parse(int argc, const char **argv, Options *o, EngineOptions **eo);
+EngineOptions *options_parse(int argc, const char **argv, Options *o);
 void options_destroy(Options *o);

@@ -51,9 +51,8 @@ static void main_destroy(void) {
 static void main_init(int argc, const char **argv) {
     atexit(main_destroy);
 
-    vecEO = vec_init(EngineOptions);
     options = options_init();
-    options_parse(argc, argv, &options, &vecEO);
+    vecEO = options_parse(argc, argv, &options);
 
     jq = job_queue_init((int)vec_size(vecEO), options.rounds, options.games, options.gauntlet);
     openings = openings_init(options.openings.buf, options.random, options.srand);
