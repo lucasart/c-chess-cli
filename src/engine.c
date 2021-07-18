@@ -44,6 +44,19 @@
 // (1) handle inheritance bug as CreatePipe() and stuff are racy
 // (2) chdir is done in the context of the parent process (not child after fork like on POSIX)
 static pthread_mutex_t mtxSequentialSpawn = PTHREAD_MUTEX_INITIALIZER;
+
+__attribute__((constructor)) static void associate_job(void) {
+    // Setup a Windows job and associate the parent process to it. Note that all children will
+    // automatically be associated to this job.
+    HANDLE hJob = CreateJobObject(NULL, NULL);
+    DIE_IF(!hJob);
+    JOBOBJECT_BASIC_LIMIT_INFORMATION jobBasicInfo = {.LimitFlags =
+                                                          JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE};
+    JOBOBJECT_EXTENDED_LIMIT_INFORMATION jobExtendedInfo = {.BasicLimitInformation = jobBasicInfo};
+    DIE_IF(!SetInformationJobObject(hJob, JobObjectExtendedLimitInformation, &jobExtendedInfo,
+                                    sizeof(JOBOBJECT_EXTENDED_LIMIT_INFORMATION)));
+    DIE_IF(!AssignProcessToJobObject(hJob, GetCurrentProcess()));
+}
 #endif
 
 static void engine_spawn(Engine *e, const char *cwd, char **argv, bool readStdErr) {
@@ -60,17 +73,6 @@ static void engine_spawn(Engine *e, const char *cwd, char **argv, bool readStdEr
 
     // Pipe handler: read=0, write=1
     HANDLE into[2] = {0}, outof[2] = {0};
-
-    // Setup job handler and job info
-    HANDLE hJob = CreateJobObject(NULL, NULL);
-    DIE_IF(!hJob);
-
-    JOBOBJECT_BASIC_LIMIT_INFORMATION jobBasicInfo = {.LimitFlags =
-                                                          JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE};
-    JOBOBJECT_EXTENDED_LIMIT_INFORMATION jobExtendedInfo = {.BasicLimitInformation = jobBasicInfo};
-
-    DIE_IF(!SetInformationJobObject(hJob, JobObjectExtendedLimitInformation, &jobExtendedInfo,
-                                    sizeof(JOBOBJECT_EXTENDED_LIMIT_INFORMATION)));
 
     // Recompose cmdFromCwd = "argv[0] argv[1] ... argv[argc-1]", which is the command to execute
     // from the context of cwd. This may differ from cmd in engine_init(), because argv[0] strips
@@ -129,11 +131,6 @@ static void engine_spawn(Engine *e, const char *cwd, char **argv, bool readStdEr
     DIE_IF(stdout_fd == -1);
     DIE_IF(!(e->in = _fdopen(stdout_fd, "r")));
     DIE_IF(!(e->out = _fdopen(stdin_fd, "w")));
-
-    // Bind child process and parent process to one job, so child process is
-    // killed when parent process exits
-    DIE_IF(!AssignProcessToJobObject(hJob, GetCurrentProcess()));
-    DIE_IF(!AssignProcessToJobObject(hJob, e->hProcess));
 
 #else // POSIX: Linux/Android == __linux__, otherwise assume __APPLE__
     // Pipe diagram: Parent -> [1]into[0] -> Child -> [1]outof[0] -> Parent
