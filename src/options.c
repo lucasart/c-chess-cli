@@ -185,6 +185,38 @@ void engine_options_destroy(EngineOptions *eo) {
     vec_destroy_rec(eo->options, str_destroy);
 }
 
+static void engine_options_apply(const EngineOptions *from, EngineOptions *to) {
+    if (from->cmd.len)
+        str_cpy(&to->cmd, from->cmd);
+
+    if (from->name.len)
+        str_cpy(&to->name, from->name);
+
+    for (size_t j = 0; j < vec_size(from->options); j++)
+        vec_push(to->options, str_init_from(from->options[j]));
+
+    if (from->time)
+        to->time = from->time;
+
+    if (from->increment)
+        to->increment = from->increment;
+
+    if (from->movetime)
+        to->movetime = from->movetime;
+
+    if (from->nodes)
+        to->nodes = from->nodes;
+
+    if (from->depth)
+        to->depth = from->depth;
+
+    if (from->movestogo)
+        to->movestogo = from->movestogo;
+
+    if (from->timeOut)
+        to->timeOut = from->timeOut;
+}
+
 SampleParams sample_params_init(void) { return (SampleParams){.fileName = str_init(), .freq = 1}; }
 
 void sample_params_destroy(SampleParams *sp) { str_destroy(&sp->fileName); }
@@ -251,37 +283,8 @@ void options_parse(int argc, const char **argv, Options *o, EngineOptions **eo) 
     }
 
     if (eachSet) {
-        for (size_t i = 0; i < vec_size(*eo); i++) {
-            if (each.cmd.len)
-                str_cpy(&(*eo)[i].cmd, each.cmd);
-
-            if (each.name.len)
-                str_cpy(&(*eo)[i].name, each.name);
-
-            for (size_t j = 0; j < vec_size(each.options); j++)
-                vec_push((*eo)[i].options, str_init_from(each.options[j]));
-
-            if (each.time)
-                (*eo)[i].time = each.time;
-
-            if (each.increment)
-                (*eo)[i].increment = each.increment;
-
-            if (each.movetime)
-                (*eo)[i].movetime = each.movetime;
-
-            if (each.nodes)
-                (*eo)[i].nodes = each.nodes;
-
-            if (each.depth)
-                (*eo)[i].depth = each.depth;
-
-            if (each.movestogo)
-                (*eo)[i].movestogo = each.movestogo;
-
-            if (each.timeOut)
-                (*eo)[i].timeOut = each.timeOut;
-        }
+        for (size_t i = 0; i < vec_size(*eo); i++)
+            engine_options_apply(&each, *eo + i);
     }
 
     if (vec_size(*eo) < 2)
