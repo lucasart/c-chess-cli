@@ -37,7 +37,7 @@ typedef struct {
 } Options;
 
 typedef struct {
-    str_t cmd, name, *options;
+    str_t cmd, name, *vecOptions;
     int64_t time, increment, movetime, nodes, timeOut;
     int depth, movestogo;
 } EngineOptions;

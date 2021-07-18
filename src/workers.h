@@ -35,7 +35,7 @@ typedef struct {
     int id;        // starts at 1 (0 is for main thread)
 } Worker;
 
-extern Worker *Workers;
+extern Worker *vecWorkers;
 
 Worker worker_init(int id, const char *logName);
 void worker_destroy(Worker *w);

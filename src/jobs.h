@@ -33,11 +33,11 @@ typedef struct {
 // Job Queue: consumed by workers to play tournament (thread safe)
 typedef struct {
     pthread_mutex_t mtx;
-    Job *jobs;
+    Job *vecJobs;
     size_t idx;       // next job index
     size_t completed; // number of jobs completed
-    str_t *names;
-    Result *results;
+    str_t *vecNames;
+    Result *vecResults;
 } JobQueue;
 
 JobQueue job_queue_init(int engines, int rounds, int games, bool gauntlet);

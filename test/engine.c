@@ -93,24 +93,24 @@ static void random_pv(const Position *pos, uint64_t *seed, int len, str_t *pv) {
     str_clear(pv);
     Position p[2];
     p[0] = *pos;
-    move_t *moves = vec_init_reserve(64, move_t);
+    move_t *vecMoves = vec_init_reserve(64, move_t);
     scope(str_destroy) str_t lan = str_init();
 
     for (int ply = 0; ply < len; ply++) {
         // Generate and count legal moves
-        moves = gen_all_moves(&p[ply % 2], moves);
-        const uint64_t n = (uint64_t)vec_size(moves);
+        vecMoves = gen_all_moves(&p[ply % 2], vecMoves);
+        const uint64_t n = (uint64_t)vec_size(vecMoves);
         if (n == 0)
             break;
 
         // Choose a random one
-        const move_t m = moves[prng(seed) % n];
+        const move_t m = vecMoves[prng(seed) % n];
         pos_move_to_lan(&p[ply % 2], m, &lan);
         str_push(str_cat(pv, lan), ' ');
         pos_move(&p[(ply + 1) % 2], &p[ply % 2], m);
     }
 
-    vec_destroy(moves);
+    vec_destroy(vecMoves);
 }
 
 static void run_go(const Position *pos, const Go *go, uint64_t *seed) {

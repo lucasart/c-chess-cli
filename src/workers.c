@@ -17,10 +17,10 @@
 #include "vec.h"
 #include <stdlib.h>
 
-Worker *Workers;
+Worker *vecWorkers;
 
 void deadline_set(Worker *w, const char *engineName, int64_t now, int64_t duration) {
-    assert(timeLimit > 0);
+    assert((uint64_t)now + (uint64_t)duration > (uint64_t)now); // signed overflow is undefined
 
     pthread_mutex_lock(&w->deadline.mtx);
 

@@ -18,31 +18,31 @@
 #include <assert.h>
 
 Openings openings_init(const char *fileName, bool random, uint64_t srand) {
-    Openings o = {.index = vec_init(size_t)};
+    Openings o = {.vecIndex = vec_init(size_t)};
 
     if (*fileName)
         DIE_IF(!(o.file = fopen(fileName, "r" FOPEN_TEXT)));
 
     if (o.file) {
-        // Fill o.index[] to record file offsets for each lines
+        // Fill o.vecIndex[] to record file offsets for each lines
         scope(str_destroy) str_t line = str_init();
 
         do {
-            vec_push(o.index, ftell(o.file));
+            vec_push(o.vecIndex, ftell(o.file));
         } while (str_getline(&line, o.file));
 
-        vec_pop(o.index); // EOF offset must be removed
+        vec_pop(o.vecIndex); // EOF offset must be removed
 
         if (random) {
-            // Shuffle o.index[], which will be read sequentially from the beginning. This allows
+            // Shuffle o.vecIndex[], which will be read sequentially from the beginning. This allows
             // consistent treatment of random and !random, and guarantees no repetition N-cycles in
             // the random case, rather than sqrt(N) (birthday paradox) if random seek each time.
-            const size_t n = vec_size(o.index);
+            const size_t n = vec_size(o.vecIndex);
             uint64_t seed = srand ? srand : (uint64_t)system_msec();
 
             for (size_t i = n - 1; i > 0; i--) {
                 const size_t j = prng(&seed) % (i + 1);
-                swap(o.index[i], o.index[j]);
+                swap(o.vecIndex[i], o.vecIndex[j]);
             }
         }
     }
@@ -56,7 +56,7 @@ void openings_destroy(Openings *o) {
         DIE_IF(fclose(o->file) < 0);
 
     pthread_mutex_destroy(&o->mtx);
-    vec_destroy(o->index);
+    vec_destroy(o->vecIndex);
 }
 
 void openings_next(Openings *o, str_t *fen, size_t idx) {
@@ -69,7 +69,7 @@ void openings_next(Openings *o, str_t *fen, size_t idx) {
     scope(str_destroy) str_t line = str_init();
 
     pthread_mutex_lock(&o->mtx);
-    DIE_IF(fseek(o->file, o->index[idx % vec_size(o->index)], SEEK_SET) < 0);
+    DIE_IF(fseek(o->file, o->vecIndex[idx % vec_size(o->vecIndex)], SEEK_SET) < 0);
     DIE_IF(!str_getline(&line, o->file));
     pthread_mutex_unlock(&o->mtx);
 

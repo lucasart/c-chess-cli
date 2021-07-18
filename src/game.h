@@ -46,9 +46,9 @@ typedef struct {
 
 typedef struct {
     str_t names[NB_COLOR]; // names of players, by color
-    Position *pos;         // list of positions (including moves) since game start
-    Info *info;            // remembered from parsing info lines (for PGN comments)
-    Sample *samples;       // list of samples when generating training data
+    Position *vecPos;      // list of positions (including moves) since game start
+    Info *vecInfo;         // remembered from parsing info lines (for PGN comments)
+    Sample *vecSamples;    // list of samples when generating training data
     int round, game, ply, state;
 } Game;
 

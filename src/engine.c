@@ -204,7 +204,7 @@ static void engine_spawn(Engine *e, const char *cwd, char **argv, bool readStdEr
     #define ESC_SEQ '\\'
 #endif
 
-static void engine_parse_cmd(const char *cmd, str_t *cwd, str_t *run, str_t **args) {
+static void engine_parse_cmd(const char *cmd, str_t *cwd, str_t *run, str_t **vecArgs) {
     // Isolate the first token being the command to run.
     scope(str_destroy) str_t token = str_init();
     const char *tail = cmd;
@@ -224,11 +224,11 @@ static void engine_parse_cmd(const char *cmd, str_t *cwd, str_t *run, str_t **ar
         str_cpy_fmt(run, CUR_DIR "%s", lastSlash + 1);
     }
 
-    // Collect the arguments into a vec of str_t, args[]
-    vec_push(*args, str_init_from(*run)); // argv[0] is the executed command
+    // Collect the arguments into a vec of str_t, *vecArgs[]
+    vec_push(*vecArgs, str_init_from(*run)); // argv[0] is the executed command
 
     while ((tail = str_tok_esc(tail, &token, ' ', ESC_SEQ)))
-        vec_push(*args, str_init_from(token));
+        vec_push(*vecArgs, str_init_from(token));
 }
 
 Engine engine_init(Worker *w, const char *cmd, const char *name, const str_t *options,
@@ -239,22 +239,22 @@ Engine engine_init(Worker *w, const char *cmd, const char *name, const str_t *op
     Engine e = {.name = str_init_from_c(*name ? name : cmd), // default value
                 .timeOut = timeOut};
 
-    // Parse cmd into (cwd, run, args): we want to execute run from cwd with args.
+    // Parse cmd into (cwd, run, vecArgs): we want to execute run from cwd with vecArgs.
     scope(str_destroy) str_t cwd = str_init(), run = str_init();
-    str_t *args = vec_init(str_t);
-    engine_parse_cmd(cmd, &cwd, &run, &args);
+    str_t *vecArgs = vec_init(str_t);
+    engine_parse_cmd(cmd, &cwd, &run, &vecArgs);
 
     // execvp() needs NULL terminated char **, not vec of str_t. Prepare a char **, whose elements
-    // point to the C-string buffers of the elements of args, with the required NULL at the end.
-    char **argv = calloc(vec_size(args) + 1, sizeof(char *));
+    // point to the C-string buffers of the elements of vecArgs, with the required NULL at the end.
+    char **argv = calloc(vec_size(vecArgs) + 1, sizeof(char *));
 
-    for (size_t i = 0; i < vec_size(args); i++)
-        argv[i] = args[i].buf;
+    for (size_t i = 0; i < vec_size(vecArgs); i++)
+        argv[i] = vecArgs[i].buf;
 
     // Spawn child process and plug pipes
     engine_spawn(&e, cwd.buf, argv, w->log != NULL);
 
-    vec_destroy_rec(args, str_destroy);
+    vec_destroy_rec(vecArgs, str_destroy);
     free(argv);
 
     // Start the uci..uciok dialogue

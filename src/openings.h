@@ -22,7 +22,7 @@
 typedef struct {
     pthread_mutex_t mtx;
     FILE *file;
-    long *index; // vector of file offsets
+    long *vecIndex; // vector of file offsets
 } Openings;
 
 Openings openings_init(const char *fileName, bool random, uint64_t srand);

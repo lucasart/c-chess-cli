@@ -31,10 +31,10 @@ static void uci_position_command(const Game *g, str_t *cmd)
 // losing information.
 {
     // Index of the starting FEN, where rule50 was last reset
-    const int ply0 = max(g->ply - g->pos[g->ply].rule50, 0);
+    const int ply0 = max(g->ply - g->vecPos[g->ply].rule50, 0);
 
     scope(str_destroy) str_t fen = str_init();
-    pos_get(&g->pos[ply0], &fen);
+    pos_get(&g->vecPos[ply0], &fen);
     str_cpy_fmt(cmd, "position fen %S", fen);
 
     if (ply0 < g->ply) {
@@ -42,7 +42,7 @@ static void uci_position_command(const Game *g, str_t *cmd)
         str_cat_c(cmd, " moves");
 
         for (int ply = ply0 + 1; ply <= g->ply; ply++) {
-            pos_move_to_lan(&g->pos[ply - 1], g->pos[ply].lastMove, &lan);
+            pos_move_to_lan(&g->vecPos[ply - 1], g->vecPos[ply].lastMove, &lan);
             str_cat(str_push(cmd, ' '), lan);
         }
     }
@@ -62,7 +62,7 @@ static void uci_go_command(Game *g, const EngineOptions *eo[2], int ei, const in
         str_cat_fmt(cmd, " movetime %I", eo[ei]->movetime);
 
     if (eo[ei]->time || eo[ei]->increment) {
-        const int color = g->pos[g->ply].turn;
+        const int color = g->vecPos[g->ply].turn;
 
         str_cat_fmt(cmd, " wtime %I winc %I btime %I binc %I", timeLeft[ei ^ color],
                     eo[ei ^ color]->increment, timeLeft[ei ^ color ^ BLACK],
@@ -76,7 +76,7 @@ static void uci_go_command(Game *g, const EngineOptions *eo[2], int ei, const in
 static int game_apply_chess_rules(const Game *g, move_t **moves)
 // Applies chess rules to generate legal moves, and determine the state of the game
 {
-    const Position *pos = &g->pos[g->ply];
+    const Position *pos = &g->vecPos[g->ply];
 
     *moves = gen_all_moves(pos, *moves);
 
@@ -92,7 +92,7 @@ static int game_apply_chess_rules(const Game *g, move_t **moves)
         int repetitions = 1;
 
         for (int i = 4; i <= pos->rule50 && i <= g->ply; i += 2)
-            if (g->pos[g->ply - i].key == pos->key && ++repetitions >= 3)
+            if (g->vecPos[g->ply - i].key == pos->key && ++repetitions >= 3)
                 return STATE_THREEFOLD;
     }
 
@@ -112,12 +112,12 @@ static Position resolve_pv(const Worker *w, const Game *g, const char *pv) {
 
     // Start with current position. We can't guarantee that the resolved position won't be in check,
     // but a valid one must be returned.
-    Position resolved = g->pos[g->ply];
+    Position resolved = g->vecPos[g->ply];
 
     Position p[2];
     p[0] = resolved;
     int idx = 0;
-    move_t *moves = vec_init_reserve(64, move_t);
+    move_t *vecMoves = vec_init_reserve(64, move_t);
 
     while ((pv = str_tok(pv, &token, " "))) {
         const move_t m = pos_lan_to_move(&p[idx], token.buf);
@@ -126,12 +126,12 @@ static Position resolve_pv(const Worker *w, const Game *g, const char *pv) {
         if (!pos_move_is_tactical(&p[idx], m))
             break;
 
-        moves = gen_all_moves(&p[idx], moves);
+        vecMoves = gen_all_moves(&p[idx], vecMoves);
 
-        if (illegal_move(m, moves)) {
+        if (illegal_move(m, vecMoves)) {
             stdio_lock(stdout); // lock both stderr and stdout to prevent interleaving
             fprintf(stderr, "[%d] WARNING: Illegal move in PV '%s%s' from %s\n", threadId,
-                    token.buf, pv, g->names[g->pos[g->ply].turn].buf);
+                    token.buf, pv, g->names[g->vecPos[g->ply].turn].buf);
             stdio_unlock(stdout);
 
             if (w->log)
@@ -147,7 +147,7 @@ static Position resolve_pv(const Worker *w, const Game *g, const char *pv) {
             resolved = p[idx];
     }
 
-    vec_destroy(moves);
+    vec_destroy(vecMoves);
     return resolved;
 }
 
@@ -155,26 +155,26 @@ Game game_init(int round, int game) {
     Game g = {.round = round,
               .game = game,
               .names = {str_init(), str_init()},
-              .pos = vec_init(Position),
-              .info = vec_init(Info),
-              .samples = vec_init(Sample)};
+              .vecPos = vec_init(Position),
+              .vecInfo = vec_init(Info),
+              .vecSamples = vec_init(Sample)};
 
-    vec_push(g.pos, (Position){0});
+    vec_push(g.vecPos, (Position){0});
     return g;
 }
 
 bool game_load_fen(Game *g, const char *fen, int *color) {
-    if (pos_set(&g->pos[0], fen, false)) {
-        *color = g->pos[0].turn;
+    if (pos_set(&g->vecPos[0], fen, false)) {
+        *color = g->vecPos[0].turn;
         return true;
     } else
         return false;
 }
 
 void game_destroy(Game *g) {
-    vec_destroy(g->samples);
-    vec_destroy(g->info);
-    vec_destroy(g->pos);
+    vec_destroy(g->vecSamples);
+    vec_destroy(g->vecInfo);
+    vec_destroy(g->vecPos);
 
     str_destroy_n(&g->names[WHITE], &g->names[BLACK]);
 }
@@ -187,10 +187,10 @@ int game_play(Worker *w, Game *g, const Options *o, const Engine engines[2],
 // - returns RESULT_LOSS/DRAW/WIN from engines[0] pov
 {
     for (int color = WHITE; color <= BLACK; color++)
-        str_cpy(&g->names[color], engines[color ^ g->pos[0].turn ^ reverse].name);
+        str_cpy(&g->names[color], engines[color ^ g->vecPos[0].turn ^ reverse].name);
 
     for (int i = 0; i < 2; i++) {
-        if (g->pos[0].chess960) {
+        if (g->vecPos[0].chess960) {
             if (engines[i].supportChess960)
                 engine_writeln(w, &engines[i], "setoption name UCI_Chess960 value true");
             else
@@ -208,13 +208,13 @@ int game_play(Worker *w, Game *g, const Options *o, const Engine engines[2],
     int ei = reverse; // engines[ei] has the move
     int64_t timeLeft[2] = {eo[0]->time, eo[1]->time};
     scope(str_destroy) str_t pv = str_init();
-    move_t *legalMoves = vec_init_reserve(64, move_t);
+    move_t *vecLegalMoves = vec_init_reserve(64, move_t);
 
     for (g->ply = 0;; ei = 1 - ei, g->ply++) {
         if (played)
-            pos_move(&g->pos[g->ply], &g->pos[g->ply - 1], played);
+            pos_move(&g->vecPos[g->ply], &g->vecPos[g->ply - 1], played);
 
-        if ((g->state = game_apply_chess_rules(g, &legalMoves)))
+        if ((g->state = game_apply_chess_rules(g, &vecLegalMoves)))
             break;
 
         uci_position_command(g, &cmd);
@@ -241,7 +241,7 @@ int game_play(Worker *w, Game *g, const Options *o, const Engine engines[2],
 
         Info info = {0};
         const bool ok = engine_bestmove(w, &engines[ei], &timeLeft[ei], &best, &pv, &info);
-        vec_push(g->info, info);
+        vec_push(g->vecInfo, info);
 
         // Parses the last PV sent. An invalid PV is not fatal, but logs some warnings. Keep track
         // of the resolved position, which is the last in the PV that is not in check (or the
@@ -253,9 +253,9 @@ int game_play(Worker *w, Game *g, const Options *o, const Engine engines[2],
             break;
         }
 
-        played = pos_lan_to_move(&g->pos[g->ply], best.buf);
+        played = pos_lan_to_move(&g->vecPos[g->ply], best.buf);
 
-        if (illegal_move(played, legalMoves)) {
+        if (illegal_move(played, vecLegalMoves)) {
             g->state = STATE_ILLEGAL_MOVE;
             break;
         }
@@ -285,33 +285,33 @@ int game_play(Worker *w, Game *g, const Options *o, const Engine engines[2],
 
         // Write sample: position (compactly encoded) + score
         if (o->sp.fileName.len && !(o->sp.resolve && is_mate(info.score)) &&
-            prngf(&w->seed) <= o->sp.freq * exp(-o->sp.decay * g->pos[g->ply].rule50)) {
+            prngf(&w->seed) <= o->sp.freq * exp(-o->sp.decay * g->vecPos[g->ply].rule50)) {
             Sample sample = (Sample){
-                .pos = o->sp.resolve ? resolved : g->pos[g->ply],
-                .score = sample.pos.turn == g->pos[g->ply].turn ? info.score : -info.score,
+                .pos = o->sp.resolve ? resolved : g->vecPos[g->ply],
+                .score = sample.pos.turn == g->vecPos[g->ply].turn ? info.score : -info.score,
                 .result = NB_RESULT // mark as invalid for now, computed after the game
             };
 
             // Record sample, except if resolvePv=true and the position is in check (becuase PV
             // resolution couldn't avoid it), in which case the sample is discarded.
             if (!o->sp.resolve || !sample.pos.checkers)
-                vec_push(g->samples, sample);
+                vec_push(g->vecSamples, sample);
         }
 
-        vec_push(g->pos, (Position){0});
+        vec_push(g->vecPos, (Position){0});
     }
 
     assert(g->state != STATE_NONE);
-    vec_destroy(legalMoves);
+    vec_destroy(vecLegalMoves);
 
     // Signed result from white's pov: -1 (loss), 0 (draw), +1 (win)
     const int wpov =
         g->state < STATE_SEPARATOR
-            ? (g->pos[g->ply].turn == WHITE ? RESULT_LOSS : RESULT_WIN) // lost from turn's pov
+            ? (g->vecPos[g->ply].turn == WHITE ? RESULT_LOSS : RESULT_WIN) // lost from turn's pov
             : RESULT_DRAW;
 
-    for (size_t i = 0; i < vec_size(g->samples); i++)
-        g->samples[i].result = g->samples[i].pos.turn == WHITE ? wpov : 2 - wpov;
+    for (size_t i = 0; i < vec_size(g->vecSamples); i++)
+        g->vecSamples[i].result = g->vecSamples[i].pos.turn == WHITE ? wpov : 2 - wpov;
 
     return g->state < STATE_SEPARATOR
                ? (ei == 0 ? RESULT_LOSS : RESULT_WIN) // engine on the move has lost
@@ -326,7 +326,7 @@ void game_decode_state(const Game *g, str_t *result, str_t *reason) {
         str_cpy_c(result, "*");
         str_cpy_c(reason, "unterminated");
     } else if (g->state == STATE_CHECKMATE) {
-        str_cpy_c(result, g->pos[g->ply].turn == WHITE ? "0-1" : "1-0");
+        str_cpy_c(result, g->vecPos[g->ply].turn == WHITE ? "0-1" : "1-0");
         str_cpy_c(reason, "checkmate");
     } else if (g->state == STATE_STALEMATE)
         str_cpy_c(reason, "stalemate");
@@ -337,15 +337,15 @@ void game_decode_state(const Game *g, str_t *result, str_t *reason) {
     else if (g->state == STATE_INSUFFICIENT_MATERIAL)
         str_cpy_c(reason, "insufficient material");
     else if (g->state == STATE_ILLEGAL_MOVE) {
-        str_cpy_c(result, g->pos[g->ply].turn == WHITE ? "0-1" : "1-0");
+        str_cpy_c(result, g->vecPos[g->ply].turn == WHITE ? "0-1" : "1-0");
         str_cpy_c(reason, "rules infraction");
     } else if (g->state == STATE_DRAW_ADJUDICATION)
         str_cpy_c(reason, "adjudication");
     else if (g->state == STATE_RESIGN) {
-        str_cpy_c(result, g->pos[g->ply].turn == WHITE ? "0-1" : "1-0");
+        str_cpy_c(result, g->vecPos[g->ply].turn == WHITE ? "0-1" : "1-0");
         str_cpy_c(reason, "adjudication");
     } else if (g->state == STATE_TIME_LOSS) {
-        str_cpy_c(result, g->pos[g->ply].turn == WHITE ? "0-1" : "1-0");
+        str_cpy_c(result, g->vecPos[g->ply].turn == WHITE ? "0-1" : "1-0");
         str_cpy_c(reason, "time forfeit");
     } else
         assert(false);
@@ -363,10 +363,10 @@ void game_export_pgn(const Game *g, int verbosity, str_t *out) {
     str_cat_fmt(out, "[Termination \"%S\"]\n", reason);
 
     scope(str_destroy) str_t fen = str_init();
-    pos_get(&g->pos[0], &fen);
+    pos_get(&g->vecPos[0], &fen);
     str_cat_fmt(out, "[FEN \"%S\"]\n", fen);
 
-    if (g->pos[0].chess960)
+    if (g->vecPos[0].chess960)
         str_cat_c(out, "[Variant \"Chess960\"]\n");
 
     str_cat_fmt(out, "[PlyCount \"%i\"]\n", g->ply);
@@ -380,16 +380,16 @@ void game_export_pgn(const Game *g, int verbosity, str_t *out) {
 
         for (int ply = 1; ply <= g->ply; ply++) {
             // Write move number
-            if (g->pos[ply - 1].turn == WHITE || ply == 1)
-                str_cat_fmt(out, g->pos[ply - 1].turn == WHITE ? "%i. " : "%i... ",
-                            g->pos[ply - 1].fullMove);
+            if (g->vecPos[ply - 1].turn == WHITE || ply == 1)
+                str_cat_fmt(out, g->vecPos[ply - 1].turn == WHITE ? "%i. " : "%i... ",
+                            g->vecPos[ply - 1].fullMove);
 
             // Append SAN move
-            pos_move_to_san(&g->pos[ply - 1], g->pos[ply].lastMove, &san);
+            pos_move_to_san(&g->vecPos[ply - 1], g->vecPos[ply].lastMove, &san);
             str_cat(out, san);
 
             // Append check marker
-            if (g->pos[ply].checkers) {
+            if (g->vecPos[ply].checkers) {
                 if (ply == g->ply && g->state == STATE_CHECKMATE)
                     str_push(out, '#'); // checkmate
                 else
@@ -397,7 +397,7 @@ void game_export_pgn(const Game *g, int verbosity, str_t *out) {
             }
 
             // Write PGN comment
-            const int depth = g->info[ply - 1].depth, score = g->info[ply - 1].score;
+            const int depth = g->vecInfo[ply - 1].depth, score = g->vecInfo[ply - 1].score;
 
             if (verbosity == 2) {
                 if (is_mating(score))
@@ -407,7 +407,7 @@ void game_export_pgn(const Game *g, int verbosity, str_t *out) {
                 else
                     str_cat_fmt(out, " {%i/%i}", score, depth);
             } else if (verbosity == 3) {
-                const int64_t time = g->info[ply - 1].time;
+                const int64_t time = g->vecInfo[ply - 1].time;
 
                 if (is_mating(score))
                     str_cat_fmt(out, " {M%i/%i %Ims}", INT16_MAX - score, depth, time);
@@ -428,20 +428,20 @@ void game_export_pgn(const Game *g, int verbosity, str_t *out) {
 static void game_export_samples_csv(const Game *g, FILE *out) {
     scope(str_destroy) str_t fen = str_init();
 
-    for (size_t i = 0; i < vec_size(g->samples); i++) {
-        pos_get(&g->samples[i].pos, &fen);
-        fprintf(out, "%s,%d,%d\n", fen.buf, g->samples[i].score, g->samples[i].result);
+    for (size_t i = 0; i < vec_size(g->vecSamples); i++) {
+        pos_get(&g->vecSamples[i].pos, &fen);
+        fprintf(out, "%s,%d,%d\n", fen.buf, g->vecSamples[i].score, g->vecSamples[i].result);
     }
 }
 
 static void game_export_samples_bin(const Game *g, FILE *out) {
-    for (size_t i = 0; i < vec_size(g->samples); i++) {
+    for (size_t i = 0; i < vec_size(g->vecSamples); i++) {
         PackedPos packed = {0};
-        const size_t bytes = pos_pack(&g->samples[i].pos, &packed);
+        const size_t bytes = pos_pack(&g->vecSamples[i].pos, &packed);
 
         fwrite(&packed, bytes, 1, out);
-        fwrite(&g->samples[i].score, sizeof(g->samples[i].score), 1, out);
-        fwrite(&g->samples[i].result, sizeof(g->samples[i].result), 1, out);
+        fwrite(&g->vecSamples[i].score, sizeof(g->vecSamples[i].score), 1, out);
+        fwrite(&g->vecSamples[i].result, sizeof(g->vecSamples[i].result), 1, out);
     }
 }
 

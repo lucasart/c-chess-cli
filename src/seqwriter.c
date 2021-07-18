@@ -23,7 +23,7 @@ static SeqStr seq_str_init(size_t idx, str_t str) {
 static void seq_str_destroy(SeqStr *ss) { str_destroy(&ss->str); }
 
 SeqWriter seq_writer_init(const char *fileName, const char *mode) {
-    SeqWriter sw = {.out = fopen(fileName, mode), .buf = vec_init(SeqStr)};
+    SeqWriter sw = {.out = fopen(fileName, mode), .vecQueued = vec_init(SeqStr)};
 
     pthread_mutex_init(&sw.mtx, NULL);
     return sw;
@@ -31,45 +31,46 @@ SeqWriter seq_writer_init(const char *fileName, const char *mode) {
 
 void seq_writer_destroy(SeqWriter *sw) {
     pthread_mutex_destroy(&sw->mtx);
-    vec_destroy_rec(sw->buf, seq_str_destroy);
+    vec_destroy_rec(sw->vecQueued, seq_str_destroy);
     fclose(sw->out);
 }
 
 void seq_writer_push(SeqWriter *sw, size_t idx, str_t str) {
     pthread_mutex_lock(&sw->mtx);
 
-    // Append to sw->buf[n]
-    const size_t n = vec_size(sw->buf);
-    vec_push(sw->buf, seq_str_init(idx, str));
+    // Append to sw->vecQueued[n]
+    const size_t n = vec_size(sw->vecQueued);
+    vec_push(sw->vecQueued, seq_str_init(idx, str));
 
     // insert in correct position
     for (size_t i = 0; i < n; i++)
-        if (sw->buf[i].idx > idx) {
-            SeqStr tmp = sw->buf[n];
-            memmove(&sw->buf[i + 1], &sw->buf[i], (n - i) * sizeof(SeqStr));
-            sw->buf[i] = tmp;
+        if (sw->vecQueued[i].idx > idx) {
+            SeqStr tmp = sw->vecQueued[n];
+            memmove(&sw->vecQueued[i + 1], &sw->vecQueued[i], (n - i) * sizeof(SeqStr));
+            sw->vecQueued[i] = tmp;
             break;
         }
 
     // Calculate i such that buf[0..i-1] is the longest sequential chunk
     size_t i = 0;
-    for (; i < vec_size(sw->buf); i++)
-        if (sw->buf[i].idx != sw->idxNext + i) {
-            assert(sw->buf[i].idx > sw->idxNext + i);
+    for (; i < vec_size(sw->vecQueued); i++)
+        if (sw->vecQueued[i].idx != sw->idxNext + i) {
+            assert(sw->vecQueued[i].idx > sw->idxNext + i);
             break;
         }
 
     if (i) {
         // Write buf[0..i-1] to file, and destroy elements
         for (size_t j = 0; j < i; j++) {
-            fputs(sw->buf[j].str.buf, sw->out);
-            seq_str_destroy(&sw->buf[j]);
+            fputs(sw->vecQueued[j].str.buf, sw->out);
+            seq_str_destroy(&sw->vecQueued[j]);
         }
         fflush(sw->out);
 
         // Delete buf[0..i-1]
-        memmove(&sw->buf[0], &sw->buf[i], (vec_size(sw->buf) - i) * sizeof(SeqStr));
-        vec_ptr(sw->buf)->size -= i;
+        memmove(&sw->vecQueued[0], &sw->vecQueued[i],
+                (vec_size(sw->vecQueued) - i) * sizeof(SeqStr));
+        vec_ptr(sw->vecQueued)->size -= i;
 
         // Updated next expected index
         sw->idxNext += i;

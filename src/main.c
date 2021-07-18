@@ -27,14 +27,14 @@
 #include <string.h>
 
 static Options options;
-static EngineOptions *eo;
+static EngineOptions *vecEO;
 static Openings openings;
 static SeqWriter pgnSeqWriter;
 static FILE *sampleFile;
 static JobQueue jq;
 
 static void main_destroy(void) {
-    vec_destroy_rec(Workers, worker_destroy);
+    vec_destroy_rec(vecWorkers, worker_destroy);
 
     if (options.sp.fileName.len)
         fclose(sampleFile);
@@ -45,17 +45,17 @@ static void main_destroy(void) {
     openings_destroy(&openings);
     job_queue_destroy(&jq);
     options_destroy(&options);
-    vec_destroy_rec(eo, engine_options_destroy);
+    vec_destroy_rec(vecEO, engine_options_destroy);
 }
 
 static void main_init(int argc, const char **argv) {
     atexit(main_destroy);
 
-    eo = vec_init(EngineOptions);
+    vecEO = vec_init(EngineOptions);
     options = options_init();
-    options_parse(argc, argv, &options, &eo);
+    options_parse(argc, argv, &options, &vecEO);
 
-    jq = job_queue_init((int)vec_size(eo), options.rounds, options.games, options.gauntlet);
+    jq = job_queue_init((int)vec_size(vecEO), options.rounds, options.games, options.gauntlet);
     openings = openings_init(options.openings.buf, options.random, options.srand);
 
     if (options.pgn.len)
@@ -68,8 +68,8 @@ static void main_init(int argc, const char **argv) {
             DIE_IF(!(sampleFile = fopen(options.sp.fileName.buf, "a" FOPEN_TEXT)));
     }
 
-    // Prepare Workers[]
-    Workers = vec_init(Worker);
+    // Prepare vecWorkers[]
+    vecWorkers = vec_init(Worker);
 
     for (int i = 0; i < options.concurrency; i++) {
         scope(str_destroy) str_t logName = str_init();
@@ -77,7 +77,7 @@ static void main_init(int argc, const char **argv) {
         if (options.log)
             str_cat_fmt(&logName, "c-chess-cli.%i.log", i + 1);
 
-        vec_push(Workers, worker_init(i, logName.buf));
+        vec_push(vecWorkers, worker_init(i, logName.buf));
     }
 }
 
@@ -88,8 +88,9 @@ static void *thread_start(void *arg) {
 
     scope(str_destroy) str_t fen = str_init();
     Job job = {0};
-    int ei[2] = {-1, -1};      // eo[ei[0]] plays eo[ei[1]]: initialize with invalid values to start
-    size_t idx = 0, count = 0; // game idx and count (shared across workers)
+    int ei[2] = {-1,
+                 -1}; // vecEO[ei[0]] plays vecEO[ei[1]]: initialize with invalid values to start
+    size_t idx = 0, count = 0; // game idx and count (shared across vecWorkers)
 
     while (job_queue_pop(&jq, &job, &idx, &count)) {
         // Engine stop/start, as needed
@@ -100,8 +101,8 @@ static void *thread_start(void *arg) {
                 if (engines[i].in)
                     engine_destroy(w, &engines[i]);
 
-                engines[i] = engine_init(w, eo[ei[i]].cmd.buf, eo[ei[i]].name.buf,
-                                         eo[ei[i]].options, eo[ei[i]].timeOut);
+                engines[i] = engine_init(w, vecEO[ei[i]].cmd.buf, vecEO[ei[i]].name.buf,
+                                         vecEO[ei[i]].vecOptions, vecEO[ei[i]].timeOut);
                 job_queue_set_name(&jq, ei[i], engines[i].name.buf);
             }
 
@@ -127,7 +128,7 @@ static void *thread_start(void *arg) {
         printf("[%d] Started game %zu of %zu (%s vs %s)\n", threadId, idx + 1, count,
                engines[whiteIdx].name.buf, engines[opposite(whiteIdx)].name.buf);
 
-        const EngineOptions *eoPair[2] = {&eo[ei[0]], &eo[ei[1]]};
+        const EngineOptions *eoPair[2] = {&vecEO[ei[0]], &vecEO[ei[1]]};
         const int wld = game_play(w, &game, &options, engines, eoPair, job.reverse);
 
         // Write to PGN file
@@ -162,7 +163,7 @@ static void *thread_start(void *arg) {
             job_queue_stop(&jq);
 
         // Tournament update
-        if (vec_size(eo) > 2)
+        if (vec_size(vecEO) > 2)
             job_queue_print_results(&jq, (size_t)options.games);
 
         game_destroy(&game);
@@ -186,7 +187,7 @@ int main(int argc, const char **argv) {
     pthread_t threads[options.concurrency];
 
     for (int i = 0; i < options.concurrency; i++)
-        pthread_create(&threads[i], NULL, thread_start, &Workers[i]);
+        pthread_create(&threads[i], NULL, thread_start, &vecWorkers[i]);
 
     // Main thread loop: check deadline overdue at regular intervals
     do {
@@ -199,9 +200,9 @@ int main(int argc, const char **argv) {
         // are likely to face a completely unresponsive engine, where any attempt at I/O will block
         // the master thread, on top of the already blocked worker. Hence, we must DIE().
         for (int i = 0; i < options.concurrency; i++)
-            if (deadline_overdue(&Workers[i]))
-                DIE("[%d] engine %s is unresponsive\n", Workers[i].id,
-                    Workers[i].deadline.engineName.buf);
+            if (deadline_overdue(&vecWorkers[i]))
+                DIE("[%d] engine %s is unresponsive\n", vecWorkers[i].id,
+                    vecWorkers[i].deadline.engineName.buf);
     } while (!job_queue_done(&jq));
 
     // Join threads[]

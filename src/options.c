@@ -85,7 +85,7 @@ static int options_parse_eo(int argc, const char **argv, int i, EngineOptions *e
         else if ((tail = str_prefix(argv[i], "name=")))
             str_cpy_c(&eo->name, tail);
         else if ((tail = str_prefix(argv[i], "option.")))
-            vec_push(eo->options, str_init_from_c(tail)); // store "name=value" string
+            vec_push(eo->vecOptions, str_init_from_c(tail)); // store "name=value" string
         else if ((tail = str_prefix(argv[i], "depth=")))
             eo->depth = atoi(tail);
         else if ((tail = str_prefix(argv[i], "nodes=")))
@@ -177,12 +177,12 @@ static int options_parse_sprt(int argc, const char **argv, int i, Options *o) {
 
 EngineOptions engine_options_init(void) {
     return (EngineOptions){
-        .cmd = str_init(), .name = str_init(), .options = vec_init(str_t), .timeOut = 4000};
+        .cmd = str_init(), .name = str_init(), .vecOptions = vec_init(str_t), .timeOut = 4000};
 }
 
 void engine_options_destroy(EngineOptions *eo) {
     str_destroy_n(&eo->cmd, &eo->name);
-    vec_destroy_rec(eo->options, str_destroy);
+    vec_destroy_rec(eo->vecOptions, str_destroy);
 }
 
 static void engine_options_apply(const EngineOptions *from, EngineOptions *to) {
@@ -192,8 +192,8 @@ static void engine_options_apply(const EngineOptions *from, EngineOptions *to) {
     if (from->name.len)
         str_cpy(&to->name, from->name);
 
-    for (size_t j = 0; j < vec_size(from->options); j++)
-        vec_push(to->options, str_init_from(from->options[j]));
+    for (size_t j = 0; j < vec_size(from->vecOptions); j++)
+        vec_push(to->vecOptions, str_init_from(from->vecOptions[j]));
 
     if (from->time)
         to->time = from->time;

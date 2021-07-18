@@ -24,7 +24,7 @@ typedef struct {
 
 typedef struct {
     pthread_mutex_t mtx;
-    SeqStr *buf;
+    SeqStr *vecQueued;
     FILE *out;
     size_t idxNext;
 } SeqWriter;
