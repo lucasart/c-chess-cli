@@ -283,7 +283,10 @@ Engine engine_init(Worker *w, const char *cmd, const char *name, const str_t *op
         if ((tail = str_tok_esc(options[i].buf, &oname, '=', ESC_SEQ)) &&
             (tail = str_tok_esc(tail, &ovalue, '=', ESC_SEQ))) {
             str_cpy_fmt(&line, "setoption name %S value %S", oname, ovalue);
+
+            deadline_set(w, e.name.buf, system_msec(), e.timeOut);
             engine_writeln(w, &e, line.buf);
+            deadline_clear(w);
         } else
             DIE("Cannot parse '%s'\n", options[i].buf);
     }
@@ -331,6 +334,12 @@ void engine_writeln(const Worker *w, const Engine *e, char *buf) {
         DIE_IF(fprintf(w->log, "%s <- %s\n", e->name.buf, buf) < 0);
         DIE_IF(fflush(w->log) < 0);
     }
+}
+
+void engine_newgame(Worker *w, const Engine *e) {
+    deadline_set(w, e->name.buf, system_msec(), e->timeOut);
+    engine_writeln(w, e, "ucinewgame");
+    deadline_clear(w);
 }
 
 void engine_sync(Worker *w, const Engine *e) {

@@ -197,7 +197,7 @@ int game_play(Worker *w, Game *g, const Options *o, const Engine engines[2],
                 DIE("[%d] '%s' does not support Chess960\n", threadId, engines[i].name.buf);
         }
 
-        engine_writeln(w, &engines[i], "ucinewgame");
+        engine_newgame(w, &engines[i]);
         engine_sync(w, &engines[i]);
     }
 

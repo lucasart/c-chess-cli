@@ -52,6 +52,7 @@ void engine_destroy(Worker *w, Engine *e);
 void engine_readln(const Worker *w, const Engine *e, str_t *line);
 void engine_writeln(const Worker *w, const Engine *e, char *buf);
 
+void engine_newgame(Worker *w, const Engine *e);
 void engine_sync(Worker *w, const Engine *e);
 bool engine_bestmove(Worker *w, const Engine *e, int64_t *timeLeft, str_t *best, str_t *pv,
                      Info *info);

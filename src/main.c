@@ -199,9 +199,15 @@ int main(int argc, const char **argv) {
         // are likely to face a completely unresponsive engine, where any attempt at I/O will block
         // the master thread, on top of the already blocked worker. Hence, we must DIE().
         for (int i = 0; i < options.concurrency; i++)
-            if (deadline_overdue(&vecWorkers[i]))
+            if (deadline_overdue(&vecWorkers[i])) {
+                DIE_IF(fprintf(vecWorkers[i].log,
+                               "deadline_clear: now is T1=%" PRId64
+                               ". %s responded after T0+D=%" PRId64 ". fatal error!\n",
+                               system_msec(), vecWorkers[i].deadline.engineName.buf,
+                               vecWorkers[i].deadline.timeLimit) < 0);
                 DIE("[%d] engine %s is unresponsive\n", vecWorkers[i].id,
                     vecWorkers[i].deadline.engineName.buf);
+            }
     } while (!job_queue_done(&jq));
 
     // Join threads[]
