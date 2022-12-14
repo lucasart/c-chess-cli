@@ -22,6 +22,7 @@
 #include "util.h"
 #include "vec.h"
 #include "workers.h"
+#include <math.h>
 #include <pthread.h>
 #include <stdlib.h>
 #include <string.h>
@@ -153,9 +154,12 @@ static void *thread_start(void *arg) {
         int wldCount[3] = {0};
         job_queue_add_result(&jq, job.pair, wld, wldCount);
         const int n = wldCount[RESULT_WIN] + wldCount[RESULT_LOSS] + wldCount[RESULT_DRAW];
-        printf("Score of %s vs %s: %d - %d - %d  [%.3f] %d\n", engines[0].name.buf,
+        const double win_frac = (wldCount[RESULT_WIN] + 0.5 * wldCount[RESULT_DRAW]) / n;
+        const double elo_change = -400.0 * log10((1 - win_frac) / win_frac);
+
+        printf("Score of %s vs %s: %d - %d - %d  [%.3f, %+.0f elo] %d\n", engines[0].name.buf,
                engines[1].name.buf, wldCount[RESULT_WIN], wldCount[RESULT_LOSS],
-               wldCount[RESULT_DRAW], (wldCount[RESULT_WIN] + 0.5 * wldCount[RESULT_DRAW]) / n, n);
+               wldCount[RESULT_DRAW], win_frac, elo_change, n);
 
         // SPRT update
         if (options.sprt && sprt_done(wldCount, &options.sprtParam))
