@@ -22,6 +22,7 @@
 #include "util.h"
 #include "vec.h"
 #include "workers.h"
+#include "eta.h"
 #include <pthread.h>
 #include <stdlib.h>
 #include <string.h>
@@ -78,6 +79,9 @@ static void main_init(int argc, const char **argv) {
 
         vec_push(vecWorkers, worker_init(i, logName.buf));
     }
+
+    // Give ETA
+    print_eta(options, vecEO);
 }
 
 static void *thread_start(void *arg) {
