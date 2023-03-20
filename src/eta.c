@@ -23,8 +23,8 @@ int print_eta(Options options, EngineOptions *vecEO) {
 
     time_t eta = time(NULL);
     
-    int average_num_moves = 40;
-    float time_usage = 0.95;
+    int average_num_moves = 46;
+    float time_usage = 0.94;
 
     time_t time_per_game;
     time_t time_per_game_time = 2 * (vecEO->time + average_num_moves * vecEO->increment);
