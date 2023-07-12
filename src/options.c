@@ -249,9 +249,11 @@ EngineOptions *options_parse(int argc, const char **argv, Options *o) {
             o->gauntlet = true;
         else if (!strcmp(argv[i], "-log"))
             o->log = true;
-        else if (!strcmp(argv[i], "-concurrency"))
+        else if (!strcmp(argv[i], "-concurrency")) {
             o->concurrency = atoi(argv[++i]);
-        else if (!strcmp(argv[i], "-each")) {
+            if (o->concurrency < 1)
+                DIE("Invalid value for -concurrency: '%s'\n", argv[i]);
+        } else if (!strcmp(argv[i], "-each")) {
             i = options_parse_eo(argc, argv, i + 1, &each);
             eachSet = true;
         } else if (!strcmp(argv[i], "-engine")) {
