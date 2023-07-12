@@ -33,7 +33,7 @@ uint64_t prng(uint64_t *state) {
 
 double prngf(uint64_t *state) { return (prng(state) >> 11) * 0x1.0p-53; }
 
-int64_t system_msec() {
+int64_t system_msec(void) {
     struct timespec t = {0};
     clock_gettime(CLOCK_MONOTONIC, &t);
     return t.tv_sec * 1000LL + t.tv_nsec / 1000000;
