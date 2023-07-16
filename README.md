@@ -88,9 +88,12 @@ uint8_t packedPieces[(count(occ) + 1) / 2];  // 4 bits per piece, max 16 bytes
 int16_t score;   // score in cp; mating scores INT16_MAX - dtm; mated scores INT16_MIN + dtm
 uint8_t result;  // 0=loss, 1=draw, 2=win
 ```
-Encoding for `packedPieces[]` elements is:
+Encoding for `packedPieces[]` elements is `2 * extPiece + color` with:
 ```
-0=KNIGHT, 1=BISHOP, 2=ROOK, 3=QUEEN, 4=KING, 5=PAWN,
-6=ROOK with castling ability,
-7=PAWN which is capturable en-passant
+enum ExtPiece {
+	KNIGHT, BISHOP, ROOK, QUEEN, KING, PAWN,
+	ROOK_WITH_CASTLING_RIGHT, PAWN_CAPTURABLE_ENPASSANT
+};
+
+enum Color {WHITE, BLACK};
 ```
