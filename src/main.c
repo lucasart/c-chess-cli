@@ -22,6 +22,7 @@
 #include "util.h"
 #include "vec.h"
 #include "workers.h"
+#include <math.h>
 #include <pthread.h>
 #include <stdlib.h>
 #include <string.h>
@@ -78,6 +79,55 @@ static void main_init(int argc, const char **argv) {
 
         vec_push(vecWorkers, worker_init(i, logName.buf));
     }
+}
+
+static double elo_difference(double points_frac) {
+    return 400.0 * log10(points_frac / (1 - points_frac));
+}
+
+static double inverse_error_function(double x) {
+    static const double a = 8 * (M_PI - 3) / (3 * M_PI * (4 - M_PI));
+    double y = log(1 - x * x);
+
+    double z = 2 / (M_PI * a) + y / 2;
+    double ret = sqrt(sqrt(z * z - y / a) - z);
+
+    if (x < 0) {
+        return -ret;
+    }
+
+    return ret;
+}
+
+static double phi_inv(double p) {
+    static const double sqrt_2 = sqrt(2);
+    return sqrt_2 * inverse_error_function(2 * p - 1);
+}
+
+static double error_margin(int wins, int losses, int draws) {
+    double total = wins + draws + losses;
+    double win_p = ((double)wins) / total;
+    double draw_p = ((double)draws) / total;
+    double loss_p = ((double)losses) / total;
+
+    double points_frac = win_p + draw_p * 0.5;
+
+    double wins_dev = win_p * pow(1 - points_frac, 2);
+    double draws_dev = draw_p * pow(0.5 - points_frac, 2);
+    double losses_dev = loss_p * pow(0 - points_frac, 2);
+
+    double std_dev = sqrt((wins_dev + draws_dev + losses_dev) / total);
+
+    static const double confidence_p = 0.95;
+    static const double min_confidence_p = (1 - confidence_p) / 2;
+    static const double max_confidence_p = 1 - min_confidence_p;
+
+    double dev_min = points_frac + phi_inv(min_confidence_p) * std_dev;
+    double dev_max = points_frac + phi_inv(max_confidence_p) * std_dev;
+
+    double difference = elo_difference(dev_max) - elo_difference(dev_min);
+
+    return difference / 2;
 }
 
 static void *thread_start(void *arg) {
@@ -153,9 +203,14 @@ static void *thread_start(void *arg) {
         int wldCount[3] = {0};
         job_queue_add_result(&jq, job.pair, wld, wldCount);
         const int n = wldCount[RESULT_WIN] + wldCount[RESULT_LOSS] + wldCount[RESULT_DRAW];
-        printf("Score of %s vs %s: %d - %d - %d  [%.3f] %d\n", engines[0].name.buf,
+        const double points_frac = (wldCount[RESULT_WIN] + 0.5 * wldCount[RESULT_DRAW]) / n;
+        const double elo_change = elo_difference(points_frac);
+        const double elo_margin =
+            error_margin(wldCount[RESULT_WIN], wldCount[RESULT_LOSS], wldCount[RESULT_DRAW]);
+
+        printf("Score of %s vs %s: %d - %d - %d  [%.3f, %+.0f elo ±%.0f] %d\n", engines[0].name.buf,
                engines[1].name.buf, wldCount[RESULT_WIN], wldCount[RESULT_LOSS],
-               wldCount[RESULT_DRAW], (wldCount[RESULT_WIN] + 0.5 * wldCount[RESULT_DRAW]) / n, n);
+               wldCount[RESULT_DRAW], points_frac, elo_change, elo_margin, n);
 
         // SPRT update
         if (options.sprt && sprt_done(wldCount, &options.sprtParam))
